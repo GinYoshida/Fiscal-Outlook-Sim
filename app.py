@@ -59,6 +59,17 @@ SCENARIOS = [
      "params": {"inflationRate": 1.5, "realGrowth": 1.0, "riskPremium": 0.3, "initDebt": 1100, "initTax": 80, "initPolicyExp": 75, "initAvgCoupon": 0.8, "bojCA": 550, "bojYield": 0.2, "taxElasticity": 1.2, "otherRevenue": 17, "naturalIncrease": 0.3, "policyRateSpread": 1.0}},
 ]
 
+PLOTLY_CONFIG = {
+    "displayModeBar": True,
+    "modeBarButtonsToRemove": [
+        "zoom2d", "pan2d", "select2d", "lasso2d", "zoomIn2d", "zoomOut2d",
+        "autoScale2d", "hoverClosestCartesian", "hoverCompareCartesian",
+        "toggleSpikelines", "toImage",
+    ],
+    "modeBarButtonsToAdd": [],
+    "displaylogo": False,
+}
+
 PLOTLY_LAYOUT = dict(
     margin=dict(l=40, r=20, t=40, b=40),
     font=dict(family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', sans-serif", size=12),
@@ -216,7 +227,7 @@ with tab1:
     fig1.add_trace(go.Bar(x=sim_years, y=sim_burden, name="シミュレーション", marker_color=sim_colors))
     fig1.add_hline(y=30, line_dash="dash", line_color="#ef4444", annotation_text="30%警戒ライン", annotation_position="top right")
     fig1.update_layout(yaxis_title="負担率 (%)", barmode="group")
-    st.plotly_chart(fig1, use_container_width=True, config={"displayModeBar": False})
+    st.plotly_chart(fig1, use_container_width=True, config=PLOTLY_CONFIG)
 
     col1, col2 = st.columns(2)
     with col1:
@@ -227,7 +238,7 @@ with tab1:
         fig2.add_trace(go.Bar(x=actual_years, y=actual_debt, name="実績", marker_color="#94a3b8"))
         fig2.add_trace(go.Bar(x=sim_years, y=sim_debt, name="シミュレーション", marker_color="#f97316"))
         fig2.update_layout(yaxis_title="兆円", barmode="group")
-        st.plotly_chart(fig2, use_container_width=True, config={"displayModeBar": False})
+        st.plotly_chart(fig2, use_container_width=True, config=PLOTLY_CONFIG)
 
     with col2:
         st.subheader("財政収支の推移")
@@ -239,7 +250,7 @@ with tab1:
         fig3.add_trace(go.Bar(x=sim_years, y=sim_bal, name="シミュレーション", marker_color=sim_bal_colors))
         fig3.add_hline(y=0, line_color="#94a3b8")
         fig3.update_layout(yaxis_title="兆円", barmode="group")
-        st.plotly_chart(fig3, use_container_width=True, config={"displayModeBar": False})
+        st.plotly_chart(fig3, use_container_width=True, config=PLOTLY_CONFIG)
 
     st.subheader("税収 vs 利払い費")
     fig4 = make_chart("")
@@ -252,7 +263,7 @@ with tab1:
     fig4.add_trace(go.Bar(x=sim_years, y=sim_tax, name="税収(予測)", marker_color="#3b82f6"))
     fig4.add_trace(go.Bar(x=sim_years, y=sim_int, name="利払い(予測)", marker_color="#ef4444"))
     fig4.update_layout(yaxis_title="兆円", barmode="group")
-    st.plotly_chart(fig4, use_container_width=True, config={"displayModeBar": False})
+    st.plotly_chart(fig4, use_container_width=True, config=PLOTLY_CONFIG)
 
     with st.expander("📋 全年度データを表示"):
         df_all = pd.DataFrame(sim_data)
@@ -293,7 +304,7 @@ with tab2:
             yaxis_title="兆円",
             showlegend=False,
         )
-        st.plotly_chart(fig_wf, use_container_width=True, config={"displayModeBar": False})
+        st.plotly_chart(fig_wf, use_container_width=True, config=PLOTLY_CONFIG)
 
         c1, c2, c3 = st.columns(3)
         c1.metric("歳入合計", f"{d['totalRevenue']:.1f} 兆円")
@@ -308,6 +319,99 @@ with tab2:
         c6.metric("利払負担率", f"{d['interestBurden']:.1f}%",
                   delta="危険" if d["interestBurden"] > 30 else "正常",
                   delta_color="inverse" if d["interestBurden"] > 30 else "normal")
+
+        st.markdown("---")
+        st.subheader("計算式と変数の解説")
+
+        nominal_g = p["inflationRate"] + p["realGrowth"]
+        market_rate = nominal_g + p["riskPremium"]
+        policy_rate_val = max(market_rate / 100 - p["policyRateSpread"] / 100, 0) * 100
+
+        prev_d = next((item for item in sim_data if item["year"] == wf_year - 1), None)
+
+        st.markdown("##### 歳入の部")
+        if wf_year == 2026:
+            st.markdown(f"""
+| 項目 | 計算式 | 当年度の値 |
+|:--|:--|--:|
+| **税収** | 初期値（設定値） | **{d['tax']:.1f} 兆円** |
+| **日銀納付金** | max(債務残高 × 利回り − 当座預金 × 政策金利, 0) | **{d['bojPayment']:.1f} 兆円** |
+| | = max({p['initDebt']:.0f} × {p['bojYield']:.2f}% − {p['bojCA']:.0f} × {policy_rate_val:.2f}%, 0) | |
+| **その他収入** | 固定値 | **{p['otherRevenue']:.1f} 兆円** |
+| **歳入合計** | 税収 + 日銀納付金 + その他 | **{d['totalRevenue']:.1f} 兆円** |
+""")
+        else:
+            st.markdown(f"""
+| 項目 | 計算式 | 当年度の値 |
+|:--|:--|--:|
+| **税収** | 前年税収 × (1 + 名目成長率 × 弾性値) | **{d['tax']:.1f} 兆円** |
+| | = {prev_d['tax']:.1f} × (1 + {nominal_g:.1f}% × {p['taxElasticity']:.1f}) | |
+| **日銀納付金** | max(前年債務 × 利回り − 当座預金 × 政策金利, 0) | **{d['bojPayment']:.1f} 兆円** |
+| | = max({prev_d['debt']:.0f} × {p['bojYield']:.2f}% − {p['bojCA']:.0f} × {policy_rate_val:.2f}%, 0) | |
+| **その他収入** | 固定値 | **{p['otherRevenue']:.1f} 兆円** |
+| **歳入合計** | 税収 + 日銀納付金 + その他 | **{d['totalRevenue']:.1f} 兆円** |
+""")
+
+        st.markdown("##### 歳出の部")
+        if wf_year == 2026:
+            st.markdown(f"""
+| 項目 | 計算式 | 当年度の値 |
+|:--|:--|--:|
+| **政策経費** | 初期値（設定値） | **{d['policyExp']:.1f} 兆円** |
+| **平均クーポン** | 初期値（設定値） | **{d['avgCoupon']:.2f}%** |
+| **利払い費** | 債務残高 × 平均クーポン | **{d['interest']:.1f} 兆円** |
+| | = {p['initDebt']:.0f} × {d['avgCoupon']:.2f}% | |
+| **歳出合計** | 政策経費 + 利払い費 | **{d['totalCost']:.1f} 兆円** |
+""")
+        else:
+            st.markdown(f"""
+| 項目 | 計算式 | 当年度の値 |
+|:--|:--|--:|
+| **政策経費** | 前年 × (1 + インフレ率) + 自然増 | **{d['policyExp']:.1f} 兆円** |
+| | = {prev_d['policyExp']:.1f} × (1 + {p['inflationRate']:.1f}%) + {p['naturalIncrease']:.1f} | |
+| **平均クーポン** | 前年 × 8/9 + 市場金利 × 1/9 | **{d['avgCoupon']:.2f}%** |
+| | = {prev_d['avgCoupon']:.2f}% × 8/9 + {market_rate:.1f}% × 1/9 | |
+| **利払い費** | 前年債務残高 × 平均クーポン | **{d['interest']:.1f} 兆円** |
+| | = {prev_d['debt']:.0f} × {d['avgCoupon']:.2f}% | |
+| **歳出合計** | 政策経費 + 利払い費 | **{d['totalCost']:.1f} 兆円** |
+""")
+
+        st.markdown("##### 収支・残高")
+        if wf_year == 2026:
+            st.markdown(f"""
+| 項目 | 計算式 | 当年度の値 |
+|:--|:--|--:|
+| **財政収支** | 歳入合計 − 歳出合計 | **{d['fiscalBalance']:.1f} 兆円** |
+| | = {d['totalRevenue']:.1f} − {d['totalCost']:.1f} | |
+| **債務残高** | 初期値 + (歳出 − 歳入) | **{d['debt']:.0f} 兆円** |
+| | = {p['initDebt']:.0f} + ({d['totalCost']:.1f} − {d['totalRevenue']:.1f}) | |
+| **利払負担率** | (利払い費 / 税収) × 100 | **{d['interestBurden']:.1f}%** |
+| | = ({d['interest']:.1f} / {d['tax']:.1f}) × 100 | |
+""")
+        else:
+            st.markdown(f"""
+| 項目 | 計算式 | 当年度の値 |
+|:--|:--|--:|
+| **財政収支** | 歳入合計 − 歳出合計 | **{d['fiscalBalance']:.1f} 兆円** |
+| | = {d['totalRevenue']:.1f} − {d['totalCost']:.1f} | |
+| **債務残高** | 前年残高 + (歳出 − 歳入) | **{d['debt']:.0f} 兆円** |
+| | = {prev_d['debt']:.0f} + ({d['totalCost']:.1f} − {d['totalRevenue']:.1f}) | |
+| **利払負担率** | (利払い費 / 税収) × 100 | **{d['interestBurden']:.1f}%** |
+| | = ({d['interest']:.1f} / {d['tax']:.1f}) × 100 | |
+""")
+
+        with st.expander("各変数の解説"):
+            st.markdown(f"""
+- **税収**：国の主要な収入源。所得税・法人税・消費税等の合計。名目GDP成長率に弾性値（{p['taxElasticity']:.1f}）を掛けた率で毎年増加
+- **日銀納付金**：日銀が保有する国債から得る利子収入から、当座預金への利払いを差し引いた利益の国庫納付。金利が上昇すると当座預金コストが増え、納付金が減少する可能性
+- **その他収入**：税外収入（印紙収入、官業収入、政府資産整理収入等）。年間{p['otherRevenue']:.0f}兆円で固定
+- **政策経費**：社会保障費、公共事業、教育、防衛等の歳出。インフレ率（{p['inflationRate']:.1f}%）で増加し、高齢化による自然増（年{p['naturalIncrease']:.1f}兆円）が加算
+- **平均クーポン**：政府債務全体の加重平均利率。国債の平均残存期間（約9年）に基づき、毎年1/9が新しい市場金利（{market_rate:.1f}%）で借り換わる
+- **利払い費**：債務残高に平均クーポンを掛けた金額。金利上昇時、9年借換ロジックにより徐々に負担増
+- **財政収支**：歳入から歳出を引いた差額。マイナスなら赤字で、その分だけ債務が増加
+- **債務残高**：国の借金の累計。財政赤字が続くと雪だるま式に増加する
+- **利払負担率**：税収に対する利払い費の割合。30%を超えると財政の持続可能性に対する警戒水準
+""")
 
 with tab3:
     st.subheader("変数・計算ロジック説明")
