@@ -288,28 +288,42 @@ with tab1:
 
 with tab2:
     st.subheader("単年度 収支ウォーターフォール")
-    wf_year = st.slider("分析する年度", 2026, 2055, 2035, key="wf_year")
-    d = next((item for item in sim_data if item["year"] == wf_year), None)
+    available_years = sorted([d["year"] for d in ACTUAL_DATA] + [d["year"] for d in sim_data])
+    wf_year = st.select_slider("分析する年度", options=available_years, value=2035, key="wf_year")
+
+    is_actual = wf_year <= 2024
+    if is_actual:
+        d = next((item for item in ACTUAL_DATA if item["year"] == wf_year), None)
+        st.info(f"{wf_year}年度は実績データです（出典：財務省・日本銀行）")
+    else:
+        d = next((item for item in sim_data if item["year"] == wf_year), None)
+
     if d:
+        if is_actual:
+            other_rev = d["totalRevenue"] - d["tax"] - d["bojPayment"]
+        else:
+            other_rev = p["otherRevenue"]
+
         categories = ["税収", "日銀納付金", "その他", "歳入合計", "政策経費", "利払い費", "歳出合計", "財政収支"]
-        values = [d["tax"], d["bojPayment"], p["otherRevenue"], d["totalRevenue"],
+        values = [d["tax"], d["bojPayment"], other_rev, d["totalRevenue"],
                   -d["policyExp"], -d["interest"], -d["totalCost"], d["fiscalBalance"]]
 
+        wf_label = "実績" if is_actual else "シミュレーション"
         fig_wf = go.Figure(go.Waterfall(
             x=categories,
             y=values,
             measure=["relative", "relative", "relative", "total", "relative", "relative", "total", "total"],
             connector=dict(line=dict(color="#e2e8f0")),
-            increasing=dict(marker=dict(color="#3b82f6")),
-            decreasing=dict(marker=dict(color="#ef4444")),
+            increasing=dict(marker=dict(color="#3b82f6" if not is_actual else "#64748b")),
+            decreasing=dict(marker=dict(color="#ef4444" if not is_actual else "#94a3b8")),
             totals=dict(marker=dict(color="#334155")),
             textposition="outside",
-            text=[f"{v:.1f}" for v in [d["tax"], d["bojPayment"], p["otherRevenue"], d["totalRevenue"],
+            text=[f"{v:.1f}" for v in [d["tax"], d["bojPayment"], other_rev, d["totalRevenue"],
                                         d["policyExp"], d["interest"], d["totalCost"], d["fiscalBalance"]]],
         ))
         fig_wf.update_layout(
             **PLOTLY_LAYOUT,
-            title=dict(text=f"{wf_year}年度 収支ウォーターフォール", font=dict(size=14)),
+            title=dict(text=f"{wf_year}年度 収支ウォーターフォール（{wf_label}）", font=dict(size=14)),
             height=400,
             yaxis_title="兆円",
             showlegend=False,
@@ -331,17 +345,36 @@ with tab2:
                   delta_color="inverse" if d["interestBurden"] > 30 else "normal")
 
         st.markdown("---")
-        st.subheader("計算式と変数の解説")
 
-        nominal_g = p["inflationRate"] + p["realGrowth"]
-        market_rate = nominal_g + p["riskPremium"]
-        policy_rate_val = max(market_rate / 100 - p["policyRateSpread"] / 100, 0) * 100
-
-        prev_d = next((item for item in sim_data if item["year"] == wf_year - 1), None)
-
-        st.markdown("##### 歳入の部")
-        if wf_year == 2026:
+        if is_actual:
+            st.subheader("実績データの内訳")
             st.markdown(f"""
+| 項目 | 当年度の値 |
+|:--|--:|
+| **税収** | **{d['tax']:.1f} 兆円** |
+| **日銀納付金** | **{d['bojPayment']:.1f} 兆円** |
+| **その他収入** | **{other_rev:.1f} 兆円** |
+| **歳入合計** | **{d['totalRevenue']:.1f} 兆円** |
+| **政策経費** | **{d['policyExp']:.1f} 兆円** |
+| **利払い費** | **{d['interest']:.1f} 兆円** |
+| **歳出合計** | **{d['totalCost']:.1f} 兆円** |
+| **財政収支** | **{d['fiscalBalance']:.1f} 兆円** |
+| **債務残高** | **{d['debt']:.0f} 兆円** |
+| **利払負担率** | **{d['interestBurden']:.1f}%** |
+""")
+            st.caption("出典：財務省「一般会計税収の推移」「財政に関する資料」、日本銀行「決算」")
+        else:
+            st.subheader("計算式と変数の解説")
+
+            nominal_g = p["inflationRate"] + p["realGrowth"]
+            market_rate = nominal_g + p["riskPremium"]
+            policy_rate_val = max(market_rate / 100 - p["policyRateSpread"] / 100, 0) * 100
+
+            prev_d = next((item for item in sim_data if item["year"] == wf_year - 1), None)
+
+            st.markdown("##### 歳入の部")
+            if wf_year == 2026:
+                st.markdown(f"""
 | 項目 | 計算式 | 当年度の値 |
 |:--|:--|--:|
 | **税収** | 初期値（設定値） | **{d['tax']:.1f} 兆円** |
@@ -350,8 +383,8 @@ with tab2:
 | **その他収入** | 固定値 | **{p['otherRevenue']:.1f} 兆円** |
 | **歳入合計** | 税収 + 日銀納付金 + その他 | **{d['totalRevenue']:.1f} 兆円** |
 """)
-        else:
-            st.markdown(f"""
+            else:
+                st.markdown(f"""
 | 項目 | 計算式 | 当年度の値 |
 |:--|:--|--:|
 | **税収** | 前年税収 × (1 + 名目成長率 × 弾性値) | **{d['tax']:.1f} 兆円** |
@@ -362,9 +395,9 @@ with tab2:
 | **歳入合計** | 税収 + 日銀納付金 + その他 | **{d['totalRevenue']:.1f} 兆円** |
 """)
 
-        st.markdown("##### 歳出の部")
-        if wf_year == 2026:
-            st.markdown(f"""
+            st.markdown("##### 歳出の部")
+            if wf_year == 2026:
+                st.markdown(f"""
 | 項目 | 計算式 | 当年度の値 |
 |:--|:--|--:|
 | **政策経費** | 初期値（設定値） | **{d['policyExp']:.1f} 兆円** |
@@ -373,8 +406,8 @@ with tab2:
 | | = {p['initDebt']:.0f} × {d['avgCoupon']:.2f}% | |
 | **歳出合計** | 政策経費 + 利払い費 | **{d['totalCost']:.1f} 兆円** |
 """)
-        else:
-            st.markdown(f"""
+            else:
+                st.markdown(f"""
 | 項目 | 計算式 | 当年度の値 |
 |:--|:--|--:|
 | **政策経費** | 前年 × (1 + インフレ率) + 自然増 | **{d['policyExp']:.1f} 兆円** |
@@ -386,9 +419,9 @@ with tab2:
 | **歳出合計** | 政策経費 + 利払い費 | **{d['totalCost']:.1f} 兆円** |
 """)
 
-        st.markdown("##### 収支・残高")
-        if wf_year == 2026:
-            st.markdown(f"""
+            st.markdown("##### 収支・残高")
+            if wf_year == 2026:
+                st.markdown(f"""
 | 項目 | 計算式 | 当年度の値 |
 |:--|:--|--:|
 | **財政収支** | 歳入合計 − 歳出合計 | **{d['fiscalBalance']:.1f} 兆円** |
@@ -398,8 +431,8 @@ with tab2:
 | **利払負担率** | (利払い費 / 税収) × 100 | **{d['interestBurden']:.1f}%** |
 | | = ({d['interest']:.1f} / {d['tax']:.1f}) × 100 | |
 """)
-        else:
-            st.markdown(f"""
+            else:
+                st.markdown(f"""
 | 項目 | 計算式 | 当年度の値 |
 |:--|:--|--:|
 | **財政収支** | 歳入合計 − 歳出合計 | **{d['fiscalBalance']:.1f} 兆円** |
@@ -410,17 +443,47 @@ with tab2:
 | | = ({d['interest']:.1f} / {d['tax']:.1f}) × 100 | |
 """)
 
-        with st.expander("各変数の解説"):
+        with st.expander("各計算式の根拠と解説"):
             st.markdown(f"""
-- **税収**：国の主要な収入源。所得税・法人税・消費税等の合計。名目GDP成長率に弾性値（{p['taxElasticity']:.1f}）を掛けた率で毎年増加
-- **日銀納付金**：日銀が保有する国債から得る利子収入から、当座預金への利払いを差し引いた利益の国庫納付。金利が上昇すると当座預金コストが増え、納付金が減少する可能性
-- **その他収入**：税外収入（印紙収入、官業収入、政府資産整理収入等）。年間{p['otherRevenue']:.0f}兆円で固定
-- **政策経費**：社会保障費、公共事業、教育、防衛等の歳出。インフレ率（{p['inflationRate']:.1f}%）で増加し、高齢化による自然増（年{p['naturalIncrease']:.1f}兆円）が加算
-- **平均クーポン**：政府債務全体の加重平均利率。国債の平均残存期間（約9年）に基づき、毎年1/9が新しい市場金利（{market_rate:.1f}%）で借り換わる
-- **利払い費**：債務残高に平均クーポンを掛けた金額。金利上昇時、9年借換ロジックにより徐々に負担増
-- **財政収支**：歳入から歳出を引いた差額。マイナスなら赤字で、その分だけ債務が増加
-- **債務残高**：国の借金の累計。財政赤字が続くと雪だるま式に増加する
-- **利払負担率**：税収に対する利払い費の割合。30%を超えると財政の持続可能性に対する警戒水準
+**税収：前年税収 × (1 + 名目成長率 × 弾性値{p['taxElasticity']:.1f})**
+
+税収はGDPに連動するため、名目GDP成長率を基準に推計します。弾性値{p['taxElasticity']:.1f}を掛けるのは、累進課税の効果で所得が伸びると税率の高い区分に移行する人が増え、GDP以上に税収が伸びる傾向があるためです。日本の過去の実績では弾性値1.0〜1.3程度で推移しており、1.2は標準的な仮定です。
+
+---
+
+**日銀納付金：max(保有国債 × 利回り − 当座預金 × 政策金利, 0)**
+
+日銀は保有する国債から利息収入を得る一方、金融機関から預かる当座預金に利息を支払います。この差額（利ざや）が日銀の利益となり、国庫に納付されます。金利上昇局面では当座預金への付利コストが先に上昇する一方、保有国債の利回りは既発債のため簡単には上がらず、逆ざやで納付金がゼロになるリスクがあります。max関数は、赤字になっても国が日銀に補填する仕組みがないため、下限をゼロとしています。
+
+---
+
+**政策経費：前年 × (1 + インフレ率) + 自然増{p['naturalIncrease']:.1f}兆円**
+
+社会保障・公共事業・教育・防衛等の歳出は、物価上昇に伴い名目額が膨らみます。インフレ率で調整する理由は、公務員給与・調達価格・年金の物価スライドなどが物価に連動するためです。さらに高齢化により年金・医療・介護の給付が毎年構造的に増加するため、自然増（年{p['naturalIncrease']:.1f}兆円）を加算しています。財務省の試算でも社会保障の自然増は年0.3〜0.7兆円とされています。
+
+---
+
+**平均クーポン：前年 × 8/9 + 市場金利 × 1/9（9年借換ロジック）**
+
+日本国債の平均残存期間は約9年です。これは、毎年およそ全体の1/9が満期を迎え、その時点の市場金利で新たに借り換えられることを意味します。残りの8/9は既発債のため金利は変わりません。このモデルにより、金利が急上昇しても利払い負担はすぐには跳ね上がらず、9年かけて徐々に波及する現実の動きを再現しています。
+
+---
+
+**利払い費：債務残高 × 平均クーポン**
+
+国が発行している国債の元本（債務残高）に対して、加重平均の利率（平均クーポン）を掛けた金額が年間の利息支払い額です。債務残高が大きくなるほど、また平均クーポンが上昇するほど、利払い費は加速度的に増大します。
+
+---
+
+**利払負担率：(利払い費 / 税収) × 100**
+
+税収に対する利払い費の比率を見ることで、「稼ぎのうちどれだけが借金の利息に消えるか」を示します。30%を警戒ラインとしているのは、過去に財政危機に陥った国々（ギリシャ、イタリア等）がこの水準前後で市場の信認を失った事例があるためです。日本は現在約{ACTUAL_DATA[-1]['interestBurden']:.0f}%ですが、金利上昇シナリオでは急速に悪化する可能性があります。
+
+---
+
+**債務残高：前年残高 + (歳出 − 歳入)**
+
+財政赤字（歳出 > 歳入）が発生すると、その分だけ新たに国債を発行して資金を調達するため、債務残高が積み上がります。これは会計上の恒等式であり、黒字なら残高は減少します。利払い費が増えると赤字が拡大し、さらに債務が増えて利払い費が増える「債務の雪だるま効果」が発生し得ます。
 """)
 
 with tab3:
