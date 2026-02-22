@@ -39,6 +39,7 @@ function App() {
         scenarioIndex={scenarioIndex}
         onScenarioChange={handleScenarioChange}
         onParamChange={updateParam}
+        onParamsReplace={(newParams: SimParams) => setParams(newParams)}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
       />

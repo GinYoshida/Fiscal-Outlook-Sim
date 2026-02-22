@@ -1,10 +1,13 @@
+import { useState, useRef, useCallback, useMemo } from 'react'
 import { SCENARIOS, type SimParams } from './data'
+import { OPTIMIZABLE_PARAMS, runOptimizer, countWarnings, type OptimizerProgress } from './optimizer'
 
 interface SidebarProps {
   params: SimParams;
   scenarioIndex: number;
   onScenarioChange: (index: number) => void;
   onParamChange: <K extends keyof SimParams>(key: K, value: SimParams[K]) => void;
+  onParamsReplace: (params: SimParams) => void;
   isOpen: boolean;
 }
 
@@ -61,9 +64,54 @@ function NumberInput({ label, value, step, tooltip, onChange }: {
   )
 }
 
-export function Sidebar({ params, scenarioIndex, onScenarioChange, onParamChange, isOpen, onClose }: SidebarProps & { onClose?: () => void }) {
+export function Sidebar({ params, scenarioIndex, onScenarioChange, onParamChange, onParamsReplace, isOpen, onClose }: SidebarProps & { onClose?: () => void }) {
   const p = params;
   const taxTotal = p.initTaxConsumption + p.initTaxIncome + p.initTaxCorporate + p.initTaxOther;
+
+  const [selectedOptKeys, setSelectedOptKeys] = useState<Set<string>>(
+    () => new Set(OPTIMIZABLE_PARAMS.slice(0, 5).map(p => p.key))
+  )
+  const [optimizerProgress, setOptimizerProgress] = useState<OptimizerProgress | null>(null)
+  const [isOptimizing, setIsOptimizing] = useState(false)
+  const [baselineWarnings, setBaselineWarnings] = useState<number | null>(null)
+  const cancelRef = useRef<(() => void) | null>(null)
+
+  const toggleOptKey = useCallback((key: string) => {
+    setSelectedOptKeys(prev => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }, [])
+
+  const startOptimizer = useCallback(() => {
+    if (isOptimizing) {
+      cancelRef.current?.()
+      setIsOptimizing(false)
+      return
+    }
+    const keys = Array.from(selectedOptKeys) as (keyof SimParams)[]
+    if (keys.length === 0) return
+    setIsOptimizing(true)
+    setOptimizerProgress(null)
+    setBaselineWarnings(countWarnings(params))
+    const { cancel } = runOptimizer(params, keys, (progress) => {
+      setOptimizerProgress(progress)
+      if (progress.done) {
+        setIsOptimizing(false)
+      }
+    })
+    cancelRef.current = cancel
+  }, [params, selectedOptKeys, isOptimizing])
+
+  const applyOptResult = useCallback(() => {
+    if (optimizerProgress?.bestParams) {
+      onParamsReplace(optimizerProgress.bestParams)
+    }
+  }, [optimizerProgress, onParamsReplace])
+
+  const currentWarnings = useMemo(() => countWarnings(params), [params])
 
   return (
     <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
@@ -203,6 +251,85 @@ export function Sidebar({ params, scenarioIndex, onScenarioChange, onParamChange
       <Slider label="政策金利スプレッド (%)" value={p.policyRateSpread} min={0} max={3} step={0.1}
         tooltip="市場金利と日銀の政策金利の差。政策金利＝市場金利−スプレッド（下限0%）。通常1%程度で、日銀は市場金利より低い政策金利を維持します。"
         onChange={v => onParamChange('policyRateSpread', v)} />
+
+      <div className="optimizer-section">
+        <h3>警告ゼロ探索</h3>
+        <p className="optimizer-current-warnings">
+          現在の警告数: <strong className={currentWarnings === 0 ? 'warn-zero' : 'warn-nonzero'}>{currentWarnings}</strong>
+        </p>
+        <p className="optimizer-desc">
+          勾配降下法で警告が最小になるパラメータを探索します。調整対象を選んでください。
+        </p>
+        <div className="optimizer-checkboxes">
+          {OPTIMIZABLE_PARAMS.map(op => (
+            <label key={op.key} className="optimizer-checkbox">
+              <input
+                type="checkbox"
+                checked={selectedOptKeys.has(op.key)}
+                onChange={() => toggleOptKey(op.key)}
+                disabled={isOptimizing}
+              />
+              <span>{op.label}</span>
+            </label>
+          ))}
+        </div>
+        <button
+          className={`optimizer-btn ${isOptimizing ? 'cancel' : ''}`}
+          onClick={startOptimizer}
+          disabled={selectedOptKeys.size === 0 && !isOptimizing}
+        >
+          {isOptimizing ? '中止' : '探索開始'}
+        </button>
+
+        {optimizerProgress && (
+          <div className="optimizer-progress">
+            <div className="progress-bar-container">
+              <div
+                className="progress-bar-fill"
+                style={{ width: `${optimizerProgress.done ? 100 : (optimizerProgress.iteration / optimizerProgress.maxIterations) * 100}%` }}
+              />
+            </div>
+            <p className="progress-text">
+              {optimizerProgress.done ? '完了' : `探索中... (${optimizerProgress.iteration}/${optimizerProgress.maxIterations})`}
+            </p>
+            <p className="progress-result">
+              最小警告数: <strong className={optimizerProgress.bestWarnings === 0 ? 'warn-zero' : 'warn-nonzero'}>
+                {optimizerProgress.bestWarnings}
+              </strong>
+              {optimizerProgress.bestWarnings === 0 && ' ✓'}
+            </p>
+            {optimizerProgress.done && optimizerProgress.bestWarnings < (baselineWarnings ?? currentWarnings) && (
+              <div className="optimizer-result-detail">
+                <p className="optimizer-changes-title">変更されるパラメータ:</p>
+                <ul className="optimizer-changes">
+                  {OPTIMIZABLE_PARAMS
+                    .filter(op => selectedOptKeys.has(op.key))
+                    .filter(op => {
+                      const before = params[op.key] as number
+                      const after = optimizerProgress.bestParams[op.key] as number
+                      return Math.abs(before - after) > 1e-6
+                    })
+                    .map(op => {
+                      const before = params[op.key] as number
+                      const after = optimizerProgress.bestParams[op.key] as number
+                      return (
+                        <li key={op.key}>
+                          {op.label}: {before.toFixed(1)} → <strong>{after.toFixed(1)}</strong>
+                        </li>
+                      )
+                    })}
+                </ul>
+                <button className="optimizer-apply-btn" onClick={applyOptResult}>
+                  結果を適用
+                </button>
+              </div>
+            )}
+            {optimizerProgress.done && optimizerProgress.bestWarnings >= (baselineWarnings ?? currentWarnings) && (
+              <p className="optimizer-no-improve">現在のパラメータが既に最適、または改善が見つかりませんでした。</p>
+            )}
+          </div>
+        )}
+      </div>
     </aside>
   )
 }
