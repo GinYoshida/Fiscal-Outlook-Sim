@@ -58,4 +58,4 @@ if os.path.exists(assets_dir):
                 f'<script type="module">{content}</script>'
             )
 
-st.components.v1.html(html, height=2400, scrolling=True)
+st.components.v1.html(html, height=4000, scrolling=True)

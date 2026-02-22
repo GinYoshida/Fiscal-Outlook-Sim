@@ -39,14 +39,14 @@ body {
 
 .sidebar {
   width: var(--sidebar-width);
+  min-width: var(--sidebar-width);
   background: white;
   border-right: 1px solid var(--gray-200);
   padding: 16px;
   overflow-y: auto;
-  position: fixed;
+  position: sticky;
   top: 0;
-  left: 0;
-  bottom: 0;
+  height: 100vh;
   z-index: 100;
 }
 
@@ -189,9 +189,8 @@ body {
 
 .main-content {
   flex: 1;
-  margin-left: var(--sidebar-width);
   padding: 24px 32px;
-  max-width: calc(100vw - var(--sidebar-width));
+  min-width: 0;
 }
 
 .app-title {
@@ -761,6 +760,9 @@ body {
   }
 
   .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
     transform: translateX(-100%);
     transition: transform 0.3s ease;
     height: 100vh;
