@@ -206,32 +206,47 @@ export function SimulationTab({ params, simData, actualData }: Props) {
 
   const summaryWarnings = useMemo(() => {
     const warnings: { year: number; type: string; detail: string }[] = []
-    simData.forEach(d => {
+    let consecutiveRealWageNeg = 0
+    simData.forEach((d, i) => {
       if (d.interest > d.policyExp) {
         warnings.push({ year: d.year, type: '利払い超過', detail: `利払い費(${fmt(d.interest)}兆円) > 政策経費(${fmt(d.policyExp)}兆円)` })
       }
       if (d.currentAccount < 0) {
-        warnings.push({ year: d.year, type: '経常赤字', detail: `経常収支 ${fmt(d.currentAccount)}兆円` })
+        warnings.push({ year: d.year, type: '経常収支が赤字転落', detail: `貿易・所得収支の合計がマイナスに（経常収支 ${fmt(d.currentAccount)}兆円）` })
       }
-      if (d.bojCumulativeLoss > 12) {
-        warnings.push({ year: d.year, type: '日銀債務超過', detail: `累積損失 ${fmt(d.bojCumulativeLoss)}兆円 > 自己資本バッファ12兆円` })
+      if (d.bojCumulativeLoss > params.bojCapitalBuffer) {
+        warnings.push({ year: d.year, type: '日銀自己資本バッファ超過', detail: `累積損失 ${fmt(d.bojCumulativeLoss)}兆円 > 自己資本バッファ${params.bojCapitalBuffer}兆円` })
       }
       if (d.dynamicRiskPremium > 0) {
-        warnings.push({ year: d.year, type: '通貨信任危機', detail: `リスクプレミアム+${fmt(d.dynamicRiskPremium)}%発動` })
+        warnings.push({ year: d.year, type: '通貨リスクプレミアム発動', detail: `経常赤字＋NFA防衛ライン割れ（リスクプレミアム+${fmt(d.dynamicRiskPremium)}%）` })
+      }
+      if (d.realWageGrowth < 0) {
+        consecutiveRealWageNeg++
+      } else {
+        consecutiveRealWageNeg = 0
+      }
+      if (consecutiveRealWageNeg >= 3) {
+        warnings.push({ year: d.year, type: '実質賃金3年連続マイナス', detail: `家計の実質購買力が継続的に低下（実質賃金伸び率 ${fmt(d.realWageGrowth)}%）` })
       }
     })
     return warnings
-  }, [simData])
+  }, [simData, params])
 
   const summaryStats = useMemo(() => {
     const last = simData[simData.length - 1]
     const first = simData[0]
     const interestExceedYear = simData.find(d => d.interest > d.policyExp)?.year
     const currentAccountDeficitYear = simData.find(d => d.currentAccount < 0)?.year
-    const bojInsolvencyYear = simData.find(d => d.bojCumulativeLoss > 12)?.year
+    const bojInsolvencyYear = simData.find(d => d.bojCumulativeLoss > params.bojCapitalBuffer)?.year
     const currencycrisisYear = simData.find(d => d.dynamicRiskPremium > 0)?.year
-    return { last, first, interestExceedYear, currentAccountDeficitYear, bojInsolvencyYear, currencycrisisYear }
-  }, [simData])
+    let consecutiveNeg = 0
+    let realWage3YearNegYear: number | undefined
+    for (const d of simData) {
+      if (d.realWageGrowth < 0) { consecutiveNeg++ } else { consecutiveNeg = 0 }
+      if (consecutiveNeg >= 3 && !realWage3YearNegYear) { realWage3YearNegYear = d.year; break }
+    }
+    return { last, first, interestExceedYear, currentAccountDeficitYear, bojInsolvencyYear, currencycrisisYear, realWage3YearNegYear }
+  }, [simData, params])
 
   const tableData = useMemo(() => {
     if (tableView === 'actual') {
