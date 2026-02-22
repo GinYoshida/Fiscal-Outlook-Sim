@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
-  ResponsiveContainer, BarChart, Bar, ReferenceLine, AreaChart, Area,
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+  ResponsiveContainer, BarChart, Bar, ReferenceLine,
   ComposedChart
 } from 'recharts'
 import type { SimResult } from './simulation'
@@ -323,14 +323,14 @@ export function SimulationTab({ params, simData, actualData }: Props) {
       <div className="chart-container">
         <div className="chart-title">利払い負担率の推移 （税収に対する利払い費の割合）</div>
         <ResponsiveContainer width="100%" height={300}>
-          <AreaChart data={interestBurdenData}>
+          <BarChart data={interestBurdenData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis dataKey="year" tick={{ fontSize: 11 }} />
             <YAxis tick={{ fontSize: 11 }} unit="%" />
             <Tooltip formatter={(v: number) => `${v.toFixed(1)}%`} />
             <ReferenceLine y={30} stroke="#ef4444" strokeDasharray="5 5" label={{ value: '警戒ライン30%', fill: '#ef4444', fontSize: 11 }} />
-            <Area type="monotone" dataKey="利払負担率" stroke="#f97316" fill="#fed7aa" strokeWidth={2} />
-          </AreaChart>
+            <Bar dataKey="利払負担率" fill="#f97316" />
+          </BarChart>
         </ResponsiveContainer>
       </div>
 
@@ -351,13 +351,13 @@ export function SimulationTab({ params, simData, actualData }: Props) {
       <div className="chart-container">
         <div className="chart-title">債務残高の推移</div>
         <ResponsiveContainer width="100%" height={300}>
-          <AreaChart data={debtData}>
+          <BarChart data={debtData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis dataKey="year" tick={{ fontSize: 11 }} />
             <YAxis tick={{ fontSize: 11 }} unit="兆円" />
             <Tooltip formatter={(v: number) => `${v.toLocaleString()} 兆円`} />
-            <Area type="monotone" dataKey="債務残高" stroke="#3b82f6" fill="#bfdbfe" strokeWidth={2} />
-          </AreaChart>
+            <Bar dataKey="債務残高" fill="#3b82f6" />
+          </BarChart>
         </ResponsiveContainer>
       </div>
 
@@ -370,9 +370,9 @@ export function SimulationTab({ params, simData, actualData }: Props) {
             <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11 }} />
             <Tooltip />
             <Legend />
-            <Area yAxisId="left" type="monotone" dataKey="貧困率" stroke="#ef4444" fill="#fecaca" strokeWidth={2} />
-            <Line yAxisId="right" type="monotone" dataKey="ジニ係数" stroke="#8b5cf6" strokeWidth={2} dot={false} />
-            <Line yAxisId="left" type="monotone" dataKey="実質賃金伸び率" stroke="#22c55e" strokeWidth={2} dot={false} strokeDasharray="5 5" />
+            <Bar yAxisId="left" dataKey="貧困率" fill="#ef4444" opacity={0.7} />
+            <Bar yAxisId="right" dataKey="ジニ係数" fill="#8b5cf6" opacity={0.7} />
+            <Bar yAxisId="left" dataKey="実質賃金伸び率" fill="#22c55e" opacity={0.7} />
           </ComposedChart>
         </ResponsiveContainer>
         <div className="chart-note">
@@ -384,11 +384,11 @@ export function SimulationTab({ params, simData, actualData }: Props) {
         <div className="chart-note" style={{ marginBottom: 8, textAlign: 'left', fontSize: 12, color: '#64748b' }}>
           年収400万円（中央値）の家計を想定。税・社会保険料30%、食費25.5%（エンゲル係数）、光熱費7.3%で計算。2026年との差額を表示。
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+        <div className="responsive-grid-2col">
           <div>
             <div className="chart-subtitle">可処分所得と生活費の変化（万円/年）</div>
             <ResponsiveContainer width="100%" height={280}>
-              <ComposedChart data={modelHouseholdData}>
+              <BarChart data={modelHouseholdData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                 <XAxis dataKey="year" tick={{ fontSize: 10 }} />
                 <YAxis tick={{ fontSize: 10 }} unit="万円" />
@@ -397,8 +397,8 @@ export function SimulationTab({ params, simData, actualData }: Props) {
                 <ReferenceLine y={0} stroke="#94a3b8" strokeDasharray="3 3" />
                 <Bar dataKey="食費増加" fill="#f97316" opacity={0.7} stackId="cost" />
                 <Bar dataKey="光熱費増加" fill="#ef4444" opacity={0.7} stackId="cost" />
-                <Line type="monotone" dataKey="可処分所得変化" stroke="#3b82f6" strokeWidth={2.5} dot={false} />
-              </ComposedChart>
+                <Bar dataKey="可処分所得変化" fill="#3b82f6" />
+              </BarChart>
             </ResponsiveContainer>
           </div>
           <div>
@@ -411,8 +411,8 @@ export function SimulationTab({ params, simData, actualData }: Props) {
                 <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10 }} />
                 <Tooltip />
                 <Legend />
-                <Area yAxisId="left" type="monotone" dataKey="所得格差倍率" stroke="#8b5cf6" fill="#ede9fe" strokeWidth={2} />
-                <Line yAxisId="right" type="monotone" dataKey="ジニ係数" stroke="#64748b" strokeWidth={1.5} dot={false} strokeDasharray="5 3" />
+                <Bar yAxisId="left" dataKey="所得格差倍率" fill="#8b5cf6" opacity={0.7} />
+                <Bar yAxisId="right" dataKey="ジニ係数" fill="#64748b" opacity={0.7} />
               </ComposedChart>
             </ResponsiveContainer>
           </div>
@@ -422,7 +422,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
           const d2055 = simData[simData.length - 1]
           const first = simData[0]
           return (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginTop: 12 }}>
+            <div className="responsive-grid-4col">
               <div className="metric-card">
                 <div className="metric-label">2035年 可処分所得変化</div>
                 <div className="metric-value" style={{ color: (d2035?.modelDisposableChange ?? 0) >= 0 ? '#22c55e' : '#ef4444' }}>
@@ -450,27 +450,27 @@ export function SimulationTab({ params, simData, actualData }: Props) {
         })()}
         <Collapsible title="モデル家計の詳細推移（年収・可処分所得・食費・光熱費）">
           <ResponsiveContainer width="100%" height={280}>
-            <LineChart data={modelSummaryData}>
+            <BarChart data={modelSummaryData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
               <XAxis dataKey="year" tick={{ fontSize: 10 }} />
               <YAxis tick={{ fontSize: 10 }} unit="万円" />
               <Tooltip formatter={(v: number) => `${v.toFixed(0)} 万円`} />
               <Legend />
-              <Line type="monotone" dataKey="名目年収" stroke="#3b82f6" strokeWidth={2} dot={false} />
-              <Line type="monotone" dataKey="可処分所得" stroke="#22c55e" strokeWidth={2} dot={false} />
-              <Line type="monotone" dataKey="食費" stroke="#f97316" strokeWidth={1.5} dot={false} strokeDasharray="5 3" />
-              <Line type="monotone" dataKey="光熱費" stroke="#ef4444" strokeWidth={1.5} dot={false} strokeDasharray="5 3" />
-            </LineChart>
+              <Bar dataKey="名目年収" fill="#3b82f6" />
+              <Bar dataKey="可処分所得" fill="#22c55e" />
+              <Bar dataKey="食費" fill="#f97316" />
+              <Bar dataKey="光熱費" fill="#ef4444" />
+            </BarChart>
           </ResponsiveContainer>
         </Collapsible>
       </Collapsible>
 
       <Collapsible title="貿易収支・為替レート" defaultOpen={true}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+        <div className="responsive-grid-2col">
           <div>
             <div className="chart-subtitle">貿易収支の推移</div>
             <ResponsiveContainer width="100%" height={250}>
-              <ComposedChart data={tradeData}>
+              <BarChart data={tradeData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                 <XAxis dataKey="year" tick={{ fontSize: 10 }} />
                 <YAxis tick={{ fontSize: 10 }} unit="兆円" />
@@ -478,20 +478,20 @@ export function SimulationTab({ params, simData, actualData }: Props) {
                 <Legend />
                 <Bar dataKey="輸出" fill="#22c55e" opacity={0.6} />
                 <Bar dataKey="輸入" fill="#ef4444" opacity={0.6} />
-                <Line type="monotone" dataKey="貿易収支" stroke="#3b82f6" strokeWidth={2} dot={false} />
-              </ComposedChart>
+                <Bar dataKey="貿易収支" fill="#3b82f6" />
+              </BarChart>
             </ResponsiveContainer>
           </div>
           <div>
             <div className="chart-subtitle">為替レートの推移</div>
             <ResponsiveContainer width="100%" height={250}>
-              <LineChart data={fxData}>
+              <BarChart data={fxData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                 <XAxis dataKey="year" tick={{ fontSize: 10 }} />
                 <YAxis tick={{ fontSize: 10 }} unit="円/$" />
                 <Tooltip formatter={(v: number) => `${v.toFixed(0)} 円/$`} />
-                <Line type="monotone" dataKey="為替レート" stroke="#f97316" strokeWidth={2} dot={false} />
-              </LineChart>
+                <Bar dataKey="為替レート" fill="#f97316" />
+              </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
@@ -541,16 +541,16 @@ export function SimulationTab({ params, simData, actualData }: Props) {
 
       <Collapsible title="金利・成長率・リスクプレミアム">
         <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={rateData}>
+          <BarChart data={rateData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis dataKey="year" tick={{ fontSize: 11 }} />
             <YAxis tick={{ fontSize: 11 }} unit="%" />
             <Tooltip />
             <Legend />
-            <Line type="monotone" dataKey="平均クーポン" stroke="#ef4444" strokeWidth={2} dot={false} />
-            <Line type="monotone" dataKey="市場金利" stroke="#3b82f6" strokeWidth={2} dot={false} strokeDasharray="5 5" />
-            <Line type="monotone" dataKey="名目成長率" stroke="#22c55e" strokeWidth={2} dot={false} strokeDasharray="5 5" />
-          </LineChart>
+            <Bar dataKey="平均クーポン" fill="#ef4444" />
+            <Bar dataKey="市場金利" fill="#3b82f6" />
+            <Bar dataKey="名目成長率" fill="#22c55e" />
+          </BarChart>
         </ResponsiveContainer>
       </Collapsible>
 
