@@ -525,8 +525,8 @@ F：対外純資産（NFA）と通貨信任
 
       <h2 className="section-title" style={{ marginTop: 24 }}>統合政府の仕組み</h2>
 
-      <Expander title="統合政府の資金フロー図（為替影響を含む）" defaultOpen={true}>
-        <svg viewBox="0 0 700 570" style={{ width: '100%', maxWidth: 700, display: 'block', margin: '0 auto' }}>
+      <Expander title="統合政府の資金フロー図（家計・為替影響を含む）" defaultOpen={true}>
+        <svg viewBox="0 0 700 680" style={{ width: '100%', maxWidth: 700, display: 'block', margin: '0 auto' }}>
           <defs>
             <marker id="ah-blue" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
               <path d="M0,0 L8,3 L0,6" fill="#3b82f6" />
@@ -552,13 +552,16 @@ F：対外純資産（NFA）と通貨信任
             <marker id="ah-rose" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
               <path d="M0,0 L8,3 L0,6" fill="#e11d48" />
             </marker>
+            <marker id="ah-pink" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+              <path d="M0,0 L8,3 L0,6" fill="#ec4899" />
+            </marker>
             <filter id="shadow" x="-4%" y="-4%" width="108%" height="108%">
               <feDropShadow dx="0" dy="2" stdDeviation="3" floodOpacity="0.1" />
             </filter>
           </defs>
 
-          <rect x="10" y="5" width="680" height="560" rx="12" fill="#f8fafc" stroke="#e2e8f0" strokeWidth="1" />
-          <text x="350" y="28" textAnchor="middle" fontSize="13" fill="#64748b" fontWeight="600">統合政府の資金フロー（為替影響を含む）</text>
+          <rect x="10" y="5" width="680" height="670" rx="12" fill="#f8fafc" stroke="#e2e8f0" strokeWidth="1" />
+          <text x="350" y="28" textAnchor="middle" fontSize="13" fill="#64748b" fontWeight="600">統合政府の資金フロー（家計・為替影響を含む）</text>
           <rect x="215" y="15" width="270" height="355" rx="8" fill="none" stroke="#3b82f6" strokeWidth="1.5" strokeDasharray="6 3" opacity="0.4" />
           <text x="350" y="50" textAnchor="middle" fontSize="10" fill="#3b82f6" opacity="0.7">統合政府</text>
 
@@ -586,6 +589,12 @@ F：対外純資産（NFA）と通貨信任
           <text x="340" y="437" textAnchor="middle" fontSize="11" fill="#92400e" fontWeight="700">💱 為替レート</text>
           <text x="340" y="452" textAnchor="middle" fontSize="9" fill="#92400e">円安↑ / 円高↓</text>
 
+          <rect x="430" y="420" width="240" height="90" rx="10" fill="#ec4899" filter="url(#shadow)" />
+          <text x="550" y="445" textAnchor="middle" fontSize="14" fill="white" fontWeight="700">🏠 家計（モデル年収400万円）</text>
+          <text x="550" y="463" textAnchor="middle" fontSize="9" fill="white" opacity="0.9">賃金収入 → 税・社保30% → 食費・光熱費 → 可処分所得</text>
+          <text x="550" y="478" textAnchor="middle" fontSize="9" fill="white" opacity="0.9">インフレ・円安 → 実質賃金↓ → 貧困率↑・格差拡大</text>
+          <text x="550" y="493" textAnchor="middle" fontSize="9" fill="white" opacity="0.9">食費(25.5%) + 光熱費(7.3%) = 生活コスト</text>
+
           <line x1="180" y1="185" x2="248" y2="110" stroke="#3b82f6" strokeWidth="2.5" markerEnd="url(#ah-blue)" />
           <rect x="170" y="132" width="70" height="22" rx="4" fill="white" stroke="#3b82f6" strokeWidth="1" />
           <text x="205" y="147" textAnchor="middle" fontSize="10" fill="#3b82f6" fontWeight="600">税金納付</text>
@@ -612,7 +621,7 @@ F：対外純資産（NFA）と通貨信任
           <rect x="492" y="242" width="86" height="22" rx="4" fill="white" stroke="#8b5cf6" strokeWidth="1" />
           <text x="535" y="257" textAnchor="middle" fontSize="10" fill="#8b5cf6" fontWeight="600">当座預金💰</text>
 
-          <line x1="70" y1="233" x2="70" y2="418" stroke="#d97706" strokeWidth="2.5" markerEnd="url(#ah-amber)" />
+          <path d="M 110 233 L 110 350 Q 110 370 110 380 L 110 418" fill="none" stroke="#d97706" strokeWidth="2.5" markerEnd="url(#ah-amber)" />
           <rect x="17" y="295" width="56" height="22" rx="4" fill="white" stroke="#d97706" strokeWidth="1" />
           <text x="45" y="310" textAnchor="middle" fontSize="10" fill="#d97706" fontWeight="600">輸出📦</text>
 
@@ -623,36 +632,50 @@ F：対外純資産（NFA）と通貨信任
           <text x="35" y="345" fontSize="9" fill="#d97706" fontWeight="600">円安→輸出増</text>
           <text x="120" y="345" fontSize="9" fill="#e11d48" fontWeight="600">円安→輸入高</text>
 
+          <path d="M 190 205 Q 310 240 430 440" fill="none" stroke="#22c55e" strokeWidth="2" markerEnd="url(#ah-green)" />
+          <rect x="255" y="280" width="70" height="22" rx="4" fill="white" stroke="#22c55e" strokeWidth="1" />
+          <text x="290" y="295" textAnchor="middle" fontSize="10" fill="#22c55e" fontWeight="600">賃金支払</text>
+
+          <line x1="430" y1="430" x2="250" y2="100" stroke="#3b82f6" strokeWidth="2" strokeDasharray="5 3" markerEnd="url(#ah-blue)" />
+          <rect x="320" y="370" width="100" height="22" rx="4" fill="white" stroke="#3b82f6" strokeWidth="1" />
+          <text x="370" y="385" textAnchor="middle" fontSize="10" fill="#3b82f6" fontWeight="600">税・社保30%</text>
+
           <path d="M 212 440 Q 260 410 280 440" fill="none" stroke="#d97706" strokeWidth="1.5" strokeDasharray="4 2" markerEnd="url(#ah-amber)" />
+
+          <path d="M 430 470 C 350 470 200 450 150 430" fill="none" stroke="#e11d48" strokeWidth="2" strokeDasharray="5 3" markerEnd="url(#ah-rose)" />
+          <rect x="260" y="480" width="110" height="22" rx="4" fill="#fff1f2" stroke="#e11d48" strokeWidth="1" />
+          <text x="315" y="495" textAnchor="middle" fontSize="9" fill="#e11d48" fontWeight="600">食費・光熱費支出</text>
+
+          <path d="M 280 430 L 430 460" fill="none" stroke="#ec4899" strokeWidth="2" strokeDasharray="5 3" markerEnd="url(#ah-pink)" />
+          <rect x="310" y="520" width="130" height="22" rx="4" fill="#fdf2f8" stroke="#ec4899" strokeWidth="1" />
+          <text x="375" y="535" textAnchor="middle" fontSize="9" fill="#ec4899" fontWeight="600">円安→物価↑→生活費↑</text>
 
           <path d="M 220 420 C 240 390 248 200 250 116" fill="none" stroke="#e11d48" strokeWidth="2" strokeDasharray="5 3" markerEnd="url(#ah-rose)" />
           <rect x="215" y="375" width="130" height="22" rx="4" fill="#fff1f2" stroke="#e11d48" strokeWidth="1" />
           <text x="280" y="390" textAnchor="middle" fontSize="9" fill="#e11d48" fontWeight="600">円安→法人税↑・補助金↑</text>
 
-          <text x="35" y="360" fontSize="8" fill="#e11d48">コストプッシュ</text>
-          <text x="35" y="370" fontSize="8" fill="#e11d48">→CPI↑→実質賃金↓</text>
-
-          <path d="M 450 110 C 490 110 540 300 530 400 C 525 430 480 455 402 448" fill="none" stroke="#d97706" strokeWidth="2" strokeDasharray="5 3" markerEnd="url(#ah-amber)" />
+          <path d="M 450 110 C 490 110 540 300 530 400 C 525 430 480 412 402 430" fill="none" stroke="#d97706" strokeWidth="2" strokeDasharray="5 3" markerEnd="url(#ah-amber)" />
           <rect x="500" y="340" width="130" height="22" rx="4" fill="#fffbeb" stroke="#d97706" strokeWidth="1" />
           <text x="565" y="355" textAnchor="middle" fontSize="9" fill="#92400e" fontWeight="600">外貨準備評価益→歳入</text>
 
-          <rect x="250" y="485" width="400" height="36" rx="6" fill="#fffbeb" stroke="#d97706" strokeWidth="1" opacity="0.8" />
-          <text x="270" y="500" fontSize="9" fill="#92400e" fontWeight="600">為替影響まとめ：</text>
-          <text x="270" y="513" fontSize="8.5" fill="#64748b">円安 → 輸出企業利益↑(法人税↑) / 輸入コスト↑(CPI↑・補助金↑) / 外貨準備評価益↑(歳入↑)</text>
+          <rect x="30" y="555" width="640" height="48" rx="6" fill="#fdf2f8" stroke="#ec4899" strokeWidth="1" opacity="0.8" />
+          <text x="50" y="572" fontSize="9" fill="#92400e" fontWeight="600">家計への影響まとめ：</text>
+          <text x="50" y="587" fontSize="8.5" fill="#64748b">賃金収入 − 税・社保(30%) − 食費(CPI連動) − 光熱費(円安連動) = 可処分所得 → 貧困率・格差に影響</text>
+          <text x="50" y="600" fontSize="8.5" fill="#64748b">円安 → 輸入物価↑ → CPI↑ → 実質賃金↓ → 貧困率↑ / 資産成長{'>'} 賃金成長 → 格差拡大（ジニ係数↑）</text>
 
-          <g transform="translate(20, 525)">
+          <g transform="translate(20, 630)">
             <circle cx="8" cy="6" r="4" fill="#3b82f6" /><text x="16" y="10" fontSize="9" fill="#475569">税金</text>
             <circle cx="52" cy="6" r="4" fill="#ef4444" /><text x="60" y="10" fontSize="9" fill="#475569">公共サービス</text>
             <circle cx="134" cy="6" r="4" fill="#f97316" /><text x="142" y="10" fontSize="9" fill="#475569">国債発行</text>
             <circle cx="206" cy="6" r="4" fill="#14b8a6" /><text x="214" y="10" fontSize="9" fill="#475569">国債売却</text>
-            <circle cx="268" cy="6" r="4" fill="#22c55e" /><text x="276" y="10" fontSize="9" fill="#475569">納付金</text>
-            <circle cx="326" cy="6" r="4" fill="#8b5cf6" /><text x="334" y="10" fontSize="9" fill="#475569">当座預金</text>
-            <circle cx="388" cy="6" r="4" fill="#d97706" /><text x="396" y="10" fontSize="9" fill="#475569">輸出</text>
-            <circle cx="428" cy="6" r="4" fill="#e11d48" /><text x="436" y="10" fontSize="9" fill="#475569">輸入</text>
-            <line x1="470" y1="6" x2="500" y2="6" stroke="#e11d48" strokeWidth="1.5" strokeDasharray="5 3" />
-            <text x="505" y="10" fontSize="9" fill="#e11d48">為替フィードバック</text>
-            <line x1="596" y1="6" x2="626" y2="6" stroke="#3b82f6" strokeWidth="1.5" strokeDasharray="6 3" />
-            <text x="631" y="10" fontSize="9" fill="#3b82f6">統合政府</text>
+            <circle cx="268" cy="6" r="4" fill="#22c55e" /><text x="276" y="10" fontSize="9" fill="#475569">賃金・納付金</text>
+            <circle cx="350" cy="6" r="4" fill="#ec4899" /><text x="358" y="10" fontSize="9" fill="#475569">家計</text>
+            <circle cx="392" cy="6" r="4" fill="#d97706" /><text x="400" y="10" fontSize="9" fill="#475569">輸出</text>
+            <circle cx="432" cy="6" r="4" fill="#e11d48" /><text x="440" y="10" fontSize="9" fill="#475569">輸入・生活費</text>
+            <line x1="514" y1="6" x2="544" y2="6" stroke="#e11d48" strokeWidth="1.5" strokeDasharray="5 3" />
+            <text x="549" y="10" fontSize="9" fill="#e11d48">フィードバック</text>
+            <line x1="616" y1="6" x2="646" y2="6" stroke="#3b82f6" strokeWidth="1.5" strokeDasharray="6 3" />
+            <text x="651" y="10" fontSize="9" fill="#3b82f6">統合政府</text>
           </g>
         </svg>
       </Expander>

@@ -732,6 +732,12 @@ body {
   gap: 16px;
 }
 
+.responsive-grid-3col {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
 .responsive-grid-4col {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -777,6 +783,10 @@ body {
   }
 
   .responsive-grid-2col {
+    grid-template-columns: 1fr;
+  }
+
+  .responsive-grid-3col {
     grid-template-columns: 1fr;
   }
 

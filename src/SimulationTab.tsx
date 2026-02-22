@@ -2,7 +2,6 @@ import { useState, useMemo } from 'react'
 import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ResponsiveContainer, BarChart, Bar, ReferenceLine,
-  ComposedChart
 } from 'recharts'
 import type { SimResult } from './simulation'
 import type { ActualDataPoint, SimParams } from './data'
@@ -481,21 +480,44 @@ export function SimulationTab({ params, simData, actualData }: Props) {
       </div>
 
       <Collapsible title="家計への影響（貧困率・ジニ係数・実質賃金）" defaultOpen={true}>
-        <ResponsiveContainer width="100%" height={300}>
-          <ComposedChart data={householdData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-            <XAxis dataKey="year" tick={{ fontSize: 11 }} />
-            <YAxis yAxisId="left" tick={{ fontSize: 11 }} unit="%" />
-            <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11 }} />
-            <Tooltip />
-            <Legend />
-            <Bar yAxisId="left" dataKey="貧困率" fill="#ef4444" opacity={0.7} />
-            <Bar yAxisId="right" dataKey="ジニ係数" fill="#8b5cf6" opacity={0.7} />
-            <Bar yAxisId="left" dataKey="実質賃金伸び率" fill="#22c55e" opacity={0.7} />
-          </ComposedChart>
-        </ResponsiveContainer>
-        <div className="chart-note">
-          左軸: 貧困率(%)・実質賃金伸び率(%) / 右軸: ジニ係数(×100)
+        <div className="responsive-grid-3col">
+          <div>
+            <div className="chart-subtitle">貧困率の推移（%）</div>
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={householdData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis dataKey="year" tick={{ fontSize: 10 }} />
+                <YAxis tick={{ fontSize: 10 }} unit="%" />
+                <Tooltip formatter={(v: number) => `${v.toFixed(1)}%`} />
+                <Bar dataKey="貧困率" fill="#ef4444" opacity={0.7} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          <div>
+            <div className="chart-subtitle">ジニ係数の推移（x100）</div>
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={householdData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis dataKey="year" tick={{ fontSize: 10 }} />
+                <YAxis tick={{ fontSize: 10 }} />
+                <Tooltip formatter={(v: number) => `${v.toFixed(1)}`} />
+                <Bar dataKey="ジニ係数" fill="#8b5cf6" opacity={0.7} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          <div>
+            <div className="chart-subtitle">実質賃金伸び率（%）</div>
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={householdData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis dataKey="year" tick={{ fontSize: 10 }} />
+                <YAxis tick={{ fontSize: 10 }} unit="%" />
+                <Tooltip formatter={(v: number) => `${v.toFixed(1)}%`} />
+                <ReferenceLine y={0} stroke="#94a3b8" strokeDasharray="3 3" />
+                <Bar dataKey="実質賃金伸び率" fill="#22c55e" opacity={0.7} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       </Collapsible>
 
@@ -523,16 +545,13 @@ export function SimulationTab({ params, simData, actualData }: Props) {
           <div>
             <div className="chart-subtitle">所得格差倍率（上位20%÷下位20%）</div>
             <ResponsiveContainer width="100%" height={280}>
-              <ComposedChart data={incomeRatioData}>
+              <BarChart data={incomeRatioData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                 <XAxis dataKey="year" tick={{ fontSize: 10 }} />
-                <YAxis yAxisId="left" tick={{ fontSize: 10 }} unit="倍" />
-                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10 }} />
-                <Tooltip />
-                <Legend />
-                <Bar yAxisId="left" dataKey="所得格差倍率" fill="#8b5cf6" opacity={0.7} />
-                <Bar yAxisId="right" dataKey="ジニ係数" fill="#64748b" opacity={0.7} />
-              </ComposedChart>
+                <YAxis tick={{ fontSize: 10 }} unit="倍" />
+                <Tooltip formatter={(v: number) => `${v.toFixed(2)}倍`} />
+                <Bar dataKey="所得格差倍率" fill="#8b5cf6" opacity={0.7} />
+              </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
@@ -621,33 +640,40 @@ export function SimulationTab({ params, simData, actualData }: Props) {
           <div>
             <div className="chart-subtitle">対外純資産の推移</div>
             <ResponsiveContainer width="100%" height={250}>
-              <ComposedChart data={nfaData}>
+              <BarChart data={nfaData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                 <XAxis dataKey="year" tick={{ fontSize: 10 }} />
                 <YAxis tick={{ fontSize: 10 }} unit="兆円" />
                 <Tooltip formatter={(v: number) => `${v.toLocaleString()} 兆円`} />
                 <ReferenceLine y={params.nfaThreshold} stroke="#ef4444" strokeDasharray="5 5" label={{ value: `防衛ライン${params.nfaThreshold}兆円`, fill: '#ef4444', fontSize: 10 }} />
                 <Bar dataKey="対外純資産" fill="#3b82f6" opacity={0.7} />
-              </ComposedChart>
+              </BarChart>
             </ResponsiveContainer>
           </div>
           <div>
-            <div className="chart-subtitle">経常収支の推移</div>
+            <div className="chart-subtitle">経常収支の推移（兆円）</div>
             <ResponsiveContainer width="100%" height={250}>
-              <ComposedChart data={nfaData}>
+              <BarChart data={nfaData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                 <XAxis dataKey="year" tick={{ fontSize: 10 }} />
-                <YAxis yAxisId="left" tick={{ fontSize: 10 }} unit="兆円" />
-                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10 }} unit="%" />
-                <Tooltip />
-                <Legend />
-                <ReferenceLine yAxisId="left" y={0} stroke="#94a3b8" strokeDasharray="3 3" />
-                <Bar yAxisId="left" dataKey="経常収支" fill="#22c55e" />
-                <Bar yAxisId="right" dataKey="通貨リスク加算" fill="#ef4444" opacity={0.7} />
-              </ComposedChart>
+                <YAxis tick={{ fontSize: 10 }} unit="兆円" />
+                <Tooltip formatter={(v: number) => `${v.toFixed(1)} 兆円`} />
+                <ReferenceLine y={0} stroke="#94a3b8" strokeDasharray="3 3" />
+                <Bar dataKey="経常収支" fill="#22c55e" />
+              </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
+        <div className="chart-subtitle" style={{ marginTop: 12 }}>通貨リスクプレミアム加算（%）</div>
+        <ResponsiveContainer width="100%" height={200}>
+          <BarChart data={nfaData}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+            <XAxis dataKey="year" tick={{ fontSize: 10 }} />
+            <YAxis tick={{ fontSize: 10 }} unit="%" />
+            <Tooltip formatter={(v: number) => `${v.toFixed(1)}%`} />
+            <Bar dataKey="通貨リスク加算" fill="#ef4444" opacity={0.7} />
+          </BarChart>
+        </ResponsiveContainer>
         <div className="chart-note">
           経常収支 = 貿易収支 + 所得収支（NFA×3%）。経常赤字＋NFA防衛ライン割れで通貨リスクプレミアムが金利に自動加算されます。
         </div>
@@ -724,37 +750,91 @@ export function SimulationTab({ params, simData, actualData }: Props) {
       </Collapsible>
 
       <Collapsible title="日銀収支（統合政府への影響）">
-        <ResponsiveContainer width="100%" height={300}>
-          <ComposedChart data={bojData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-            <XAxis dataKey="year" tick={{ fontSize: 11 }} />
-            <YAxis tick={{ fontSize: 11 }} unit="兆円" />
-            <Tooltip formatter={(v: number) => `${v.toFixed(1)} 兆円`} />
-            <Legend />
-            <ReferenceLine y={0} stroke="#94a3b8" />
-            <Bar dataKey="日銀純利益" fill="#94a3b8" opacity={0.5} />
-            <Bar dataKey="統合政府への反映額" fill="#22c55e" />
-            <Bar dataKey="累積損失" fill="#ef4444" opacity={0.4} />
-          </ComposedChart>
-        </ResponsiveContainer>
+        <div className="responsive-grid-3col">
+          <div>
+            <div className="chart-subtitle">日銀純利益（兆円）</div>
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={bojData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis dataKey="year" tick={{ fontSize: 10 }} />
+                <YAxis tick={{ fontSize: 10 }} unit="兆円" />
+                <Tooltip formatter={(v: number) => `${v.toFixed(1)} 兆円`} />
+                <ReferenceLine y={0} stroke="#94a3b8" />
+                <Bar dataKey="日銀純利益" fill="#94a3b8" opacity={0.7} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          <div>
+            <div className="chart-subtitle">統合政府への反映額（兆円）</div>
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={bojData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis dataKey="year" tick={{ fontSize: 10 }} />
+                <YAxis tick={{ fontSize: 10 }} unit="兆円" />
+                <Tooltip formatter={(v: number) => `${v.toFixed(1)} 兆円`} />
+                <ReferenceLine y={0} stroke="#94a3b8" />
+                <Bar dataKey="統合政府への反映額" fill="#22c55e" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          <div>
+            <div className="chart-subtitle">累積損失（兆円）</div>
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={bojData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis dataKey="year" tick={{ fontSize: 10 }} />
+                <YAxis tick={{ fontSize: 10 }} unit="兆円" />
+                <Tooltip formatter={(v: number) => `${v.toFixed(1)} 兆円`} />
+                <ReferenceLine y={-params.bojCapitalBuffer} stroke="#ef4444" strokeDasharray="5 5" label={{ value: `バッファ-${params.bojCapitalBuffer}兆`, fill: '#ef4444', fontSize: 9 }} />
+                <Bar dataKey="累積損失" fill="#ef4444" opacity={0.6} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
         <div className="chart-note">
           逆ザヤ時（純利益マイナス）の累積損失が自己資本バッファ（{params.bojCapitalBuffer}兆円）を超えると、マイナスが歳入を直接減少させます
         </div>
       </Collapsible>
 
       <Collapsible title="金利・成長率・リスクプレミアム">
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={rateData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-            <XAxis dataKey="year" tick={{ fontSize: 11 }} />
-            <YAxis tick={{ fontSize: 11 }} unit="%" />
-            <Tooltip />
-            <Legend />
-            <Bar dataKey="平均クーポン" fill="#ef4444" />
-            <Bar dataKey="実効市場金利" fill="#3b82f6" />
-            <Bar dataKey="名目成長率" fill="#22c55e" />
-          </BarChart>
-        </ResponsiveContainer>
+        <div className="responsive-grid-3col">
+          <div>
+            <div className="chart-subtitle">平均クーポン（%）</div>
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={rateData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis dataKey="year" tick={{ fontSize: 10 }} />
+                <YAxis tick={{ fontSize: 10 }} unit="%" />
+                <Tooltip formatter={(v: number) => `${v.toFixed(2)}%`} />
+                <Bar dataKey="平均クーポン" fill="#ef4444" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          <div>
+            <div className="chart-subtitle">実効市場金利（%）</div>
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={rateData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis dataKey="year" tick={{ fontSize: 10 }} />
+                <YAxis tick={{ fontSize: 10 }} unit="%" />
+                <Tooltip formatter={(v: number) => `${v.toFixed(2)}%`} />
+                <Bar dataKey="実効市場金利" fill="#3b82f6" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          <div>
+            <div className="chart-subtitle">名目成長率（%）</div>
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={rateData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis dataKey="year" tick={{ fontSize: 10 }} />
+                <YAxis tick={{ fontSize: 10 }} unit="%" />
+                <Tooltip formatter={(v: number) => `${v.toFixed(2)}%`} />
+                <Bar dataKey="名目成長率" fill="#22c55e" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
       </Collapsible>
 
       <h2 className="section-title" style={{ marginTop: 24 }}>データ表</h2>
