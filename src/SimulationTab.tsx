@@ -74,6 +74,16 @@ const WARNING_DETAILS: Record<string, { impact: string[]; options: string[] }> =
       '政府からの資本注入による自己資本の回復',
     ],
   },
+  '前年比100%超の変化': {
+    impact: [
+      'シミュレーション結果に前年比100%を超える急激な変動が含まれています',
+      'パラメータ設定が極端な値になっている可能性があります',
+    ],
+    options: [
+      'パラメータの設定値を確認・調整してください',
+      '別のシナリオと比較して妥当性を検証してください',
+    ],
+  },
 }
 
 function WarningAccordion({ warnings }: { warnings: { year: number; type: string; detail: string }[] }) {
@@ -127,6 +137,44 @@ function WarningAccordion({ warnings }: { warnings: { year: number; type: string
   )
 }
 
+const ALL_YEARS = Array.from({ length: 41 }, (_, i) => 2015 + i)
+
+function fillYearGaps<T extends Record<string, unknown>>(data: T[]): (T & { _noData?: boolean })[] {
+  const dataMap = new Map<number, T>()
+  data.forEach(d => dataMap.set(d.year as number, d))
+  return ALL_YEARS.map(year => {
+    if (dataMap.has(year)) return { ...dataMap.get(year)!, _noData: false }
+    const entry: Record<string, unknown> = { year, _noData: true }
+    if (data.length > 0) {
+      Object.keys(data[0]).forEach(key => {
+        if (key !== 'year' && key !== '_noData' && key !== 'type') entry[key] = null
+      })
+    }
+    return entry as T & { _noData?: boolean }
+  })
+}
+
+function NoDataTooltip({ active, payload, label, unit, decimals }: { active?: boolean; payload?: Array<{ name: string; value: number | null; color: string }>; label?: number; unit?: string; decimals?: number }) {
+  if (!active || !payload || !label) return null
+  const isNoData = payload.every(p => p.value === null || p.value === undefined)
+  const dec = decimals ?? 1
+  const u = unit ?? ''
+  return (
+    <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 6, padding: '8px 12px', fontSize: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+      <div style={{ fontWeight: 600, marginBottom: 4 }}>{label}年度</div>
+      {isNoData ? (
+        <div style={{ color: '#94a3b8' }}>実績なし</div>
+      ) : (
+        payload.filter(p => p.value !== null && p.value !== undefined).map((p, i) => (
+          <div key={i} style={{ color: p.color, marginBottom: 2 }}>
+            {p.name}: {typeof p.value === 'number' ? (dec === 0 ? p.value.toLocaleString() : p.value.toFixed(dec)) : p.value}{u}
+          </div>
+        ))
+      )}
+    </div>
+  )
+}
+
 function Collapsible({ title, children, defaultOpen = false }: { title: string; children: React.ReactNode; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen)
   return (
@@ -148,21 +196,21 @@ export function SimulationTab({ params, simData, actualData }: Props) {
   const [tableView, setTableView] = useState<'5year' | 'full' | 'actual' | 'combined'>('combined')
 
   const interestBurdenData = useMemo(() => {
-    const actual = actualData.map(d => ({ year: d.year, 利払負担率: d.interestBurden, type: '実績' }))
-    const sim = simData.map(d => ({ year: d.year, 利払負担率: parseFloat(d.interestBurden.toFixed(1)), type: 'シミュレーション' }))
-    return [...actual, ...sim]
+    const actual = actualData.map(d => ({ year: d.year, 利払負担率: d.interestBurden }))
+    const sim = simData.map(d => ({ year: d.year, 利払負担率: parseFloat(d.interestBurden.toFixed(1)) }))
+    return fillYearGaps([...actual, ...sim])
   }, [actualData, simData])
 
   const fiscalBalanceData = useMemo(() => {
-    const actual = actualData.map(d => ({ year: d.year, 財政収支: d.fiscalBalance, type: '実績' }))
-    const sim = simData.map(d => ({ year: d.year, 財政収支: parseFloat(d.fiscalBalance.toFixed(1)), type: 'シミュレーション' }))
-    return [...actual, ...sim]
+    const actual = actualData.map(d => ({ year: d.year, 財政収支: d.fiscalBalance }))
+    const sim = simData.map(d => ({ year: d.year, 財政収支: parseFloat(d.fiscalBalance.toFixed(1)) }))
+    return fillYearGaps([...actual, ...sim])
   }, [actualData, simData])
 
   const debtData = useMemo(() => {
-    const actual = actualData.map(d => ({ year: d.year, 債務残高: d.debt, type: '実績' }))
-    const sim = simData.map(d => ({ year: d.year, 債務残高: Math.round(d.debt), type: 'シミュレーション' }))
-    return [...actual, ...sim]
+    const actual = actualData.map(d => ({ year: d.year, 債務残高: d.debt }))
+    const sim = simData.map(d => ({ year: d.year, 債務残高: Math.round(d.debt) }))
+    return fillYearGaps([...actual, ...sim])
   }, [actualData, simData])
 
   const revenueData = useMemo(() => {
@@ -173,7 +221,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
       year: d.year, 消費税: parseFloat(d.taxConsumption.toFixed(1)), 所得税: parseFloat(d.taxIncome.toFixed(1)),
       法人税: parseFloat(d.taxCorporate.toFixed(1)), その他税: parseFloat(d.taxOther.toFixed(1))
     }))
-    return [...actual, ...sim]
+    return fillYearGaps([...actual, ...sim])
   }, [actualData, simData])
 
   const revenueRatioData = useMemo(() => {
@@ -189,7 +237,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
     }
     const actual = actualData.map(d => ({ year: d.year, ...toRatio({ 消費税: d.taxConsumption, 所得税: d.taxIncome, 法人税: d.taxCorporate, その他税: d.taxOther }) }))
     const sim = simData.map(d => ({ year: d.year, ...toRatio({ 消費税: d.taxConsumption, 所得税: d.taxIncome, 法人税: d.taxCorporate, その他税: d.taxOther }) }))
-    return [...actual, ...sim]
+    return fillYearGaps([...actual, ...sim])
   }, [actualData, simData])
 
   const expenditureData = useMemo(() => {
@@ -197,7 +245,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
     const sim = simData.map(d => ({
       year: d.year, 政策経費: parseFloat(d.policyExp.toFixed(1)), 利払い費: parseFloat(d.interest.toFixed(1))
     }))
-    return [...actual, ...sim]
+    return fillYearGaps([...actual, ...sim])
   }, [actualData, simData])
 
   const expenditureRatioData = useMemo(() => {
@@ -209,28 +257,29 @@ export function SimulationTab({ params, simData, actualData }: Props) {
       const total = d.policyExp + d.interest
       return { year: d.year, 政策経費: parseFloat((d.policyExp / total * 100).toFixed(1)), 利払い費: parseFloat((d.interest / total * 100).toFixed(1)) }
     })
-    return [...actual, ...sim]
+    return fillYearGaps([...actual, ...sim])
   }, [actualData, simData])
 
   const bojData = useMemo(() => {
-    const actual = actualData.map(d => ({ year: d.year, '日銀純利益': d.bojPayment, '統合政府への反映額': d.bojPayment }))
+    const actual = actualData.map(d => ({ year: d.year, '日銀純利益': d.bojPayment as number | null, '統合政府への反映額': d.bojPayment as number | null, '累積損失': null as number | null }))
     const sim = simData.map(d => ({
       year: d.year,
       '日銀純利益': parseFloat(d.bojNetIncome.toFixed(1)),
       '統合政府への反映額': parseFloat(d.bojPayment.toFixed(1)),
       '累積損失': parseFloat((-d.bojCumulativeLoss).toFixed(1)),
     }))
-    return [...actual, ...sim]
+    return fillYearGaps([...actual, ...sim])
   }, [actualData, simData])
 
   const rateData = useMemo(() => {
     const nominalG = params.inflationRate + params.realGrowth
-    return simData.map(d => ({
+    const sim = simData.map(d => ({
       year: d.year,
       平均クーポン: parseFloat(d.avgCoupon.toFixed(2)),
       実効市場金利: parseFloat(d.effectiveMarketRate.toFixed(2)),
       名目成長率: parseFloat(nominalG.toFixed(2)),
     }))
+    return fillYearGaps(sim)
   }, [params, simData])
 
   const householdData = useMemo(() => {
@@ -238,23 +287,25 @@ export function SimulationTab({ params, simData, actualData }: Props) {
       year: d.year,
       貧困率: parseFloat(d.povertyRate.toFixed(1)),
       ジニ係数: parseFloat((d.giniIndex * 100).toFixed(1)),
+      実質賃金伸び率: null as number | null,
     }))
     const sim = simData.map(d => ({
       year: d.year,
       貧困率: parseFloat(d.povertyRate.toFixed(1)),
       ジニ係数: parseFloat((d.giniIndex * 100).toFixed(1)),
-      実質賃金伸び率: parseFloat(d.realWageGrowth.toFixed(1)),
+      実質賃金伸び率: parseFloat(d.realWageGrowth.toFixed(1)) as number | null,
     }))
-    return [...actual, ...sim]
+    return fillYearGaps([...actual, ...sim])
   }, [actualData, simData])
 
   const modelHouseholdData = useMemo(() => {
-    return simData.map(d => ({
+    const sim = simData.map(d => ({
       year: d.year,
       可処分所得変化: parseFloat(d.modelDisposableChange.toFixed(1)),
       食費増加: parseFloat(d.modelFoodCostChange.toFixed(1)),
       光熱費増加: parseFloat(d.modelEnergyCostChange.toFixed(1)),
     }))
+    return fillYearGaps(sim)
   }, [simData])
 
   const incomeRatioData = useMemo(() => {
@@ -268,17 +319,18 @@ export function SimulationTab({ params, simData, actualData }: Props) {
       所得格差倍率: parseFloat(d.incomeRatio.toFixed(2)),
       ジニ係数: parseFloat(d.giniIndex.toFixed(3)),
     }))
-    return [...actual, ...sim]
+    return fillYearGaps([...actual, ...sim])
   }, [actualData, simData])
 
   const modelSummaryData = useMemo(() => {
-    return simData.map(d => ({
+    const sim = simData.map(d => ({
       year: d.year,
       名目年収: parseFloat(d.modelIncome.toFixed(0)),
       可処分所得: parseFloat(d.modelDisposable.toFixed(0)),
       食費: parseFloat(d.modelFoodCost.toFixed(0)),
       光熱費: parseFloat(d.modelEnergyCost.toFixed(0)),
     }))
+    return fillYearGaps(sim)
   }, [simData])
 
   const tradeData = useMemo(() => {
@@ -294,7 +346,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
       輸入: parseFloat(d.importAmount.toFixed(1)),
       貿易収支: parseFloat(d.tradeBalance.toFixed(1)),
     }))
-    return [...actual, ...sim]
+    return fillYearGaps([...actual, ...sim])
   }, [actualData, simData])
 
   const fxData = useMemo(() => {
@@ -306,21 +358,34 @@ export function SimulationTab({ params, simData, actualData }: Props) {
       year: d.year,
       為替レート: parseFloat(d.exchangeRate.toFixed(0)),
     }))
-    return [...actual, ...sim]
+    return fillYearGaps([...actual, ...sim])
   }, [actualData, simData])
 
   const nfaData = useMemo(() => {
-    return simData.map(d => ({
+    const sim = simData.map(d => ({
       year: d.year,
       対外純資産: parseFloat(d.nfa.toFixed(0)),
       経常収支: parseFloat(d.currentAccount.toFixed(1)),
       通貨リスク加算: parseFloat(d.dynamicRiskPremium.toFixed(1)),
     }))
+    return fillYearGaps(sim)
   }, [simData])
 
   const summaryWarnings = useMemo(() => {
     const warnings: { year: number; type: string; detail: string }[] = []
     let consecutiveRealWageNeg = 0
+
+    const monitoredFields: { key: keyof SimResult; label: string }[] = [
+      { key: 'tax', label: '税収' },
+      { key: 'interest', label: '利払い費' },
+      { key: 'fiscalBalance', label: '財政収支' },
+      { key: 'bojPayment', label: '日銀納付金' },
+      { key: 'tradeBalance', label: '貿易収支' },
+      { key: 'policyExp', label: '政策経費' },
+      { key: 'energySubsidy', label: 'エネルギー補助金' },
+      { key: 'dynamicRiskPremium', label: 'リスクプレミアム' },
+    ]
+
     simData.forEach((d, i) => {
       if (d.interestBurden > 30) {
         warnings.push({ year: d.year, type: '利払負担率30%超過', detail: `利払負担率 ${fmt(d.interestBurden)}%（税収の${fmt(d.interestBurden)}%が利払いに消費）` })
@@ -341,6 +406,32 @@ export function SimulationTab({ params, simData, actualData }: Props) {
       }
       if (consecutiveRealWageNeg >= 3) {
         warnings.push({ year: d.year, type: '実質賃金3年連続マイナス', detail: `家計の実質購買力が継続的に低下（実質賃金伸び率 ${fmt(d.realWageGrowth)}%）` })
+      }
+
+      if (i > 0) {
+        const prev = simData[i - 1]
+        for (const { key, label } of monitoredFields) {
+          const currVal = d[key] as number
+          const prevVal = prev[key] as number
+          if (Math.sign(currVal) === Math.sign(prevVal) && currVal !== 0) {
+            if (prevVal === 0) {
+              warnings.push({
+                year: d.year,
+                type: '前年比100%超の変化',
+                detail: `${label}の変化が大きいです（${fmt(prevVal)}→${fmt(currVal)}、ゼロから発生）。確認してください`,
+              })
+            } else {
+              const changeRate = Math.abs((currVal - prevVal) / prevVal)
+              if (changeRate > 1.0) {
+                warnings.push({
+                  year: d.year,
+                  type: '前年比100%超の変化',
+                  detail: `${label}の変化が大きいです（${fmt(prevVal)}→${fmt(currVal)}、前年比${fmt(changeRate * 100, 0)}%増）。確認してください`,
+                })
+              }
+            }
+          }
+        }
       }
     })
     return warnings
@@ -574,7 +665,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis dataKey="year" tick={{ fontSize: 11 }} />
             <YAxis tick={{ fontSize: 11 }} unit="%" />
-            <Tooltip formatter={(v: number) => `${v.toFixed(1)}%`} />
+            <Tooltip content={<NoDataTooltip unit="%" />} />
             <ReferenceLine y={30} stroke="#ef4444" strokeDasharray="5 5" label={{ value: '警戒ライン30%', fill: '#ef4444', fontSize: 11 }} />
             <Bar dataKey="利払負担率" fill="#f97316" />
           </BarChart>
@@ -588,7 +679,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis dataKey="year" tick={{ fontSize: 11 }} />
             <YAxis tick={{ fontSize: 11 }} unit="兆円" />
-            <Tooltip formatter={(v: number) => `${v.toFixed(1)} 兆円`} />
+            <Tooltip content={<NoDataTooltip unit=" 兆円" />} />
             <ReferenceLine y={0} stroke="#94a3b8" />
             <Bar dataKey="財政収支" fill={(entry: Record<string, unknown>) => ((entry as {財政収支: number}).財政収支 >= 0 ? '#22c55e' : '#ef4444')} />
           </BarChart>
@@ -602,7 +693,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis dataKey="year" tick={{ fontSize: 11 }} />
             <YAxis tick={{ fontSize: 11 }} unit="兆円" />
-            <Tooltip formatter={(v: number) => `${v.toLocaleString()} 兆円`} />
+            <Tooltip content={<NoDataTooltip unit=" 兆円" decimals={0} />} />
             <Bar dataKey="債務残高" fill="#3b82f6" />
           </BarChart>
         </ResponsiveContainer>
@@ -615,7 +706,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis dataKey="year" tick={{ fontSize: 10 }} />
             <YAxis tick={{ fontSize: 10 }} unit="%" />
-            <Tooltip formatter={(v: number) => `${v.toFixed(1)}%`} />
+            <Tooltip content={<NoDataTooltip unit="%" />} />
             <Bar dataKey="貧困率" fill="#ef4444" opacity={0.7} />
           </BarChart>
         </ResponsiveContainer>
@@ -625,8 +716,8 @@ export function SimulationTab({ params, simData, actualData }: Props) {
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis dataKey="year" tick={{ fontSize: 10 }} />
             <YAxis tick={{ fontSize: 10 }} />
-            <Tooltip formatter={(v: number) => `${v.toFixed(1)}`} />
-            <Bar dataKey="ジニ係数" fill="#8b5cf6" opacity={0.7} />
+            <Tooltip content={<NoDataTooltip />} />
+            <Bar dataKey="ジニ係数" fill="#8b5cf6"  opacity={0.7} />
           </BarChart>
         </ResponsiveContainer>
         <div className="chart-subtitle" style={{ marginTop: 16 }}>実質賃金伸び率（%）</div>
@@ -635,7 +726,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis dataKey="year" tick={{ fontSize: 10 }} />
             <YAxis tick={{ fontSize: 10 }} unit="%" />
-            <Tooltip formatter={(v: number) => `${v.toFixed(1)}%`} />
+            <Tooltip content={<NoDataTooltip unit="%" />} />
             <ReferenceLine y={0} stroke="#94a3b8" strokeDasharray="3 3" />
             <Bar dataKey="実質賃金伸び率" fill="#22c55e" opacity={0.7} />
           </BarChart>
@@ -652,7 +743,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis dataKey="year" tick={{ fontSize: 10 }} />
             <YAxis tick={{ fontSize: 10 }} unit="万円" />
-            <Tooltip formatter={(v: number) => `${v >= 0 ? '+' : ''}${v.toFixed(1)} 万円`} />
+            <Tooltip content={<NoDataTooltip unit=" 万円" />} />
             <Legend />
             <ReferenceLine y={0} stroke="#94a3b8" strokeDasharray="3 3" />
             <Bar dataKey="食費増加" fill="#f97316" opacity={0.7} stackId="cost" />
@@ -666,7 +757,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis dataKey="year" tick={{ fontSize: 10 }} />
             <YAxis tick={{ fontSize: 10 }} unit="倍" />
-            <Tooltip formatter={(v: number) => `${v.toFixed(2)}倍`} />
+            <Tooltip content={<NoDataTooltip unit="倍" decimals={2} />} />
             <Bar dataKey="所得格差倍率" fill="#8b5cf6" opacity={0.7} />
           </BarChart>
         </ResponsiveContainer>
@@ -707,7 +798,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
               <XAxis dataKey="year" tick={{ fontSize: 10 }} />
               <YAxis tick={{ fontSize: 10 }} unit="万円" />
-              <Tooltip formatter={(v: number) => `${v.toFixed(0)} 万円`} />
+              <Tooltip content={<NoDataTooltip unit=" 万円" decimals={0} />} />
               <Legend />
               <Bar dataKey="名目年収" fill="#3b82f6" />
               <Bar dataKey="可処分所得" fill="#22c55e" />
@@ -725,7 +816,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis dataKey="year" tick={{ fontSize: 10 }} />
             <YAxis tick={{ fontSize: 10 }} unit="兆円" />
-            <Tooltip />
+            <Tooltip content={<NoDataTooltip unit=" 兆円" />} />
             <Legend />
             <Bar dataKey="輸出" fill="#22c55e" opacity={0.6} />
             <Bar dataKey="輸入" fill="#ef4444" opacity={0.6} />
@@ -738,7 +829,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis dataKey="year" tick={{ fontSize: 10 }} />
             <YAxis tick={{ fontSize: 10 }} unit="円/$" />
-            <Tooltip formatter={(v: number) => `${v.toFixed(0)} 円/$`} />
+            <Tooltip content={<NoDataTooltip unit=" 円/$" decimals={0} />} />
             <Bar dataKey="為替レート" fill="#f97316" />
           </BarChart>
         </ResponsiveContainer>
@@ -751,7 +842,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis dataKey="year" tick={{ fontSize: 10 }} />
             <YAxis tick={{ fontSize: 10 }} unit="兆円" />
-            <Tooltip formatter={(v: number) => `${v.toLocaleString()} 兆円`} />
+            <Tooltip content={<NoDataTooltip unit=" 兆円" decimals={0} />} />
             <ReferenceLine y={params.nfaThreshold} stroke="#ef4444" strokeDasharray="5 5" label={{ value: `防衛ライン${params.nfaThreshold}兆円`, fill: '#ef4444', fontSize: 10 }} />
             <Bar dataKey="対外純資産" fill="#3b82f6" opacity={0.7} />
           </BarChart>
@@ -762,7 +853,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis dataKey="year" tick={{ fontSize: 10 }} />
             <YAxis tick={{ fontSize: 10 }} unit="兆円" />
-            <Tooltip formatter={(v: number) => `${v.toFixed(1)} 兆円`} />
+            <Tooltip content={<NoDataTooltip unit=" 兆円" />} />
             <ReferenceLine y={0} stroke="#94a3b8" strokeDasharray="3 3" />
             <Bar dataKey="経常収支" fill="#22c55e" />
           </BarChart>
@@ -773,7 +864,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis dataKey="year" tick={{ fontSize: 10 }} />
             <YAxis tick={{ fontSize: 10 }} unit="%" />
-            <Tooltip formatter={(v: number) => `${v.toFixed(1)}%`} />
+            <Tooltip content={<NoDataTooltip unit="%" />} />
             <Bar dataKey="通貨リスク加算" fill="#ef4444" opacity={0.7} />
           </BarChart>
         </ResponsiveContainer>
@@ -789,7 +880,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis dataKey="year" tick={{ fontSize: 10 }} />
             <YAxis tick={{ fontSize: 10 }} unit="兆円" />
-            <Tooltip />
+            <Tooltip content={<NoDataTooltip unit=" 兆円" />} />
             <Legend />
             <Bar dataKey="消費税" stackId="a" fill="#3b82f6" />
             <Bar dataKey="所得税" stackId="a" fill="#22c55e" />
@@ -803,7 +894,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis dataKey="year" tick={{ fontSize: 10 }} />
             <YAxis tick={{ fontSize: 10 }} unit="%" domain={[0, 100]} />
-            <Tooltip formatter={(v: number) => `${v.toFixed(1)}%`} />
+            <Tooltip content={<NoDataTooltip unit="%" />} />
             <Legend />
             <Bar dataKey="消費税" stackId="a" fill="#3b82f6" />
             <Bar dataKey="所得税" stackId="a" fill="#22c55e" />
@@ -820,7 +911,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis dataKey="year" tick={{ fontSize: 10 }} />
             <YAxis tick={{ fontSize: 10 }} unit="兆円" />
-            <Tooltip />
+            <Tooltip content={<NoDataTooltip unit=" 兆円" />} />
             <Legend />
             <Bar dataKey="政策経費" stackId="a" fill="#3b82f6" />
             <Bar dataKey="利払い費" stackId="a" fill="#ef4444" />
@@ -832,7 +923,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis dataKey="year" tick={{ fontSize: 10 }} />
             <YAxis tick={{ fontSize: 10 }} unit="%" domain={[0, 100]} />
-            <Tooltip formatter={(v: number) => `${v.toFixed(1)}%`} />
+            <Tooltip content={<NoDataTooltip unit="%" />} />
             <Legend />
             <Bar dataKey="政策経費" stackId="a" fill="#3b82f6" />
             <Bar dataKey="利払い費" stackId="a" fill="#ef4444" />
@@ -847,7 +938,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis dataKey="year" tick={{ fontSize: 10 }} />
             <YAxis tick={{ fontSize: 10 }} unit="兆円" />
-            <Tooltip formatter={(v: number) => `${v.toFixed(1)} 兆円`} />
+            <Tooltip content={<NoDataTooltip unit=" 兆円" />} />
             <ReferenceLine y={0} stroke="#94a3b8" />
             <Bar dataKey="日銀純利益" fill="#94a3b8" opacity={0.7} />
           </BarChart>
@@ -858,7 +949,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis dataKey="year" tick={{ fontSize: 10 }} />
             <YAxis tick={{ fontSize: 10 }} unit="兆円" />
-            <Tooltip formatter={(v: number) => `${v.toFixed(1)} 兆円`} />
+            <Tooltip content={<NoDataTooltip unit=" 兆円" />} />
             <ReferenceLine y={0} stroke="#94a3b8" />
             <Bar dataKey="統合政府への反映額" fill="#22c55e" />
           </BarChart>
@@ -869,7 +960,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis dataKey="year" tick={{ fontSize: 10 }} />
             <YAxis tick={{ fontSize: 10 }} unit="兆円" />
-            <Tooltip formatter={(v: number) => `${v.toFixed(1)} 兆円`} />
+            <Tooltip content={<NoDataTooltip unit=" 兆円" />} />
             <ReferenceLine y={-params.bojCapitalBuffer} stroke="#ef4444" strokeDasharray="5 5" label={{ value: `バッファ-${params.bojCapitalBuffer}兆`, fill: '#ef4444', fontSize: 9 }} />
             <Bar dataKey="累積損失" fill="#ef4444" opacity={0.6} />
           </BarChart>
@@ -886,7 +977,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis dataKey="year" tick={{ fontSize: 10 }} />
             <YAxis tick={{ fontSize: 10 }} unit="%" />
-            <Tooltip formatter={(v: number) => `${v.toFixed(2)}%`} />
+            <Tooltip content={<NoDataTooltip unit="%" />} />
             <Bar dataKey="平均クーポン" fill="#ef4444" />
           </BarChart>
         </ResponsiveContainer>
@@ -896,7 +987,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis dataKey="year" tick={{ fontSize: 10 }} />
             <YAxis tick={{ fontSize: 10 }} unit="%" />
-            <Tooltip formatter={(v: number) => `${v.toFixed(2)}%`} />
+            <Tooltip content={<NoDataTooltip unit="%" />} />
             <Bar dataKey="実効市場金利" fill="#3b82f6" />
           </BarChart>
         </ResponsiveContainer>
@@ -906,7 +997,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis dataKey="year" tick={{ fontSize: 10 }} />
             <YAxis tick={{ fontSize: 10 }} unit="%" />
-            <Tooltip formatter={(v: number) => `${v.toFixed(2)}%`} />
+            <Tooltip content={<NoDataTooltip unit="%" />} />
             <Bar dataKey="名目成長率" fill="#22c55e" />
           </BarChart>
         </ResponsiveContainer>
