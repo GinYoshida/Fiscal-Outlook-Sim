@@ -74,6 +74,19 @@ const WARNING_DETAILS: Record<string, { impact: string[]; options: string[] }> =
       '政府からの資本注入による自己資本の回復',
     ],
   },
+  '財政収支の慢性的赤字': {
+    impact: [
+      '財政赤字が長期間続くと国債発行残高が雪だるま式に膨らみ、利払い費が加速度的に増加する',
+      '市場の財政信認が低下し、国債の金利上昇（リスクプレミアム）につながる可能性がある',
+      '将来世代への負担が増大し、社会保障・教育・インフラへの投資余力が失われる',
+    ],
+    options: [
+      '歳入改革（税制の見直し・課税ベースの拡大）',
+      '歳出改革（社会保障の効率化・行政のデジタル化によるコスト削減）',
+      '経済成長戦略による税収の自然増（名目GDP成長率の引き上げ）',
+      'プライマリーバランス黒字化目標の設定と工程表の策定',
+    ],
+  },
   '前年比100%超の変化': {
     impact: [
       'シミュレーション結果に前年比100%を超える急激な変動が含まれています',
@@ -374,6 +387,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
   const summaryWarnings = useMemo(() => {
     const warnings: { year: number; type: string; detail: string }[] = []
     let consecutiveRealWageNeg = 0
+    let consecutiveFiscalDeficit = 0
 
     const monitoredFields: { key: keyof SimResult; label: string }[] = [
       { key: 'tax', label: '税収' },
@@ -406,6 +420,14 @@ export function SimulationTab({ params, simData, actualData }: Props) {
       }
       if (consecutiveRealWageNeg >= 3) {
         warnings.push({ year: d.year, type: '実質賃金3年連続マイナス', detail: `家計の実質購買力が継続的に低下（実質賃金伸び率 ${fmt(d.realWageGrowth)}%）` })
+      }
+      if (d.fiscalBalance < 0) {
+        consecutiveFiscalDeficit++
+      } else {
+        consecutiveFiscalDeficit = 0
+      }
+      if (consecutiveFiscalDeficit >= 5) {
+        warnings.push({ year: d.year, type: '財政収支の慢性的赤字', detail: `財政赤字が${consecutiveFiscalDeficit}年連続で継続中（${d.year}年度の財政収支: ${fmt(d.fiscalBalance)}兆円）。回復の兆しが見えません` })
       }
 
       if (i > 0) {
