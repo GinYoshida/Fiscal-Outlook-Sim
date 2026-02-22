@@ -564,15 +564,15 @@ function WaterfallChart({ data, otherRev, isActual, year }: {
     { label: '歳入合計', value: data.totalRevenue, type: 'total' as const },
     { label: '政策経費', value: -data.policyExp, type: 'expense' as const },
     { label: '利払い費', value: -data.interest, type: 'expense' as const },
-    { label: '歳出合計', value: -data.totalCost, type: 'total' as const },
+    { label: '歳出合計', value: -data.totalCost, type: 'exptotal' as const },
     { label: '財政収支', value: data.fiscalBalance, type: 'result' as const },
   ]
 
   const wfChartData = useMemo(() => {
     let runningTotal = 0;
+    let expenseStart = 0;
     return items.map((item) => {
-      if (item.type === 'subtotal' || item.type === 'total' || item.type === 'result') {
-        const base = 0;
+      if (item.type === 'subtotal' || item.type === 'total') {
         const val = item.value;
         return {
           name: item.label,
@@ -582,8 +582,32 @@ function WaterfallChart({ data, otherRev, isActual, year }: {
           type: item.type,
         };
       }
+      if (item.type === 'result') {
+        const val = item.value;
+        return {
+          name: item.label,
+          base: val >= 0 ? 0 : val,
+          value: Math.abs(val),
+          rawValue: val,
+          type: item.type,
+        };
+      }
+      if (item.type === 'exptotal') {
+        const val = item.value;
+        const absVal = Math.abs(val);
+        return {
+          name: item.label,
+          base: expenseStart - absVal,
+          value: absVal,
+          rawValue: val,
+          type: item.type,
+        };
+      }
       const start = runningTotal;
       runningTotal += item.value;
+      if (item.type === 'expense' && expenseStart === 0) {
+        expenseStart = start;
+      }
       if (item.value >= 0) {
         return {
           name: item.label,
@@ -607,7 +631,7 @@ function WaterfallChart({ data, otherRev, isActual, year }: {
   const wfLabel = isActual ? '実績' : 'シミュレーション'
 
   const getColor = (type: string, rawValue: number) => {
-    if (type === 'total' || type === 'subtotal') return '#334155';
+    if (type === 'total' || type === 'subtotal' || type === 'exptotal') return '#334155';
     if (type === 'result') return rawValue >= 0 ? '#22c55e' : '#ef4444';
     if (type === 'expense') return '#ef4444';
     if (isActual) return '#64748b';
