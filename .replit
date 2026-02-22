@@ -2,6 +2,7 @@ modules = ["python-3.11", "nodejs-20"]
 [deployment]
 deploymentTarget = "autoscale"
 run = ["streamlit", "run", "app.py", "--server.port", "5000"]
+publicDir = "dist/public"
 
 [nix]
 channel = "stable-25_05"
