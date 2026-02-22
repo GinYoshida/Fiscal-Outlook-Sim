@@ -38,6 +38,19 @@ ACTUAL_DATA = [
     {"year": 2024, "tax": 75.2, "interest": 9.6, "debt": 1103, "policyExp": 73.5, "totalRevenue": 90.6, "totalCost": 83.1, "fiscalBalance": 7.5, "interestBurden": 12.8, "avgCoupon": 0.9, "bojPayment": 2.2},
 ]
 
+ACTUAL_MACRO = [
+    {"year": 2015, "jgb10y": 0.36, "nominalGrowth": 3.5, "inflation": 0.8, "realGrowth": 2.7},
+    {"year": 2016, "jgb10y": -0.07, "nominalGrowth": 1.1, "inflation": -0.1, "realGrowth": 1.2},
+    {"year": 2017, "jgb10y": 0.06, "nominalGrowth": 2.0, "inflation": 0.5, "realGrowth": 1.5},
+    {"year": 2018, "jgb10y": 0.07, "nominalGrowth": 0.3, "inflation": 1.0, "realGrowth": -0.7},
+    {"year": 2019, "jgb10y": -0.09, "nominalGrowth": 0.8, "inflation": 0.5, "realGrowth": 0.3},
+    {"year": 2020, "jgb10y": 0.02, "nominalGrowth": -3.9, "inflation": 0.0, "realGrowth": -3.9},
+    {"year": 2021, "jgb10y": 0.07, "nominalGrowth": 2.4, "inflation": -0.2, "realGrowth": 2.6},
+    {"year": 2022, "jgb10y": 0.25, "nominalGrowth": 1.6, "inflation": 2.5, "realGrowth": -0.9},
+    {"year": 2023, "jgb10y": 0.55, "nominalGrowth": 5.7, "inflation": 3.2, "realGrowth": 2.5},
+    {"year": 2024, "jgb10y": 1.05, "nominalGrowth": 3.2, "inflation": 2.7, "realGrowth": 0.5},
+]
+
 DATA_SOURCES = [
     {"name": "一般会計税収の推移", "url": "https://www.mof.go.jp/tax_policy/summary/condition/a03.htm", "desc": "税収データ"},
     {"name": "財政に関する資料", "url": "https://www.mof.go.jp/tax_policy/summary/condition/a02.htm", "desc": "歳出・国債費"},
@@ -276,6 +289,65 @@ with tab1:
     fig5.add_trace(go.Bar(x=sim_years, y=sim_boj, name="予測", marker_color="#8b5cf6"))
     fig5.update_layout(yaxis_title="兆円", barmode="group")
     st.plotly_chart(fig5, use_container_width=True, config=PLOTLY_CONFIG)
+
+    st.subheader("金利・成長率・リスクプレミアムの推移")
+
+    nominal_g_sim = p["inflationRate"] + p["realGrowth"]
+    market_rate_sim = nominal_g_sim + p["riskPremium"]
+
+    actual_macro_years = [d["year"] for d in ACTUAL_MACRO]
+    actual_jgb = [d["jgb10y"] for d in ACTUAL_MACRO]
+    actual_ng = [d["nominalGrowth"] for d in ACTUAL_MACRO]
+    actual_rp = [d["jgb10y"] - d["nominalGrowth"] for d in ACTUAL_MACRO]
+
+    fig6 = make_chart("", height=400)
+
+    fig6.add_trace(go.Scatter(
+        x=actual_macro_years, y=actual_jgb, name="10Y国債利回り(実績)",
+        mode="lines+markers", line=dict(color="#f97316", width=2),
+        marker=dict(size=6),
+    ))
+    fig6.add_trace(go.Scatter(
+        x=actual_macro_years, y=actual_ng, name="名目GDP成長率(実績)",
+        mode="lines+markers", line=dict(color="#3b82f6", width=2),
+        marker=dict(size=6),
+    ))
+    fig6.add_trace(go.Bar(
+        x=actual_macro_years, y=actual_rp, name="r−g スプレッド(実績)",
+        marker_color=["#ef4444" if v > 0 else "#22c55e" for v in actual_rp],
+        opacity=0.5,
+    ))
+
+    fig6.add_trace(go.Scatter(
+        x=sim_years, y=[market_rate_sim] * len(sim_years), name=f"市場金利(設定: {market_rate_sim:.1f}%)",
+        mode="lines", line=dict(color="#f97316", width=2, dash="dash"),
+    ))
+    fig6.add_trace(go.Scatter(
+        x=sim_years, y=[nominal_g_sim] * len(sim_years), name=f"名目成長率(設定: {nominal_g_sim:.1f}%)",
+        mode="lines", line=dict(color="#3b82f6", width=2, dash="dash"),
+    ))
+
+    fig6.add_hline(y=0, line_color="#94a3b8", line_dash="dot", line_width=1)
+
+    fig6.add_annotation(
+        x=2040, y=p["riskPremium"],
+        text=f"設定リスクプレミアム: {p['riskPremium']:.1f}%",
+        showarrow=True, arrowhead=2, font=dict(size=11, color="#ef4444"),
+        bgcolor="rgba(255,255,255,0.9)", bordercolor="#ef4444", borderpad=4,
+        ax=0, ay=-40,
+    )
+
+    fig6.update_layout(
+        yaxis_title="%",
+        barmode="overlay",
+    )
+    st.plotly_chart(fig6, use_container_width=True, config=PLOTLY_CONFIG)
+
+    avg_rp = sum(actual_rp) / len(actual_rp)
+    recent_rp = sum(actual_rp[-3:]) / 3
+    st.caption(f"r−gスプレッド（リスクプレミアムに相当）: 2015〜2024年平均 **{avg_rp:.1f}%** / 直近3年平均 **{recent_rp:.1f}%** / 設定値 **{p['riskPremium']:.1f}%**")
+    st.caption("※ 実績のr−gスプレッドはYCC（イールドカーブ・コントロール）により人為的に抑制されていた期間を含むため、将来の正常化後はスプレッドが拡大する可能性があります。")
+    st.caption("出典：財務省「国債金利情報」、内閣府「国民経済計算」")
 
     with st.expander("📋 全年度データを表示"):
         df_all = pd.DataFrame(sim_data)
