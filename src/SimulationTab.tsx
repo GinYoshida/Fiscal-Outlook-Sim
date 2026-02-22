@@ -379,6 +379,33 @@ export function SimulationTab({ params, simData, actualData }: Props) {
     return { years, rows, actualYearCount: 0 }
   }
 
+  function escapeCsvField(field: string): string {
+    if (field.includes(',') || field.includes('"') || field.includes('\n')) {
+      return `"${field.replace(/"/g, '""')}"`
+    }
+    return field
+  }
+
+  function downloadCSV(data: { years: number[]; rows: { label: string; values: string[]; indent?: number }[] }) {
+    const header = ['項目', ...data.years.map(String)]
+    const csvRows = [header.map(escapeCsvField).join(',')]
+    for (const row of data.rows) {
+      if (row.label === '─') continue
+      const label = row.label.replace(/[├│└─　]/g, '').trim()
+      const values = row.values.map(v => escapeCsvField(v))
+      csvRows.push([escapeCsvField(label), ...values].join(','))
+    }
+    const bom = '\uFEFF'
+    const blob = new Blob([bom + csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    const viewLabel = tableView === 'combined' ? '実績予測' : tableView === '5year' ? '予測5年' : tableView === 'full' ? '予測全30年' : '実績'
+    a.download = `財政シミュレーション_${viewLabel}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <div>
       <div className="summary-panel">
@@ -843,6 +870,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
         <button className={tableView === '5year' ? 'active' : ''} onClick={() => setTableView('5year')}>予測5年おき</button>
         <button className={tableView === 'full' ? 'active' : ''} onClick={() => setTableView('full')}>予測全30年</button>
         <button className={tableView === 'actual' ? 'active' : ''} onClick={() => setTableView('actual')}>実績のみ</button>
+        <button className="csv-download-btn" onClick={() => downloadCSV(tableData)}>📥 CSV</button>
       </div>
       <div className="data-table-container">
         <table className="data-table">

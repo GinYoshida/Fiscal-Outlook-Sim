@@ -492,6 +492,16 @@ body {
   display: flex;
   gap: 4px;
   margin-bottom: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.csv-download-btn {
+  margin-left: auto;
+  background: var(--blue) !important;
+  color: white !important;
+  border-color: var(--blue) !important;
+  font-weight: 600;
 }
 
 .view-toggle button {
@@ -757,7 +767,7 @@ body {
     height: 100dvh;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
-    padding-bottom: 80px;
+    padding-bottom: calc(120px + env(safe-area-inset-bottom, 0px));
   }
 
   .sidebar.open {
