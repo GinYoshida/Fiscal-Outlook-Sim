@@ -391,6 +391,9 @@ export function ExplanationTab({ params, simData, actualData, dataSources }: Pro
         <div className="prose" style={{ marginTop: 12 }}>
           <p><strong>ポイント：統合政府で見ると金利上昇の影響は相殺される？</strong></p>
           <p>上図は各金利水準での日銀純利益（逆ザヤ時はマイナス）を示しています。累積損失が自己資本バッファ（{p.bojCapitalBuffer}兆円）を超えた場合、マイナスの純利益が統合政府の歳入を直接減少させます。</p>
+          <p style={{ fontSize: 13, color: '#64748b', margin: '8px 0' }}>
+            自己資本バッファ {p.bojCapitalBuffer}兆円の根拠（2024年度決算ベース）：資本金 0.001兆円 + 法定準備金 約3.5兆円 + 債券取引損失引当金 約8.6兆円 ≒ 約12兆円。この範囲内であれば逆ザヤの損失を吸収でき、納付金はゼロで下げ止まります。バッファを超過した損失は統合政府の歳入を直接圧迫します。
+          </p>
           <p>一見すると、金利が上がれば政府の利払い費は増加しますが、日銀の保有国債からの利息収入も増えるため、統合政府としては相殺されるように見えます。しかし実際には：</p>
           <ol style={{ paddingLeft: 20, marginTop: 8 }}>
             <li><strong>タイムラグ</strong>：利払い費は9年借換ロジックで徐々に上昇するが、日銀の保有国債利回りはさらに遅れて上昇</li>
