@@ -32,7 +32,7 @@ function fmt(v: number, decimals = 1): string {
 }
 
 export function SimulationTab({ params, simData, actualData }: Props) {
-  const [tableView, setTableView] = useState<'5year' | 'full' | 'actual'>('5year')
+  const [tableView, setTableView] = useState<'5year' | 'full' | 'actual' | 'combined'>('combined')
 
   const warningData = simData.find(d => d.interestBurden > 30)
 
@@ -91,44 +91,65 @@ export function SimulationTab({ params, simData, actualData }: Props) {
   }, [params, simData])
 
   const householdData = useMemo(() => {
-    return simData.map(d => ({
+    const actual = actualData.map(d => ({
+      year: d.year,
+      貧困率: parseFloat(d.povertyRate.toFixed(1)),
+      ジニ係数: parseFloat((d.giniIndex * 100).toFixed(1)),
+    }))
+    const sim = simData.map(d => ({
       year: d.year,
       貧困率: parseFloat(d.povertyRate.toFixed(1)),
       ジニ係数: parseFloat((d.giniIndex * 100).toFixed(1)),
       実質賃金伸び率: parseFloat(d.realWageGrowth.toFixed(1)),
     }))
-  }, [simData])
+    return [...actual, ...sim]
+  }, [actualData, simData])
 
   const tradeData = useMemo(() => {
-    return simData.map(d => ({
+    const actual = actualData.map(d => ({
       year: d.year,
       輸出: parseFloat(d.exportAmount.toFixed(1)),
       輸入: parseFloat(d.importAmount.toFixed(1)),
       貿易収支: parseFloat(d.tradeBalance.toFixed(1)),
     }))
-  }, [simData])
+    const sim = simData.map(d => ({
+      year: d.year,
+      輸出: parseFloat(d.exportAmount.toFixed(1)),
+      輸入: parseFloat(d.importAmount.toFixed(1)),
+      貿易収支: parseFloat(d.tradeBalance.toFixed(1)),
+    }))
+    return [...actual, ...sim]
+  }, [actualData, simData])
 
   const fxData = useMemo(() => {
-    return simData.map(d => ({
+    const actual = actualData.map(d => ({
       year: d.year,
       為替レート: parseFloat(d.exchangeRate.toFixed(0)),
     }))
-  }, [simData])
+    const sim = simData.map(d => ({
+      year: d.year,
+      為替レート: parseFloat(d.exchangeRate.toFixed(0)),
+    }))
+    return [...actual, ...sim]
+  }, [actualData, simData])
 
   const tableData = useMemo(() => {
     if (tableView === 'actual') {
       return buildActualTable()
     }
+    if (tableView === 'combined') {
+      return buildCombinedTable(params)
+    }
     const years = tableView === '5year'
       ? simData.filter((_, i) => i % 5 === 0 || i === 29)
       : simData
     return buildSimTable(years, params)
-  }, [tableView, simData, params])
+  }, [tableView, simData, actualData, params])
 
   function buildActualTable() {
     const data = ACTUAL_DATA
     const years = data.map(d => d.year)
-    const rows: { label: string; values: string[]; indent?: number }[] = [
+    const rows: { label: string; values: string[]; indent?: number; isActual?: boolean }[] = [
       { label: '歳入合計', values: data.map(d => fmt(d.totalRevenue)) },
       { label: '├ 税収合計', values: data.map(d => fmt(d.tax)), indent: 1 },
       { label: '│　├ 消費税', values: data.map(d => fmt(d.taxConsumption)), indent: 2 },
@@ -146,11 +167,54 @@ export function SimulationTab({ params, simData, actualData }: Props) {
       { label: '債務残高', values: data.map(d => fmt(d.debt, 0)) },
       { label: '利払負担率 (%)', values: data.map(d => fmt(d.interestBurden)) },
       { label: '平均クーポン (%)', values: data.map(d => fmt(d.avgCoupon)) },
+      { label: '─', values: years.map(() => '') },
+      { label: '為替レート (円/$)', values: data.map(d => fmt(d.exchangeRate, 0)) },
+      { label: '貿易収支 (兆円)', values: data.map(d => fmt(d.tradeBalance)) },
+      { label: '├ 輸出', values: data.map(d => fmt(d.exportAmount)), indent: 1 },
+      { label: '└ 輸入', values: data.map(d => fmt(d.importAmount)), indent: 1 },
+      { label: '─', values: years.map(() => '') },
+      { label: '貧困率 (%)', values: data.map(d => fmt(d.povertyRate)) },
+      { label: 'ジニ係数', values: data.map(d => fmt(d.giniIndex, 3)) },
     ]
-    return { years, rows }
+    return { years, rows, actualYearCount: 0 }
   }
 
-  function buildSimTable(data: SimResult[], p: SimParams) {
+  function buildCombinedTable(p: SimParams) {
+    const aData = ACTUAL_DATA
+    const sFiltered = simData.filter((_, i) => i % 5 === 0 || i === 29)
+    const years = [...aData.map(d => d.year), ...sFiltered.map(d => d.year)]
+    const actualCount = aData.length
+    const rows: { label: string; values: string[]; indent?: number }[] = [
+      { label: '歳入合計', values: [...aData.map(d => fmt(d.totalRevenue)), ...sFiltered.map(d => fmt(d.totalRevenue))] },
+      { label: '├ 税収合計', values: [...aData.map(d => fmt(d.tax)), ...sFiltered.map(d => fmt(d.tax))], indent: 1 },
+      { label: '│　├ 消費税', values: [...aData.map(d => fmt(d.taxConsumption)), ...sFiltered.map(d => fmt(d.taxConsumption))], indent: 2 },
+      { label: '│　├ 所得税', values: [...aData.map(d => fmt(d.taxIncome)), ...sFiltered.map(d => fmt(d.taxIncome))], indent: 2 },
+      { label: '│　├ 法人税', values: [...aData.map(d => fmt(d.taxCorporate)), ...sFiltered.map(d => fmt(d.taxCorporate))], indent: 2 },
+      { label: '│　└ その他税', values: [...aData.map(d => fmt(d.taxOther)), ...sFiltered.map(d => fmt(d.taxOther))], indent: 2 },
+      { label: '├ 日銀納付金', values: [...aData.map(d => fmt(d.bojPayment)), ...sFiltered.map(d => fmt(d.bojPayment))], indent: 1 },
+      { label: '└ その他収入', values: [...aData.map(d => fmt(d.totalRevenue - d.tax - d.bojPayment)), ...sFiltered.map(d => fmt(d.otherRevStamp + d.otherRevGov + d.otherRevAsset + d.otherRevMisc))], indent: 1 },
+      { label: '─', values: years.map(() => '') },
+      { label: '支出合計', values: [...aData.map(d => fmt(d.totalCost)), ...sFiltered.map(d => fmt(d.totalCost))] },
+      { label: '├ 政策経費', values: [...aData.map(d => fmt(d.policyExp)), ...sFiltered.map(d => fmt(d.policyExp))], indent: 1 },
+      { label: '└ 利払い費', values: [...aData.map(d => fmt(d.interest)), ...sFiltered.map(d => fmt(d.interest))], indent: 1 },
+      { label: '─', values: years.map(() => '') },
+      { label: '財政収支', values: [...aData.map(d => fmt(d.fiscalBalance)), ...sFiltered.map(d => fmt(d.fiscalBalance))] },
+      { label: '国債発行額', values: [...aData.map(() => '―'), ...sFiltered.map(d => fmt(d.bondIssuance))] },
+      { label: '債務残高', values: [...aData.map(d => fmt(d.debt, 0)), ...sFiltered.map(d => fmt(d.debt, 0))] },
+      { label: '利払負担率 (%)', values: [...aData.map(d => fmt(d.interestBurden)), ...sFiltered.map(d => fmt(d.interestBurden))] },
+      { label: '─', values: years.map(() => '') },
+      { label: '為替レート (円/$)', values: [...aData.map(d => fmt(d.exchangeRate, 0)), ...sFiltered.map(d => fmt(d.exchangeRate, 0))] },
+      { label: '貿易収支 (兆円)', values: [...aData.map(d => fmt(d.tradeBalance)), ...sFiltered.map(d => fmt(d.tradeBalance))] },
+      { label: '├ 輸出', values: [...aData.map(d => fmt(d.exportAmount)), ...sFiltered.map(d => fmt(d.exportAmount))], indent: 1 },
+      { label: '└ 輸入', values: [...aData.map(d => fmt(d.importAmount)), ...sFiltered.map(d => fmt(d.importAmount))], indent: 1 },
+      { label: '─', values: years.map(() => '') },
+      { label: '貧困率 (%)', values: [...aData.map(d => fmt(d.povertyRate)), ...sFiltered.map(d => fmt(d.povertyRate))] },
+      { label: 'ジニ係数', values: [...aData.map(d => fmt(d.giniIndex, 3)), ...sFiltered.map(d => fmt(d.giniIndex, 3))] },
+    ]
+    return { years, rows, actualYearCount: actualCount }
+  }
+
+  function buildSimTable(data: SimResult[], _p: SimParams) {
     const years = data.map(d => d.year)
     const rows: { label: string; values: string[]; indent?: number }[] = [
       { label: '歳入合計', values: data.map(d => fmt(d.totalRevenue)) },
@@ -187,7 +251,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
       { label: 'ジニ係数', values: data.map(d => fmt(d.giniIndex, 3)) },
       { label: '実質賃金伸び率 (%)', values: data.map(d => fmt(d.realWageGrowth)) },
     ]
-    return { years, rows }
+    return { years, rows, actualYearCount: 0 }
   }
 
   return (
@@ -353,16 +417,20 @@ export function SimulationTab({ params, simData, actualData }: Props) {
 
       <h2 className="section-title" style={{ marginTop: 24 }}>データ表</h2>
       <div className="view-toggle">
-        <button className={tableView === '5year' ? 'active' : ''} onClick={() => setTableView('5year')}>5年おき</button>
-        <button className={tableView === 'full' ? 'active' : ''} onClick={() => setTableView('full')}>全30年</button>
-        <button className={tableView === 'actual' ? 'active' : ''} onClick={() => setTableView('actual')}>実績 2015-2024</button>
+        <button className={tableView === 'combined' ? 'active' : ''} onClick={() => setTableView('combined')}>実績+予測</button>
+        <button className={tableView === '5year' ? 'active' : ''} onClick={() => setTableView('5year')}>予測5年おき</button>
+        <button className={tableView === 'full' ? 'active' : ''} onClick={() => setTableView('full')}>予測全30年</button>
+        <button className={tableView === 'actual' ? 'active' : ''} onClick={() => setTableView('actual')}>実績のみ</button>
       </div>
       <div className="data-table-container">
         <table className="data-table">
           <thead>
             <tr>
               <th>項目</th>
-              {tableData.years.map(y => <th key={y}>{y}</th>)}
+              {tableData.years.map((y, j) => {
+                const isActual = tableData.actualYearCount ? j < tableData.actualYearCount : tableView === 'actual'
+                return <th key={`${y}-${j}`} className={isActual ? 'actual-col' : ''}>{y}</th>
+              })}
             </tr>
           </thead>
           <tbody>
@@ -375,13 +443,21 @@ export function SimulationTab({ params, simData, actualData }: Props) {
                   <td className={row.indent === 1 ? 'indent-1' : row.indent === 2 ? 'indent-2' : 'bold-label'}>
                     {row.label}
                   </td>
-                  {row.values.map((v, j) => <td key={j}>{v}</td>)}
+                  {row.values.map((v, j) => {
+                    const isActual = tableData.actualYearCount ? j < tableData.actualYearCount : tableView === 'actual'
+                    return <td key={j} className={isActual ? 'actual-col' : ''}>{v}</td>
+                  })}
                 </tr>
               )
             })}
           </tbody>
         </table>
       </div>
+      {tableView === 'combined' && (
+        <div style={{ fontSize: 11, color: '#64748b', marginTop: 4, textAlign: 'center' }}>
+          🔵 水色背景 = 実績データ ／ 白背景 = シミュレーション
+        </div>
+      )}
     </div>
   )
 }

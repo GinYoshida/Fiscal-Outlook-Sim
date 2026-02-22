@@ -255,33 +255,91 @@ E：家計インパクト
 
       <h2 className="section-title" style={{ marginTop: 24 }}>統合政府の仕組み</h2>
 
-      <Expander title="統合政府の資金フロー図">
-        <div className="flow-diagram">
-          <div className="flow-box gov">
-            日本政府（財務省）
-            <div className="flow-sub">税収・歳出・国債発行を管理</div>
-          </div>
-          <div className="flow-box people">
-            国民・企業
-            <div className="flow-sub">納税者・サービス受益者</div>
-          </div>
-          <div className="flow-box bank">
-            金融機関
-            <div className="flow-sub">国債購入・当座預金</div>
-          </div>
-          <div className="flow-box boj">
-            日本銀行（BOJ）
-            <div className="flow-sub">金融政策・国債保有・当座預金管理</div>
-          </div>
-        </div>
-        <div style={{ background: '#f8fafc', borderRadius: 8, padding: 12, marginTop: 8, fontSize: 12, lineHeight: 1.8 }}>
-          <div>🔵 <strong>国民→政府</strong>：税金の納付</div>
-          <div>🔴 <strong>政府→国民</strong>：公共サービス・社会保障</div>
-          <div>🟠 <strong>政府→金融機関</strong>：国債発行（資金調達）</div>
-          <div>🟣 <strong>金融機関→日銀</strong>：国債売却（公開市場操作）</div>
-          <div>🟢 <strong>日銀→政府</strong>：国庫納付金</div>
-          <div>⚪ <strong>金融機関⇄日銀</strong>：当座預金（付利）</div>
-        </div>
+      <Expander title="統合政府の資金フロー図" defaultOpen={true}>
+        <svg viewBox="0 0 700 420" style={{ width: '100%', maxWidth: 700, display: 'block', margin: '0 auto' }}>
+          <defs>
+            <marker id="ah-blue" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+              <path d="M0,0 L8,3 L0,6" fill="#3b82f6" />
+            </marker>
+            <marker id="ah-red" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+              <path d="M0,0 L8,3 L0,6" fill="#ef4444" />
+            </marker>
+            <marker id="ah-orange" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+              <path d="M0,0 L8,3 L0,6" fill="#f97316" />
+            </marker>
+            <marker id="ah-purple" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+              <path d="M0,0 L8,3 L0,6" fill="#8b5cf6" />
+            </marker>
+            <marker id="ah-green" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+              <path d="M0,0 L8,3 L0,6" fill="#22c55e" />
+            </marker>
+            <marker id="ah-teal" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+              <path d="M0,0 L8,3 L0,6" fill="#14b8a6" />
+            </marker>
+            <filter id="shadow" x="-4%" y="-4%" width="108%" height="108%">
+              <feDropShadow dx="0" dy="2" stdDeviation="3" floodOpacity="0.1" />
+            </filter>
+          </defs>
+
+          <rect x="10" y="5" width="680" height="410" rx="12" fill="#f8fafc" stroke="#e2e8f0" strokeWidth="1" />
+          <text x="350" y="28" textAnchor="middle" fontSize="13" fill="#64748b" fontWeight="600">統合政府の資金フロー</text>
+          <rect x="215" y="15" width="270" height="395" rx="8" fill="none" stroke="#3b82f6" strokeWidth="1.5" strokeDasharray="6 3" opacity="0.4" />
+          <text x="350" y="50" textAnchor="middle" fontSize="10" fill="#3b82f6" opacity="0.7">統合政府</text>
+
+          <rect x="250" y="60" width="200" height="56" rx="10" fill="#3b82f6" filter="url(#shadow)" />
+          <text x="350" y="85" textAnchor="middle" fontSize="14" fill="white" fontWeight="700">日本政府（財務省）</text>
+          <text x="350" y="103" textAnchor="middle" fontSize="10" fill="white" opacity="0.9">税収・歳出・国債発行を管理</text>
+
+          <rect x="250" y="300" width="200" height="56" rx="10" fill="#8b5cf6" filter="url(#shadow)" />
+          <text x="350" y="325" textAnchor="middle" fontSize="14" fill="white" fontWeight="700">日本銀行（BOJ）</text>
+          <text x="350" y="343" textAnchor="middle" fontSize="10" fill="white" opacity="0.9">金融政策・国債保有・当座預金管理</text>
+
+          <rect x="30" y="175" width="160" height="56" rx="10" fill="#475569" filter="url(#shadow)" />
+          <text x="110" y="200" textAnchor="middle" fontSize="14" fill="white" fontWeight="700">国民・企業</text>
+          <text x="110" y="218" textAnchor="middle" fontSize="10" fill="white" opacity="0.9">納税者・サービス受益者</text>
+
+          <rect x="510" y="175" width="160" height="56" rx="10" fill="#059669" filter="url(#shadow)" />
+          <text x="590" y="200" textAnchor="middle" fontSize="14" fill="white" fontWeight="700">金融機関</text>
+          <text x="590" y="218" textAnchor="middle" fontSize="10" fill="white" opacity="0.9">国債購入・当座預金</text>
+
+          <line x1="180" y1="185" x2="248" y2="110" stroke="#3b82f6" strokeWidth="2.5" markerEnd="url(#ah-blue)" />
+          <rect x="170" y="132" width="70" height="22" rx="4" fill="white" stroke="#3b82f6" strokeWidth="1" />
+          <text x="205" y="147" textAnchor="middle" fontSize="10" fill="#3b82f6" fontWeight="600">税金納付</text>
+
+          <line x1="248" y1="100" x2="180" y2="195" stroke="#ef4444" strokeWidth="2.5" markerEnd="url(#ah-red)" />
+          <rect x="160" y="147" width="86" height="22" rx="4" fill="white" stroke="#ef4444" strokeWidth="1" />
+          <text x="203" y="162" textAnchor="middle" fontSize="10" fill="#ef4444" fontWeight="600">公共サービス</text>
+
+          <line x1="452" y1="95" x2="518" y2="180" stroke="#f97316" strokeWidth="2.5" markerEnd="url(#ah-orange)" />
+          <rect x="455" y="122" width="88" height="22" rx="4" fill="white" stroke="#f97316" strokeWidth="1" />
+          <text x="499" y="137" textAnchor="middle" fontSize="10" fill="#f97316" fontWeight="600">国債発行💴</text>
+
+          <line x1="520" y1="230" x2="455" y2="305" stroke="#14b8a6" strokeWidth="2.5" markerEnd="url(#ah-teal)" />
+          <rect x="457" y="257" width="90" height="22" rx="4" fill="white" stroke="#14b8a6" strokeWidth="1" />
+          <text x="502" y="272" textAnchor="middle" fontSize="10" fill="#14b8a6" fontWeight="600">国債売却📉</text>
+
+          <line x1="455" y1="315" x2="520" y2="220" stroke="#8b5cf6" strokeWidth="2" strokeDasharray="5 3" markerEnd="url(#ah-purple)" />
+          <rect x="497" y="257" width="90" height="22" rx="4" fill="white" stroke="#8b5cf6" strokeWidth="1" opacity="0" />
+
+          <line x1="350" y1="298" x2="350" y2="118" stroke="#22c55e" strokeWidth="2.5" markerEnd="url(#ah-green)" />
+          <rect x="360" y="195" width="90" height="22" rx="4" fill="white" stroke="#22c55e" strokeWidth="1" />
+          <text x="405" y="210" textAnchor="middle" fontSize="10" fill="#22c55e" fontWeight="600">国庫納付金</text>
+
+          <line x1="560" y1="233" x2="490" y2="298" stroke="#8b5cf6" strokeWidth="2" strokeDasharray="5 3" />
+          <rect x="492" y="242" width="86" height="22" rx="4" fill="white" stroke="#8b5cf6" strokeWidth="1" />
+          <text x="535" y="257" textAnchor="middle" fontSize="10" fill="#8b5cf6" fontWeight="600">当座預金💰</text>
+
+          <g transform="translate(30, 375)">
+            <circle cx="8" cy="6" r="4" fill="#3b82f6" /><text x="16" y="10" fontSize="10" fill="#475569">税金</text>
+            <circle cx="58" cy="6" r="4" fill="#ef4444" /><text x="66" y="10" fontSize="10" fill="#475569">公共サービス</text>
+            <circle cx="148" cy="6" r="4" fill="#f97316" /><text x="156" y="10" fontSize="10" fill="#475569">国債発行</text>
+            <circle cx="228" cy="6" r="4" fill="#14b8a6" /><text x="236" y="10" fontSize="10" fill="#475569">国債売却</text>
+            <circle cx="308" cy="6" r="4" fill="#22c55e" /><text x="316" y="10" fontSize="10" fill="#475569">納付金</text>
+            <circle cx="378" cy="6" r="4" fill="#8b5cf6" /><text x="386" y="10" fontSize="10" fill="#475569">当座預金</text>
+            <line x1="440" y1="6" x2="470" y2="6" stroke="#3b82f6" strokeWidth="1.5" strokeDasharray="6 3" />
+            <text x="475" y="10" fontSize="10" fill="#3b82f6">統合政府の範囲</text>
+          </g>
+        </svg>
       </Expander>
 
       <Expander title="日銀納付金の計算構造">
