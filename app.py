@@ -109,7 +109,8 @@ def run_simulation(p):
                 "year": year, "tax": tax, "bojPayment": boj_payment, "totalRevenue": total_revenue,
                 "policyExp": policy_exp, "avgCoupon": avg_coupon * 100, "interest": interest,
                 "totalCost": total_cost, "debt": debt, "fiscalBalance": fiscal_balance,
-                "interestBurden": interest_burden
+                "interestBurden": interest_burden,
+                "bojRev": boj_rev, "bojCost": boj_cost, "policyRate": policy_rate * 100,
             })
         else:
             prev = results[i - 1]
@@ -130,7 +131,8 @@ def run_simulation(p):
                 "year": year, "tax": tax, "bojPayment": boj_payment, "totalRevenue": total_revenue,
                 "policyExp": policy_exp, "avgCoupon": avg_coupon_dec * 100, "interest": interest,
                 "totalCost": total_cost, "debt": debt, "fiscalBalance": fiscal_balance,
-                "interestBurden": interest_burden
+                "interestBurden": interest_burden,
+                "bojRev": boj_rev, "bojCost": boj_cost, "policyRate": policy_rate * 100,
             })
     return results
 
@@ -160,43 +162,43 @@ with st.sidebar:
     p = st.session_state.params
 
     st.markdown("#### マクロ経済")
-    p["inflationRate"] = st.slider("インフレ率 (%)", 0.0, 10.0, p["inflationRate"], 0.1, key="inf")
-    p["realGrowth"] = st.slider("実質成長率 (%)", -2.0, 5.0, p["realGrowth"], 0.1, key="rg")
-    p["riskPremium"] = st.slider("リスクプレミアム (%)", 0.0, 3.0, p["riskPremium"], 0.1, key="rp")
+    p["inflationRate"] = st.slider("インフレ率 (%)", 0.0, 10.0, p["inflationRate"], 0.1, key="inf", help="消費者物価の年間上昇率。政策経費の伸びと名目成長率に影響します。日銀の目標は2%です。")
+    p["realGrowth"] = st.slider("実質成長率 (%)", -2.0, 5.0, p["realGrowth"], 0.1, key="rg", help="物価変動を除いた実質GDPの成長率。インフレ率と合算して名目成長率となり、税収の伸びに直結します。")
+    p["riskPremium"] = st.slider("リスクプレミアム (%)", 0.0, 3.0, p["riskPremium"], 0.1, key="rp", help="国債の信用リスクに対する上乗せ金利。財政悪化や市場の不安が高まると上昇し、市場金利＝名目成長率＋リスクプレミアムとなります。")
 
     st.markdown("#### 初期値（2026年）")
-    p["initDebt"] = st.number_input("債務残高 (兆円)", value=p["initDebt"], step=50, key="debt")
-    p["initTax"] = st.number_input("税収 (兆円)", value=p["initTax"], step=5, key="tax")
-    p["initPolicyExp"] = st.number_input("政策的経費 (兆円)", value=p["initPolicyExp"], step=5, key="pexp")
-    p["initAvgCoupon"] = st.slider("平均クーポン (%)", 0.0, 5.0, p["initAvgCoupon"], 0.1, key="coup")
+    p["initDebt"] = st.number_input("債務残高 (兆円)", value=p["initDebt"], step=50, key="debt", help="2026年度のスタート時点での国の借金総額。2024年度末で約1,100兆円です。")
+    p["initTax"] = st.number_input("税収 (兆円)", value=p["initTax"], step=5, key="tax", help="2026年度の初期税収。所得税・法人税・消費税等の合計です。2024年度実績は約75兆円。")
+    p["initPolicyExp"] = st.number_input("政策的経費 (兆円)", value=p["initPolicyExp"], step=5, key="pexp", help="2026年度の政策的経費の初期値。社会保障・公共事業・教育・防衛等の歳出合計（利払い費を除く）です。")
+    p["initAvgCoupon"] = st.slider("平均クーポン (%)", 0.0, 5.0, p["initAvgCoupon"], 0.1, key="coup", help="政府債務全体の加重平均利率。既発債の金利が残るため、市場金利が上がってもすぐには上昇しません。9年借換ロジックで毎年1/9ずつ新金利に置き換わります。")
 
     st.markdown("#### 日銀パラメータ")
-    p["bojCA"] = st.number_input("当座預金 (兆円)", value=p["bojCA"], step=50, key="bojca")
-    p["bojYield"] = st.slider("保有国債利回り (%)", 0.0, 2.0, p["bojYield"], 0.05, key="bojy")
+    p["bojCA"] = st.number_input("当座預金 (兆円)", value=p["bojCA"], step=50, key="bojca", help="金融機関が日銀に預けている預金の残高。金利上昇時、この預金に付利するコストが日銀の負担になります。量的緩和で約550兆円まで膨張しています。")
+    p["bojYield"] = st.slider("保有国債利回り (%)", 0.0, 2.0, p["bojYield"], 0.05, key="bojy", help="日銀が保有する国債の平均利回り。低金利時代に大量購入したため現在は非常に低い水準です。この利回りから得る利息が日銀の主な収入源です。")
 
     st.markdown("#### その他")
-    p["taxElasticity"] = st.slider("税収弾性値", 0.5, 2.0, p["taxElasticity"], 0.1, key="te")
-    p["otherRevenue"] = st.number_input("その他収入 (兆円/年)", value=p["otherRevenue"], step=1, key="orev")
-    p["naturalIncrease"] = st.number_input("自然増 (兆円/年)", value=p["naturalIncrease"], step=0.1, key="ni")
-    p["policyRateSpread"] = st.slider("政策金利スプレッド (%)", 0.0, 3.0, p["policyRateSpread"], 0.1, key="prs")
+    p["taxElasticity"] = st.slider("税収弾性値", 0.5, 2.0, p["taxElasticity"], 0.1, key="te", help="GDP成長率に対する税収の感応度。1.2＝GDP1%増で税収1.2%増。累進課税の効果で1より大きくなります。日本の実績では1.0〜1.3程度。")
+    p["otherRevenue"] = st.number_input("その他収入 (兆円/年)", value=p["otherRevenue"], step=1, key="orev", help="税外収入（印紙収入、官業収入、政府資産整理収入等）の年間合計。シミュレーション期間中は固定値として扱います。")
+    p["naturalIncrease"] = st.number_input("自然増 (兆円/年)", value=p["naturalIncrease"], step=0.1, key="ni", help="高齢化に伴う社会保障費（年金・医療・介護）の構造的な年間増加額。財務省の試算では年0.3〜0.7兆円程度とされています。")
+    p["policyRateSpread"] = st.slider("政策金利スプレッド (%)", 0.0, 3.0, p["policyRateSpread"], 0.1, key="prs", help="市場金利と日銀の政策金利の差。政策金利＝市場金利−スプレッド（下限0%）。通常1%程度で、日銀は市場金利より低い政策金利を維持します。")
 
 sim_data = run_simulation(p)
 
 st.title("🏛️ 統合政府 30年財政シミュレーター")
 st.caption("2026〜2055年：日本政府＋日銀の財政推移シミュレーション")
 
-tab1, tab2, tab3 = st.tabs(["📊 シミュレーション", "📉 ウォーターフォール", "📖 変数説明"])
+tab1, tab2, tab4, tab3 = st.tabs(["📊 シミュレーション", "📉 ウォーターフォール", "🏦 統合政府の仕組み", "📖 変数説明"])
 
 with tab1:
     summary_years = [2026, 2030, 2035, 2040, 2045, 2050, 2055]
     summary = [d for d in sim_data if d["year"] in summary_years]
     df_summary = pd.DataFrame(summary)
     df_summary = df_summary[["year", "tax", "totalRevenue", "policyExp", "interest", "debt", "fiscalBalance", "interestBurden"]]
-    df_summary.columns = ["年度", "税収", "歳入計", "政策経費", "利払い", "債務残高", "収支", "負担率%"]
-    for col in ["税収", "歳入計", "政策経費", "利払い", "収支"]:
+    df_summary.columns = ["年度", "税収", "┗ 歳入計", "政策経費", "利払い", "債務残高", "┗ 収支", "┗ 負担率%"]
+    for col in ["税収", "┗ 歳入計", "政策経費", "利払い", "┗ 収支"]:
         df_summary[col] = df_summary[col].round(1)
     df_summary["債務残高"] = df_summary["債務残高"].round(0).astype(int)
-    df_summary["負担率%"] = df_summary["負担率%"].round(1)
+    df_summary["┗ 負担率%"] = df_summary["┗ 負担率%"].round(1)
 
     st.subheader("シミュレーション結果（5年おき）")
     st.dataframe(df_summary, use_container_width=True, hide_index=True)
@@ -278,13 +280,38 @@ with tab1:
     with st.expander("📋 全年度データを表示"):
         df_all = pd.DataFrame(sim_data)
         df_all = df_all[["year", "tax", "bojPayment", "totalRevenue", "policyExp", "avgCoupon", "interest", "totalCost", "debt", "fiscalBalance", "interestBurden"]]
-        df_all.columns = ["年度", "税収", "日銀納付金", "歳入計", "政策経費", "平均ｸｰﾎﾟﾝ%", "利払い", "歳出計", "債務残高", "収支", "負担率%"]
-        for col in ["税収", "日銀納付金", "歳入計", "政策経費", "利払い", "歳出計", "収支"]:
+        df_all.columns = [
+            "年度",
+            "税収",
+            "日銀納付金",
+            "┗ 歳入計",
+            "政策経費",
+            "平均ｸｰﾎﾟﾝ%",
+            "利払い",
+            "┗ 歳出計",
+            "債務残高",
+            "┗ 財政収支",
+            "┗ 負担率%",
+        ]
+        for col in ["税収", "日銀納付金", "┗ 歳入計", "政策経費", "利払い", "┗ 歳出計", "┗ 財政収支"]:
             df_all[col] = df_all[col].round(1)
         df_all["平均ｸｰﾎﾟﾝ%"] = df_all["平均ｸｰﾎﾟﾝ%"].round(2)
         df_all["債務残高"] = df_all["債務残高"].round(0).astype(int)
-        df_all["負担率%"] = df_all["負担率%"].round(1)
+        df_all["┗ 負担率%"] = df_all["┗ 負担率%"].round(1)
+
+        st.caption("┗ は他の列から計算される項目です（歳入計＝税収+日銀納付金+その他、歳出計＝政策経費+利払い、財政収支＝歳入計−歳出計、負担率＝利払い÷税収×100）")
         st.dataframe(df_all, use_container_width=True, hide_index=True, height=800)
+
+    with st.expander("📋 日銀納付金の内訳データ"):
+        df_boj = pd.DataFrame(sim_data)
+        df_boj = df_boj[["year", "bojRev", "bojCost", "bojPayment", "policyRate"]]
+        df_boj.columns = ["年度", "利息収入 (国債)", "付利コスト (当座預金)", "┗ 納付金", "政策金利%"]
+        df_boj["利息収入 (国債)"] = df_boj["利息収入 (国債)"].round(2)
+        df_boj["付利コスト (当座預金)"] = df_boj["付利コスト (当座預金)"].round(2)
+        df_boj["┗ 納付金"] = df_boj["┗ 納付金"].round(2)
+        df_boj["政策金利%"] = df_boj["政策金利%"].round(2)
+        st.caption(f"利息収入＝債務残高×保有国債利回り({p['bojYield']:.2f}%)、付利コスト＝当座預金({p['bojCA']:.0f}兆円)×政策金利、納付金＝max(利息収入−付利コスト, 0)")
+        st.dataframe(df_boj, use_container_width=True, hide_index=True, height=800)
 
 with tab2:
     st.subheader("単年度 収支ウォーターフォール")
@@ -484,6 +511,153 @@ with tab2:
 **債務残高：前年残高 + (歳出 − 歳入)**
 
 財政赤字（歳出 > 歳入）が発生すると、その分だけ新たに国債を発行して資金を調達するため、債務残高が積み上がります。これは会計上の恒等式であり、黒字なら残高は減少します。利払い費が増えると赤字が拡大し、さらに債務が増えて利払い費が増える「債務の雪だるま効果」が発生し得ます。
+""")
+
+with tab4:
+    st.subheader("統合政府と日銀納付金の仕組み")
+
+    st.markdown("""
+このシミュレーターでは、日本政府と日本銀行を**一体（統合政府）**として捉え、
+財政の持続可能性を分析しています。以下の図で資金の流れを解説します。
+""")
+
+    nominal_g_tab4 = p["inflationRate"] + p["realGrowth"]
+    market_rate_tab4 = nominal_g_tab4 + p["riskPremium"]
+    policy_rate_tab4 = max(market_rate_tab4 / 100 - p["policyRateSpread"] / 100, 0) * 100
+
+    fig_flow = go.Figure()
+
+    box_colors = {"gov": "#3b82f6", "boj": "#8b5cf6", "market": "#64748b", "bank": "#059669"}
+
+    boxes = [
+        (0.5, 0.92, "日本政府（財務省）", box_colors["gov"], "税収・歳出・国債発行を管理"),
+        (0.5, 0.08, "日本銀行（BOJ）", box_colors["boj"], "金融政策・国債保有・当座預金管理"),
+        (0.05, 0.50, "国民・企業", box_colors["market"], "納税者・サービス受益者"),
+        (0.95, 0.50, "金融機関", box_colors["bank"], "国債購入・当座預金"),
+    ]
+
+    for x, y, label, color, sub in boxes:
+        fig_flow.add_annotation(
+            x=x, y=y, text=f"<b>{label}</b><br><span style='font-size:10px'>{sub}</span>",
+            showarrow=False, font=dict(size=13, color="white"),
+            bgcolor=color, bordercolor=color, borderwidth=2, borderpad=10,
+            opacity=0.95, xanchor="center", yanchor="middle",
+        )
+
+    arrows = [
+        (0.20, 0.55, 0.30, 0.85, "税金", "#3b82f6"),
+        (0.30, 0.85, 0.20, 0.55, "公共サービス\n社会保障", "#ef4444"),
+        (0.70, 0.85, 0.80, 0.55, "国債発行", "#f97316"),
+        (0.80, 0.45, 0.70, 0.15, "国債売却\n(公開市場操作)", "#8b5cf6"),
+        (0.50, 0.22, 0.50, 0.78, "国庫納付金", "#22c55e"),
+        (0.80, 0.55, 0.80, 0.45, "当座預金\n(付利)", "#94a3b8"),
+    ]
+
+    for ax, ay, x, y, text, color in arrows:
+        fig_flow.add_annotation(
+            x=x, y=y, ax=ax, ay=ay, text=f"<b>{text}</b>",
+            showarrow=True, arrowhead=3, arrowsize=1.5, arrowwidth=2.5,
+            arrowcolor=color, font=dict(size=10, color=color),
+            bgcolor="rgba(255,255,255,0.85)", borderpad=3,
+        )
+
+    fig_flow.update_layout(
+        xaxis=dict(visible=False, range=[-0.05, 1.05]),
+        yaxis=dict(visible=False, range=[-0.05, 1.05]),
+        plot_bgcolor="white", paper_bgcolor="white",
+        height=500, margin=dict(l=10, r=10, t=10, b=10),
+        font=dict(family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', sans-serif"),
+    )
+    st.plotly_chart(fig_flow, use_container_width=True, config={"displayModeBar": False})
+
+    st.markdown("---")
+    st.subheader("日銀納付金の計算構造")
+
+    boj_rev_val = p["initDebt"] * (p["bojYield"] / 100)
+    boj_cost_val = p["bojCA"] * (policy_rate_tab4 / 100)
+    boj_profit = max(boj_rev_val - boj_cost_val, 0)
+
+    col_boj1, col_boj2 = st.columns(2)
+    with col_boj1:
+        fig_boj = go.Figure()
+        fig_boj.add_trace(go.Bar(
+            name="利息収入", x=["日銀損益"], y=[boj_rev_val],
+            marker_color="#22c55e", text=[f"{boj_rev_val:.1f}"], textposition="inside",
+        ))
+        fig_boj.add_trace(go.Bar(
+            name="付利コスト", x=["日銀損益"], y=[-boj_cost_val],
+            marker_color="#ef4444", text=[f"{boj_cost_val:.1f}"], textposition="inside",
+        ))
+        fig_boj.update_layout(
+            **PLOTLY_LAYOUT, height=300,
+            title=dict(text="日銀の収益構造（初年度）", font=dict(size=13)),
+            yaxis_title="兆円", barmode="relative", showlegend=True,
+        )
+        st.plotly_chart(fig_boj, use_container_width=True, config={"displayModeBar": False})
+
+    with col_boj2:
+        st.markdown(f"""
+**利息収入（国債保有から）**
+- 保有国債（＝債務残高）: **{p['initDebt']:.0f} 兆円**
+- 保有国債利回り: **{p['bojYield']:.2f}%**
+- 利息収入 = {p['initDebt']:.0f} x {p['bojYield']:.2f}% = **{boj_rev_val:.1f} 兆円**
+
+**付利コスト（当座預金への利払い）**
+- 当座預金残高: **{p['bojCA']:.0f} 兆円**
+- 政策金利: **{policy_rate_tab4:.2f}%**
+- 付利コスト = {p['bojCA']:.0f} x {policy_rate_tab4:.2f}% = **{boj_cost_val:.1f} 兆円**
+
+**国庫納付金 = max(利息収入 - 付利コスト, 0)**
+= max({boj_rev_val:.1f} - {boj_cost_val:.1f}, 0) = **{boj_profit:.1f} 兆円**
+""")
+
+    st.markdown("---")
+    st.subheader("金利上昇が統合政府に与える影響")
+
+    test_rates = [0.0, 0.5, 1.0, 1.5, 2.0, 3.0, 4.0, 5.0]
+    boj_payments_test = []
+    interest_costs_test = []
+    for rate in test_rates:
+        pr = max(rate / 100 - p["policyRateSpread"] / 100, 0)
+        boj_p = max(p["initDebt"] * (p["bojYield"] / 100) - p["bojCA"] * pr, 0)
+        int_c = p["initDebt"] * rate / 100
+        boj_payments_test.append(boj_p)
+        interest_costs_test.append(int_c)
+
+    fig_sens = go.Figure()
+    fig_sens.add_trace(go.Scatter(
+        x=test_rates, y=boj_payments_test, name="日銀納付金",
+        line=dict(color="#22c55e", width=3), mode="lines+markers",
+    ))
+    fig_sens.add_trace(go.Scatter(
+        x=test_rates, y=interest_costs_test, name="利払い費",
+        line=dict(color="#ef4444", width=3), mode="lines+markers",
+    ))
+    net_effect = [boj_payments_test[i] - interest_costs_test[i] for i in range(len(test_rates))]
+    fig_sens.add_trace(go.Scatter(
+        x=test_rates, y=net_effect, name="統合政府ネット効果",
+        line=dict(color="#3b82f6", width=2, dash="dash"), mode="lines+markers",
+    ))
+    fig_sens.add_hline(y=0, line_color="#94a3b8", line_dash="dot")
+    fig_sens.update_layout(
+        **PLOTLY_LAYOUT, height=400,
+        title=dict(text="市場金利と統合政府の収支感応度", font=dict(size=14)),
+        xaxis_title="市場金利 (%)", yaxis_title="兆円",
+    )
+    st.plotly_chart(fig_sens, use_container_width=True, config=PLOTLY_CONFIG)
+
+    st.markdown("""
+**ポイント：統合政府で見ると金利上昇の影響は相殺される？**
+
+一見すると、金利が上がれば政府の利払い費は増加しますが、日銀の保有国債からの利息収入も増えるため、
+統合政府としては相殺されるように見えます。しかし実際には：
+
+1. **タイムラグ**：利払い費は9年借換ロジックで徐々に上昇するが、日銀の保有国債利回りはさらに遅れて上昇
+2. **逆ざや問題**：金利上昇初期は当座預金への付利コストが先に増え、日銀が赤字（逆ざや）に陥る
+3. **国債保有比率**：日銀が全国債を保有しているわけではないため、完全な相殺にはならない
+4. **信認リスク**：金利が急騰する場合、国債市場の信認低下が同時に発生し、さらなる金利上昇を招く悪循環
+
+このシミュレーターでは、これらの動態を簡易的にモデル化して将来の財政リスクを可視化しています。
 """)
 
 with tab3:
