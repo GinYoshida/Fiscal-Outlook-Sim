@@ -992,11 +992,12 @@ function WaterfallChart({ data, otherRev, isActual, year }: {
   const wfLabel = isActual ? '実績' : 'シミュレーション'
 
   const getColor = (type: string, rawValue: number) => {
-    if (type === 'total' || type === 'subtotal' || type === 'exptotal') return '#334155';
-    if (type === 'result') return rawValue >= 0 ? '#22c55e' : '#ef4444';
-    if (type === 'expense') return '#ef4444';
-    if (isActual) return '#64748b';
-    return '#3b82f6';
+    const isBold = type === 'subtotal' || type === 'total' || type === 'exptotal' || type === 'result';
+    if (rawValue >= 0) {
+      return isBold ? '#16a34a' : '#86efac';
+    } else {
+      return isBold ? '#dc2626' : '#fca5a5';
+    }
   };
 
   return (
