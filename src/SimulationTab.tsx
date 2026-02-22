@@ -13,6 +13,120 @@ interface Props {
   actualData: ActualDataPoint[];
 }
 
+const WARNING_DETAILS: Record<string, { impact: string[]; options: string[] }> = {
+  '利払負担率30%超過': {
+    impact: [
+      '政府が税収の3割以上を借金の利息に使う状態。教育・医療・インフラへの予算が圧迫され、サービスの質が低下しやすい',
+      '社会保障の給付削減や自己負担増加が政治的に議論されやすくなる',
+    ],
+    options: [
+      '増税（消費税・所得税・法人税の引き上げ）',
+      '歳出カット（社会保障の自然増抑制、公共事業削減）',
+      '名目成長率の引き上げによる税収増（成長戦略・賃上げ促進）',
+    ],
+  },
+  '通貨リスクプレミアム発動': {
+    impact: [
+      '長期金利が上昇し、住宅ローン・企業借入コストが上がる',
+      '円安がさらに進み、食料・エネルギーなど輸入物価が上昇して家計の実質可処分所得が減少する',
+      '外貨建て資産（海外旅行・外国製品）のコストが増大する',
+    ],
+    options: [
+      '外貨準備の活用による円買い介入',
+      '輸出競争力強化策（産業政策・FTA推進）',
+      '財政再建シグナルによる市場信認の回復',
+      '観光・デジタルサービス輸出による経常収支改善',
+    ],
+  },
+  '実質賃金3年連続マイナス': {
+    impact: [
+      '年収400万円世帯では実質的な生活水準が毎年低下し、食費・光熱費の削減を迫られる',
+      '貯蓄の取り崩しが進み、老後資産形成が困難になる',
+      '貧困率・ジニ係数の悪化が加速する',
+    ],
+    options: [
+      '最低賃金の引き上げ・賃上げ税制',
+      'エネルギー補助金の拡充（物価上昇の直接軽減）',
+      '給付付き税額控除など低所得層への直接支援',
+    ],
+  },
+  '経常収支の赤字転落': {
+    impact: [
+      '円の対外信認が中長期的に低下し、じわじわと円安圧力が続く',
+      '輸入に頼る食料・エネルギーのコストが構造的に高止まりする',
+      '海外からの資本流入に依存する構造になり、金利が海外投資家の意向に左右されやすくなる',
+    ],
+    options: [
+      '再生可能エネルギー投資によるエネルギー輸入の削減',
+      'インバウンド観光・コンテンツ輸出などサービス収支の改善',
+      '半導体・製造業の国内回帰による輸出回復',
+    ],
+  },
+  '日銀自己資本バッファ超過': {
+    impact: [
+      '日銀の累積損失が引当金・準備金を超過し、実質的な債務超過状態に',
+      '統合政府の歳入が直接減少し、他の政策予算を圧迫する',
+      '中央銀行の信認低下が通貨（円）の信認低下につながるリスク',
+    ],
+    options: [
+      '政策金利の据え置き（付利コストの抑制）',
+      '国債保有の段階的圧縮（量的引き締め）',
+      '政府からの資本注入による自己資本の回復',
+    ],
+  },
+}
+
+function WarningAccordion({ warnings }: { warnings: { year: number; type: string; detail: string }[] }) {
+  const [openType, setOpenType] = useState<string | null>(null)
+  const warningTypes = new Map<string, number>()
+  warnings.forEach(w => {
+    if (!warningTypes.has(w.type)) warningTypes.set(w.type, w.year)
+  })
+  const alerts = Array.from(warningTypes.entries())
+  if (alerts.length === 0) {
+    return <div className="success-box" style={{ marginTop: 12 }}>✓ シミュレーション期間中、重大な財政リスクイベントは検出されませんでした。</div>
+  }
+  return (
+    <div style={{ marginTop: 12 }}>
+      <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 8, color: '#ef4444' }}>⚠️ 警告イベント（クリックで詳細を表示）</div>
+      <div className="warning-timeline">
+        {alerts.map(([type, firstYear]) => {
+          const count = warnings.filter(w => w.type === type).length
+          const firstDetail = warnings.find(w => w.type === type)!.detail
+          const isOpen = openType === type
+          const details = WARNING_DETAILS[type]
+          return (
+            <div key={type}>
+              <div
+                className="warning-event"
+                onClick={() => setOpenType(isOpen ? null : type)}
+                style={{ cursor: 'pointer', userSelect: 'none' }}
+              >
+                <span style={{ fontSize: 12, color: '#ef4444', fontWeight: 700, transition: 'transform 0.2s', transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)', display: 'inline-block', marginRight: 4 }}>▶</span>
+                <span className="warning-year">{firstYear}年〜</span>
+                <span className="warning-type">{type}</span>
+                <span className="warning-detail">{firstDetail}（{count}年間）</span>
+              </div>
+              {isOpen && details && (
+                <div style={{ margin: '4px 0 12px 20px', padding: '12px 16px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, fontSize: 13 }}>
+                  <div style={{ fontWeight: 700, color: '#991b1b', marginBottom: 6 }}>■ 実生活への影響</div>
+                  <ul style={{ paddingLeft: 20, marginBottom: 12, color: '#1e293b' }}>
+                    {details.impact.map((item, i) => <li key={i} style={{ marginBottom: 4 }}>{item}</li>)}
+                  </ul>
+                  <div style={{ fontWeight: 700, color: '#1e40af', marginBottom: 6 }}>■ 政策オプション</div>
+                  <ul style={{ paddingLeft: 20, color: '#1e293b' }}>
+                    {details.options.map((item, i) => <li key={i} style={{ marginBottom: 4 }}>{item}</li>)}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 function Collapsible({ title, children, defaultOpen = false }: { title: string; children: React.ReactNode; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen)
   return (
@@ -208,11 +322,11 @@ export function SimulationTab({ params, simData, actualData }: Props) {
     const warnings: { year: number; type: string; detail: string }[] = []
     let consecutiveRealWageNeg = 0
     simData.forEach((d, i) => {
-      if (d.interest > d.policyExp) {
-        warnings.push({ year: d.year, type: '利払い超過', detail: `利払い費(${fmt(d.interest)}兆円) > 政策経費(${fmt(d.policyExp)}兆円)` })
+      if (d.interestBurden > 30) {
+        warnings.push({ year: d.year, type: '利払負担率30%超過', detail: `利払負担率 ${fmt(d.interestBurden)}%（税収の${fmt(d.interestBurden)}%が利払いに消費）` })
       }
       if (d.currentAccount < 0) {
-        warnings.push({ year: d.year, type: '経常収支が赤字転落', detail: `貿易・所得収支の合計がマイナスに（経常収支 ${fmt(d.currentAccount)}兆円）` })
+        warnings.push({ year: d.year, type: '経常収支の赤字転落', detail: `貿易・所得収支の合計がマイナスに（経常収支 ${fmt(d.currentAccount)}兆円）` })
       }
       if (d.bojCumulativeLoss > params.bojCapitalBuffer) {
         warnings.push({ year: d.year, type: '日銀自己資本バッファ超過', detail: `累積損失 ${fmt(d.bojCumulativeLoss)}兆円 > 自己資本バッファ${params.bojCapitalBuffer}兆円` })
@@ -235,7 +349,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
   const summaryStats = useMemo(() => {
     const last = simData[simData.length - 1]
     const first = simData[0]
-    const interestExceedYear = simData.find(d => d.interest > d.policyExp)?.year
+    const interestBurdenExceedYear = simData.find(d => d.interestBurden > 30)?.year
     const currentAccountDeficitYear = simData.find(d => d.currentAccount < 0)?.year
     const bojInsolvencyYear = simData.find(d => d.bojCumulativeLoss > params.bojCapitalBuffer)?.year
     const currencycrisisYear = simData.find(d => d.dynamicRiskPremium > 0)?.year
@@ -245,7 +359,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
       if (d.realWageGrowth < 0) { consecutiveNeg++ } else { consecutiveNeg = 0 }
       if (consecutiveNeg >= 3 && !realWage3YearNegYear) { realWage3YearNegYear = d.year; break }
     }
-    return { last, first, interestExceedYear, currentAccountDeficitYear, bojInsolvencyYear, currencycrisisYear, realWage3YearNegYear }
+    return { last, first, interestBurdenExceedYear, currentAccountDeficitYear, bojInsolvencyYear, currencycrisisYear, realWage3YearNegYear }
   }, [simData, params])
 
   const tableData = useMemo(() => {
@@ -450,34 +564,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
           </div>
         </div>
 
-        {(() => {
-          const warningTypes = new Map<string, number>()
-          summaryWarnings.forEach(w => {
-            if (!warningTypes.has(w.type)) warningTypes.set(w.type, w.year)
-          })
-          const alerts = Array.from(warningTypes.entries())
-          if (alerts.length === 0) {
-            return <div className="success-box" style={{ marginTop: 12 }}>✓ シミュレーション期間中、重大な財政リスクイベントは検出されませんでした。</div>
-          }
-          return (
-            <div style={{ marginTop: 12 }}>
-              <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 8, color: '#ef4444' }}>⚠️ 警告イベント</div>
-              <div className="warning-timeline">
-                {alerts.map(([type, firstYear]) => {
-                  const count = summaryWarnings.filter(w => w.type === type).length
-                  const firstDetail = summaryWarnings.find(w => w.type === type)!.detail
-                  return (
-                    <div key={type} className="warning-event">
-                      <span className="warning-year">{firstYear}年〜</span>
-                      <span className="warning-type">{type}</span>
-                      <span className="warning-detail">{firstDetail}（{count}年間）</span>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          )
-        })()}
+        <WarningAccordion warnings={summaryWarnings} />
       </div>
 
       <div className="chart-container">
