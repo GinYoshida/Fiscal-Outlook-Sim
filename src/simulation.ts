@@ -126,12 +126,14 @@ export function runSimulation(p: SimParams): SimResult[] {
 
       const yenCostPush = Math.max(yenFactor, 0) * 0.3;
       const cpiIncrease = B + yenCostPush;
+      const energySubsidyEffect = cpiIncrease * p.energySubsidyRate * 0.5;
+      const effectiveCpi = cpiIncrease - energySubsidyEffect;
       const wageIncrease = nomWageG;
-      const realWageGrowth = wageIncrease - cpiIncrease;
+      const realWageGrowth = wageIncrease - effectiveCpi;
 
-      const povertyRate = cpiIncrease > wageIncrease
-        ? p.initPovertyRate * (1 + (cpiIncrease - wageIncrease) * p.povertySensitivity)
-        : p.initPovertyRate * (1 - (wageIncrease - cpiIncrease) * p.povertySensitivity * 0.3);
+      const povertyRate = effectiveCpi > wageIncrease
+        ? p.initPovertyRate * (1 + (effectiveCpi - wageIncrease) * p.povertySensitivity)
+        : p.initPovertyRate * (1 - (wageIncrease - effectiveCpi) * p.povertySensitivity * 0.3);
 
       const assetGrowth = yenFactor * 0.5 + C;
       const giniIndex = p.initGini + (assetGrowth - realWageGrowth) * 0.01;
@@ -157,7 +159,8 @@ export function runSimulation(p: SimParams): SimResult[] {
 
       const modelIncome = BASE_INCOME * (1 + nomWageG);
       const modelFoodCost = BASE_INCOME * BASE_FOOD_RATIO * (1 + cpiIncrease);
-      const modelEnergyCost = BASE_INCOME * BASE_ENERGY_RATIO * (1 + cpiIncrease) * (1 + Math.max(yenFactor, 0) * 0.5);
+      const modelEnergyCostGross = BASE_INCOME * BASE_ENERGY_RATIO * (1 + cpiIncrease) * (1 + Math.max(yenFactor, 0) * 0.5);
+      const modelEnergyCost = modelEnergyCostGross * (1 - p.energySubsidyRate * 0.5);
       const modelDisposable = modelIncome * (1 - TAX_SOCIAL_RATIO) - modelFoodCost - modelEnergyCost;
       const baseDisposable = BASE_INCOME * (1 - TAX_SOCIAL_RATIO) - BASE_INCOME * BASE_FOOD_RATIO - BASE_INCOME * BASE_ENERGY_RATIO;
 
@@ -208,12 +211,14 @@ export function runSimulation(p: SimParams): SimResult[] {
 
       const yenCostPush = Math.max(yenDep, 0) * 0.3;
       const cpiIncrease = B + yenCostPush;
+      const energySubsidyEffect = cpiIncrease * p.energySubsidyRate * 0.5;
+      const effectiveCpi = cpiIncrease - energySubsidyEffect;
       const wageIncrease = nomWageG;
-      const realWageGrowth = wageIncrease - cpiIncrease;
+      const realWageGrowth = wageIncrease - effectiveCpi;
 
-      const povertyRate = cpiIncrease > wageIncrease
-        ? prev.povertyRate * (1 + (cpiIncrease - wageIncrease) * p.povertySensitivity)
-        : prev.povertyRate * (1 - (wageIncrease - cpiIncrease) * p.povertySensitivity * 0.3);
+      const povertyRate = effectiveCpi > wageIncrease
+        ? prev.povertyRate * (1 + (effectiveCpi - wageIncrease) * p.povertySensitivity)
+        : prev.povertyRate * (1 - (wageIncrease - effectiveCpi) * p.povertySensitivity * 0.3);
 
       const assetGrowth = Math.max(yenDep, 0) * 0.5 + C;
       const giniIndex = prev.giniIndex + (assetGrowth - realWageGrowth) * 0.01;
@@ -262,7 +267,8 @@ export function runSimulation(p: SimParams): SimResult[] {
       const cumulativeYenDep = exchangeRate / p.initExchangeRate - 1;
       const modelIncome = BASE_INCOME * cumulativeWage;
       const modelFoodCost = BASE_INCOME * BASE_FOOD_RATIO * cumulativeCpi;
-      const modelEnergyCost = BASE_INCOME * BASE_ENERGY_RATIO * cumulativeCpi * (1 + Math.max(cumulativeYenDep, 0) * 0.5);
+      const modelEnergyCostGross = BASE_INCOME * BASE_ENERGY_RATIO * cumulativeCpi * (1 + Math.max(cumulativeYenDep, 0) * 0.5);
+      const modelEnergyCost = modelEnergyCostGross * (1 - p.energySubsidyRate * 0.5);
       const modelDisposable = modelIncome * (1 - TAX_SOCIAL_RATIO) - modelFoodCost - modelEnergyCost;
       const baseDisposable = BASE_INCOME * (1 - TAX_SOCIAL_RATIO) - BASE_INCOME * BASE_FOOD_RATIO - BASE_INCOME * BASE_ENERGY_RATIO;
 
