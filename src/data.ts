@@ -1,0 +1,120 @@
+export interface ActualDataPoint {
+  year: number;
+  tax: number;
+  interest: number;
+  debt: number;
+  policyExp: number;
+  totalRevenue: number;
+  totalCost: number;
+  fiscalBalance: number;
+  interestBurden: number;
+  avgCoupon: number;
+  bojPayment: number;
+  taxConsumption: number;
+  taxIncome: number;
+  taxCorporate: number;
+  taxOther: number;
+}
+
+export interface ActualMacroPoint {
+  year: number;
+  jgb10y: number;
+  nominalGrowth: number;
+  inflation: number;
+  realGrowth: number;
+}
+
+export interface SimParams {
+  inflationRate: number;
+  realGrowth: number;
+  riskPremium: number;
+  initDebt: number;
+  initTaxConsumption: number;
+  initTaxIncome: number;
+  initTaxCorporate: number;
+  initTaxOther: number;
+  initPolicyExp: number;
+  initAvgCoupon: number;
+  bojCA: number;
+  bojYield: number;
+  otherRevenue: number;
+  naturalIncrease: number;
+  policyRateSpread: number;
+  taxRateChangeYear: string;
+  taxRateNew: number;
+}
+
+export interface Scenario {
+  name: string;
+  label: string;
+  params: SimParams;
+}
+
+export interface DataSource {
+  name: string;
+  url: string;
+  desc: string;
+}
+
+export const ACTUAL_DATA: ActualDataPoint[] = [
+  { year: 2015, tax: 56.3, interest: 10.0, debt: 807, policyExp: 57.4, totalRevenue: 72.0, totalCost: 67.4, fiscalBalance: 4.6, interestBurden: 17.8, avgCoupon: 1.2, bojPayment: 0.4, taxConsumption: 17.1, taxIncome: 17.8, taxCorporate: 10.8, taxOther: 10.6 },
+  { year: 2016, tax: 55.5, interest: 9.5, debt: 838, policyExp: 57.8, totalRevenue: 71.0, totalCost: 67.3, fiscalBalance: 3.7, interestBurden: 17.1, avgCoupon: 1.1, bojPayment: 0.4, taxConsumption: 17.2, taxIncome: 17.6, taxCorporate: 10.3, taxOther: 10.4 },
+  { year: 2017, tax: 58.8, interest: 9.0, debt: 865, policyExp: 58.4, totalRevenue: 74.4, totalCost: 67.4, fiscalBalance: 7.0, interestBurden: 15.3, avgCoupon: 1.0, bojPayment: 0.7, taxConsumption: 17.5, taxIncome: 18.9, taxCorporate: 12.0, taxOther: 10.4 },
+  { year: 2018, tax: 60.4, interest: 8.8, debt: 883, policyExp: 58.8, totalRevenue: 76.0, totalCost: 67.6, fiscalBalance: 8.4, interestBurden: 14.6, avgCoupon: 0.9, bojPayment: 0.6, taxConsumption: 17.7, taxIncome: 19.9, taxCorporate: 12.3, taxOther: 10.5 },
+  { year: 2019, tax: 58.4, interest: 8.5, debt: 897, policyExp: 62.0, totalRevenue: 73.9, totalCost: 70.5, fiscalBalance: 3.4, interestBurden: 14.6, avgCoupon: 0.9, bojPayment: 1.2, taxConsumption: 18.4, taxIncome: 19.2, taxCorporate: 10.8, taxOther: 10.0 },
+  { year: 2020, tax: 60.8, interest: 8.2, debt: 964, policyExp: 77.5, totalRevenue: 76.3, totalCost: 85.7, fiscalBalance: -9.4, interestBurden: 13.5, avgCoupon: 0.8, bojPayment: 1.2, taxConsumption: 21.0, taxIncome: 19.2, taxCorporate: 11.2, taxOther: 9.4 },
+  { year: 2021, tax: 67.0, interest: 8.0, debt: 990, policyExp: 67.0, totalRevenue: 82.6, totalCost: 75.0, fiscalBalance: 7.6, interestBurden: 11.9, avgCoupon: 0.8, bojPayment: 1.3, taxConsumption: 21.9, taxIncome: 21.4, taxCorporate: 13.6, taxOther: 10.1 },
+  { year: 2022, tax: 71.1, interest: 8.0, debt: 1005, policyExp: 67.4, totalRevenue: 86.6, totalCost: 75.4, fiscalBalance: 11.2, interestBurden: 11.3, avgCoupon: 0.8, bojPayment: 2.0, taxConsumption: 23.1, taxIncome: 22.5, taxCorporate: 14.9, taxOther: 10.6 },
+  { year: 2023, tax: 72.1, interest: 8.1, debt: 1068, policyExp: 72.7, totalRevenue: 87.6, totalCost: 80.8, fiscalBalance: 6.8, interestBurden: 11.2, avgCoupon: 0.8, bojPayment: 2.2, taxConsumption: 23.2, taxIncome: 22.0, taxCorporate: 14.6, taxOther: 12.3 },
+  { year: 2024, tax: 75.2, interest: 9.6, debt: 1103, policyExp: 73.5, totalRevenue: 90.6, totalCost: 83.1, fiscalBalance: 7.5, interestBurden: 12.8, avgCoupon: 0.9, bojPayment: 2.2, taxConsumption: 23.8, taxIncome: 22.4, taxCorporate: 17.0, taxOther: 12.0 },
+];
+
+export const ACTUAL_MACRO: ActualMacroPoint[] = [
+  { year: 2015, jgb10y: 0.36, nominalGrowth: 3.5, inflation: 0.8, realGrowth: 2.7 },
+  { year: 2016, jgb10y: -0.07, nominalGrowth: 1.1, inflation: -0.1, realGrowth: 1.2 },
+  { year: 2017, jgb10y: 0.06, nominalGrowth: 2.0, inflation: 0.5, realGrowth: 1.5 },
+  { year: 2018, jgb10y: 0.07, nominalGrowth: 0.3, inflation: 1.0, realGrowth: -0.7 },
+  { year: 2019, jgb10y: -0.09, nominalGrowth: 0.8, inflation: 0.5, realGrowth: 0.3 },
+  { year: 2020, jgb10y: 0.02, nominalGrowth: -3.9, inflation: 0.0, realGrowth: -3.9 },
+  { year: 2021, jgb10y: 0.07, nominalGrowth: 2.4, inflation: -0.2, realGrowth: 2.6 },
+  { year: 2022, jgb10y: 0.25, nominalGrowth: 1.6, inflation: 2.5, realGrowth: -0.9 },
+  { year: 2023, jgb10y: 0.55, nominalGrowth: 5.7, inflation: 3.2, realGrowth: 2.5 },
+  { year: 2024, jgb10y: 1.05, nominalGrowth: 3.2, inflation: 2.7, realGrowth: 0.5 },
+];
+
+export const DATA_SOURCES: DataSource[] = [
+  { name: "一般会計税収の推移", url: "https://www.mof.go.jp/tax_policy/summary/condition/a03.htm", desc: "税収データ" },
+  { name: "財政に関する資料", url: "https://www.mof.go.jp/tax_policy/summary/condition/a02.htm", desc: "歳出・国債費" },
+  { name: "普通国債残高の累増", url: "https://www.mof.go.jp/tax_policy/summary/condition/004.pdf", desc: "債務残高" },
+  { name: "利払費と金利の推移", url: "https://www.mof.go.jp/tax_policy/summary/condition/005.pdf", desc: "利払い費" },
+  { name: "日本の統計 2025 第5章", url: "https://www.stat.go.jp/data/nihon/05.html", desc: "統計局" },
+  { name: "日本銀行 決算", url: "https://www.boj.or.jp/about/account/index.htm", desc: "国庫納付金" },
+];
+
+export const SCENARIOS: Scenario[] = [
+  {
+    name: "① ベースライン（現状維持）",
+    label: "現在の政策を維持した場合の標準シナリオ",
+    params: { inflationRate: 2.0, realGrowth: 0.5, riskPremium: 0.5, initDebt: 1100, initTaxConsumption: 24, initTaxIncome: 22, initTaxCorporate: 17, initTaxOther: 12, initPolicyExp: 80, initAvgCoupon: 0.8, bojCA: 550, bojYield: 0.2, otherRevenue: 15, naturalIncrease: 0.5, policyRateSpread: 1.0, taxRateChangeYear: "なし", taxRateNew: 10 },
+  },
+  {
+    name: "② 高成長シナリオ",
+    label: "構造改革が奏功し、実質成長率が高まるケース",
+    params: { inflationRate: 2.0, realGrowth: 2.0, riskPremium: 0.3, initDebt: 1100, initTaxConsumption: 24, initTaxIncome: 22, initTaxCorporate: 17, initTaxOther: 12, initPolicyExp: 80, initAvgCoupon: 0.8, bojCA: 550, bojYield: 0.2, otherRevenue: 16, naturalIncrease: 0.5, policyRateSpread: 1.0, taxRateChangeYear: "なし", taxRateNew: 10 },
+  },
+  {
+    name: "③ スタグフレーション",
+    label: "高インフレ＋低成長が長期化するケース",
+    params: { inflationRate: 4.0, realGrowth: 0.0, riskPremium: 1.0, initDebt: 1100, initTaxConsumption: 24, initTaxIncome: 22, initTaxCorporate: 17, initTaxOther: 12, initPolicyExp: 80, initAvgCoupon: 0.8, bojCA: 550, bojYield: 0.2, otherRevenue: 15, naturalIncrease: 1.0, policyRateSpread: 0.5, taxRateChangeYear: "なし", taxRateNew: 10 },
+  },
+  {
+    name: "④ 金利急騰シナリオ",
+    label: "国債の信認低下でリスクプレミアムが上昇するケース",
+    params: { inflationRate: 2.5, realGrowth: 0.3, riskPremium: 2.0, initDebt: 1100, initTaxConsumption: 24, initTaxIncome: 22, initTaxCorporate: 17, initTaxOther: 12, initPolicyExp: 80, initAvgCoupon: 0.8, bojCA: 550, bojYield: 0.2, otherRevenue: 15, naturalIncrease: 0.5, policyRateSpread: 1.0, taxRateChangeYear: "なし", taxRateNew: 10 },
+  },
+  {
+    name: "⑤ 財政再建シナリオ",
+    label: "歳出削減と増税で財政健全化を目指すケース",
+    params: { inflationRate: 1.5, realGrowth: 1.0, riskPremium: 0.3, initDebt: 1100, initTaxConsumption: 26, initTaxIncome: 24, initTaxCorporate: 18, initTaxOther: 12, initPolicyExp: 75, initAvgCoupon: 0.8, bojCA: 550, bojYield: 0.2, otherRevenue: 17, naturalIncrease: 0.3, policyRateSpread: 1.0, taxRateChangeYear: "なし", taxRateNew: 10 },
+  },
+];

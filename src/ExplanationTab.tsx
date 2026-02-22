@@ -1,0 +1,438 @@
+import { useState, useMemo } from 'react'
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+  ResponsiveContainer, LineChart, Line, ReferenceLine
+} from 'recharts'
+import type { SimResult } from './simulation'
+import type { ActualDataPoint, SimParams, DataSource } from './data'
+import { ACTUAL_DATA } from './data'
+
+interface Props {
+  params: SimParams;
+  simData: SimResult[];
+  actualData: ActualDataPoint[];
+  dataSources: DataSource[];
+}
+
+function Expander({ title, children, defaultOpen = false }: { title: string; children: React.ReactNode; defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen)
+  return (
+    <div className="expander">
+      <div className="expander-header" onClick={() => setOpen(!open)}>
+        <span>{title}</span>
+        <span className={`collapsible-arrow ${open ? 'open' : ''}`}>▼</span>
+      </div>
+      {open && <div className="expander-content">{children}</div>}
+    </div>
+  )
+}
+
+export function ExplanationTab({ params, simData, actualData, dataSources }: Props) {
+  const p = params
+  const nominalG = p.inflationRate + p.realGrowth
+  const marketRate = nominalG + p.riskPremium
+  const policyRate = Math.max(marketRate / 100 - p.policyRateSpread / 100, 0) * 100
+
+  const bojRevVal = p.initDebt * (p.bojYield / 100)
+  const bojCostVal = p.bojCA * (policyRate / 100)
+  const bojProfit = Math.max(bojRevVal - bojCostVal, 0)
+
+  const allYears = useMemo(() => {
+    const ay = actualData.map(d => d.year)
+    const sy = simData.map(d => d.year)
+    return [...ay, ...sy]
+  }, [actualData, simData])
+
+  const [wfYear, setWfYear] = useState(2035)
+
+  const wfData = useMemo(() => {
+    const isActual = wfYear <= 2024
+    if (isActual) {
+      const d = ACTUAL_DATA.find(item => item.year === wfYear)
+      return d ? { d, isActual: true, otherRev: d.totalRevenue - d.tax - d.bojPayment } : null
+    } else {
+      const d = simData.find(item => item.year === wfYear)
+      return d ? { d, isActual: false, otherRev: p.otherRevenue } : null
+    }
+  }, [wfYear, simData, p.otherRevenue])
+
+  const sensitivityData = useMemo(() => {
+    const rates = [0.0, 0.5, 1.0, 1.5, 2.0, 3.0, 4.0, 5.0]
+    return rates.map(rate => {
+      const pr = Math.max(rate / 100 - p.policyRateSpread / 100, 0)
+      const bojP = Math.max(p.initDebt * (p.bojYield / 100) - p.bojCA * pr, 0)
+      const intC = p.initDebt * rate / 100
+      return {
+        市場金利: rate,
+        日銀納付金: parseFloat(bojP.toFixed(1)),
+        利払い費: parseFloat(intC.toFixed(1)),
+        ネット効果: parseFloat((bojP - intC).toFixed(1)),
+      }
+    })
+  }, [p])
+
+  return (
+    <div>
+      <h2 className="section-title">シミュレーターの目的</h2>
+      <div className="prose">
+        <p>
+          このシミュレーターは、日本政府と日本銀行を<strong>一体（統合政府）</strong>として捉え、
+          2026年から2055年までの30年間の財政推移を予測するツールです。
+        </p>
+        <p style={{ marginTop: 12 }}>
+          <strong>なぜ統合政府で見るのか？</strong>
+        </p>
+        <p>
+          日銀は国債を大量に保有しており、政府が支払う利息の一部は日銀を通じて国庫に戻ります。
+          この「日銀納付金」の存在を無視すると、政府の財政負担を過大に見積もることになります。
+          統合政府として分析することで、より現実的な財政の姿を把握できます。
+        </p>
+        <p style={{ marginTop: 12 }}>
+          <strong>このシミュレーターでわかること</strong>
+        </p>
+        <ul style={{ paddingLeft: 20, marginTop: 4 }}>
+          <li>金利上昇が財政に与える影響</li>
+          <li>税収構造の変化（消費税・所得税・法人税・その他）</li>
+          <li>債務残高と利払い費の長期トレンド</li>
+          <li>日銀の金融政策が財政に与える影響</li>
+          <li>消費税率変更や国債発行の効果</li>
+        </ul>
+      </div>
+
+      <h2 className="section-title">計算ロジックの全体像</h2>
+      <p style={{ fontSize: 13, color: '#64748b', marginBottom: 8 }}>以下のツリー構造で、各年度の財政指標を計算しています。</p>
+      <div className="code-block">{`A：歳入合計 = 税収合計 + 日銀納付金 + その他収入
+│
+├── 税収合計 = 消費税 + 所得税 + 法人税 + その他税
+│   ├── 消費税 = 前年消費税 × (1 + インフレ率 × 1.0)
+│   │   └── ※税率変更年度に (新税率/10) を乗じて水準調整
+│   ├── 所得税 = 前年所得税 × (1 + 名目成長率 × 1.4)
+│   │   └── 名目成長率 = インフレ率 + 実質成長率
+│   ├── 法人税 = 前年法人税 × (1 + 実質成長率×2.0 + インフレ率×0.5)
+│   └── その他税 = 前年その他税 × (1 + 名目成長率 × 0.8)
+│
+├── 日銀納付金 = max(納付可能金額, 0)
+│   └── 納付可能金額 = 国債利息収入 − 当座預金付利コスト
+│       ├── 国債利息収入 = 保有国債残高 × 保有国債利回り
+│       └── 当座預金付利コスト = 当座預金残高 × 政策金利
+│           └── 政策金利 = max(市場金利 − スプレッド, 0)
+│               └── 市場金利 = 名目成長率 + リスクプレミアム
+│
+└── その他収入 = 印紙収入 + 官業収入 + 資産売却収入 + 雑収入
+
+
+B：支出合計 = 政策経費 + 利払い費
+│
+├── 政策経費 = 前年政策経費 × (1 + インフレ率) + 自然増
+│
+└── 利払い費 = 前年債務残高 × 平均クーポン
+    └── 平均クーポン = 前年クーポン × 8/9 + 市場金利 × 1/9
+        └── 市場金利 = 名目成長率 + リスクプレミアム
+
+
+C：収支・残高
+├── 財政収支 = 歳入合計 − 支出合計
+├── 債務残高 = 前年債務残高 + (支出合計 − 歳入合計)
+├── 国債発行額 = max(支出合計 − 歳入合計, 0)
+└── 利払負担率 = (利払い費 ÷ 税収合計) × 100`}</div>
+
+      <h2 className="section-title">各変数の解説</h2>
+
+      <Expander title="A：歳入の計算ロジック">
+        <p><strong>税収：4区分に分解して個別の弾性値で推計</strong></p>
+        <p>税目ごとに経済変数への感応度が異なるため、以下のように分解してシミュレーションしています：</p>
+        <table>
+          <thead>
+            <tr><th>税目</th><th>計算式</th><th>弾性値</th><th>連動する経済変数</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>消費税</td><td>前年 × (1 + インフレ率 × 1.0)</td><td>1.0</td><td>物価上昇で消費税額が自動増加</td></tr>
+            <tr><td>所得税</td><td>前年 × (1 + 名目成長率 × 1.4)</td><td>1.4</td><td>累進課税で所得増以上に税収増</td></tr>
+            <tr><td>法人税</td><td>前年 × (1 + 実質成長率×2.0 + インフレ率×0.5)</td><td>≈2.0</td><td>企業利益は景気変動に敏感</td></tr>
+            <tr><td>その他税</td><td>前年 × (1 + 名目成長率 × 0.8)</td><td>0.8</td><td>相続税・酒税等は比較的安定</td></tr>
+          </tbody>
+        </table>
+        <ul style={{ marginTop: 8 }}>
+          <li><strong>消費税</strong>：税率10%（軽減8%）が一定なので、消費額（≒物価水準）に比例。インフレ率に1:1で連動。</li>
+          <li><strong>所得税</strong>：累進課税のため名目賃金の伸び以上に税収が増加。弾性値1.4は国際的にも標準的な仮定。</li>
+          <li><strong>法人税</strong>：企業利益は実質GDPの変動に大きく左右される（弾性値2.0）。インフレによる名目利益増の効果は限定的（0.5）。</li>
+          <li><strong>その他税</strong>：相続税・酒税・たばこ税・関税等。名目GDPに緩やかに連動（弾性値0.8）。</li>
+        </ul>
+        <hr style={{ margin: '16px 0', borderColor: '#e2e8f0' }} />
+        <p><strong>日銀納付金：max(保有国債 × 利回り − 当座預金 × 政策金利, 0)</strong></p>
+        <p>日銀は保有する国債から利息収入を得る一方、金融機関から預かる当座預金に利息を支払います。この差額（利ざや）が日銀の利益となり、国庫に納付されます。金利上昇局面では当座預金への付利コストが先に上昇する一方、保有国債の利回りは既発債のため簡単には上がらず、逆ざやで納付金がゼロになるリスクがあります。</p>
+      </Expander>
+
+      <Expander title="B：支出の計算ロジック">
+        <p><strong>政策経費：前年 × (1 + インフレ率) + 自然増{p.naturalIncrease.toFixed(1)}兆円</strong></p>
+        <p>社会保障・公共事業・教育・防衛等の歳出は、物価上昇に伴い名目額が膨らみます。さらに高齢化により年金・医療・介護の給付が毎年構造的に増加するため、自然増を加算しています。</p>
+        <hr style={{ margin: '16px 0', borderColor: '#e2e8f0' }} />
+        <p><strong>平均クーポン：前年 × 8/9 + 市場金利 × 1/9（9年借換ロジック）</strong></p>
+        <p>日本国債の平均残存期間は約9年です。毎年およそ全体の1/9が満期を迎え、その時点の市場金利で借り換えられます。残りの8/9は既発債のため金利は変わりません。金利が急上昇しても利払い負担はすぐには跳ね上がらず、9年かけて徐々に波及する現実の動きを再現しています。</p>
+        <hr style={{ margin: '16px 0', borderColor: '#e2e8f0' }} />
+        <p><strong>利払い費：債務残高 × 平均クーポン</strong></p>
+        <p>国が発行している国債の元本（債務残高）に対して、加重平均の利率（平均クーポン）を掛けた金額が年間の利息支払い額です。</p>
+      </Expander>
+
+      <Expander title="C：収支・残高の計算ロジック">
+        <p><strong>利払負担率：(利払い費 / 税収) × 100</strong></p>
+        <p>税収に対する利払い費の比率を見ることで、「稼ぎのうちどれだけが借金の利息に消えるか」を示します。30%を警戒ラインとしているのは、過去に財政危機に陥った国々（ギリシャ、イタリア等）がこの水準前後で市場の信認を失った事例があるためです。</p>
+        <hr style={{ margin: '16px 0', borderColor: '#e2e8f0' }} />
+        <p><strong>債務残高：前年残高 + (歳出 − 歳入)</strong></p>
+        <p>財政赤字（歳出 {'>'} 歳入）が発生すると、その分だけ新たに国債を発行して資金を調達するため、債務残高が積み上がります。利払い費が増えると赤字が拡大し、さらに債務が増えて利払い費が増える「債務の雪だるま効果」が発生し得ます。</p>
+      </Expander>
+
+      <h2 className="section-title" style={{ marginTop: 24 }}>統合政府の仕組み</h2>
+
+      <Expander title="統合政府の資金フロー図">
+        <div className="flow-diagram">
+          <div className="flow-box gov">
+            日本政府（財務省）
+            <div className="flow-sub">税収・歳出・国債発行を管理</div>
+          </div>
+          <div className="flow-box people">
+            国民・企業
+            <div className="flow-sub">納税者・サービス受益者</div>
+          </div>
+          <div className="flow-box bank">
+            金融機関
+            <div className="flow-sub">国債購入・当座預金</div>
+          </div>
+          <div className="flow-box boj">
+            日本銀行（BOJ）
+            <div className="flow-sub">金融政策・国債保有・当座預金管理</div>
+          </div>
+        </div>
+        <div style={{ background: '#f8fafc', borderRadius: 8, padding: 12, marginTop: 8, fontSize: 12, lineHeight: 1.8 }}>
+          <div>🔵 <strong>国民→政府</strong>：税金の納付</div>
+          <div>🔴 <strong>政府→国民</strong>：公共サービス・社会保障</div>
+          <div>🟠 <strong>政府→金融機関</strong>：国債発行（資金調達）</div>
+          <div>🟣 <strong>金融機関→日銀</strong>：国債売却（公開市場操作）</div>
+          <div>🟢 <strong>日銀→政府</strong>：国庫納付金</div>
+          <div>⚪ <strong>金融機関⇄日銀</strong>：当座預金（付利）</div>
+        </div>
+        <p style={{ marginTop: 12 }}>
+          このシミュレーターでは、日本政府と日本銀行を<strong>一体（統合政府）</strong>として捉え、財政の持続可能性を分析しています。
+        </p>
+      </Expander>
+
+      <Expander title="日銀納付金の計算構造">
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          <div>
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={[
+                { name: '日銀損益', 利息収入: bojRevVal, 付利コスト: -bojCostVal }
+              ]}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} unit="兆円" />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="利息収入" fill="#22c55e" />
+                <Bar dataKey="付利コスト" fill="#ef4444" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          <div>
+            <div className="boj-calc">
+              <p><strong>利息収入（国債保有から）</strong></p>
+              <div className="boj-calc-row">
+                <span>保有国債（＝債務残高）</span>
+                <span>{p.initDebt.toFixed(0)} 兆円</span>
+              </div>
+              <div className="boj-calc-row">
+                <span>保有国債利回り</span>
+                <span>{p.bojYield.toFixed(2)}%</span>
+              </div>
+              <div className="boj-calc-row">
+                <span>利息収入</span>
+                <span><strong>{bojRevVal.toFixed(1)} 兆円</strong></span>
+              </div>
+              <hr style={{ margin: '8px 0', borderColor: '#e2e8f0' }} />
+              <p><strong>付利コスト（当座預金への利払い）</strong></p>
+              <div className="boj-calc-row">
+                <span>当座預金残高</span>
+                <span>{p.bojCA.toFixed(0)} 兆円</span>
+              </div>
+              <div className="boj-calc-row">
+                <span>政策金利</span>
+                <span>{policyRate.toFixed(2)}%</span>
+              </div>
+              <div className="boj-calc-row">
+                <span>付利コスト</span>
+                <span><strong>{bojCostVal.toFixed(1)} 兆円</strong></span>
+              </div>
+              <div className="boj-calc-row total">
+                <span>国庫納付金</span>
+                <span style={{ color: '#22c55e' }}><strong>{bojProfit.toFixed(1)} 兆円</strong></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Expander>
+
+      <Expander title="金利感応度分析">
+        <ResponsiveContainer width="100%" height={350}>
+          <LineChart data={sensitivityData}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+            <XAxis dataKey="市場金利" tick={{ fontSize: 11 }} unit="%" />
+            <YAxis tick={{ fontSize: 11 }} unit="兆円" />
+            <Tooltip />
+            <Legend />
+            <ReferenceLine y={0} stroke="#94a3b8" strokeDasharray="3 3" />
+            <Line type="monotone" dataKey="日銀納付金" stroke="#22c55e" strokeWidth={2} />
+            <Line type="monotone" dataKey="利払い費" stroke="#ef4444" strokeWidth={2} />
+            <Line type="monotone" dataKey="ネット効果" stroke="#3b82f6" strokeWidth={2} strokeDasharray="5 5" />
+          </LineChart>
+        </ResponsiveContainer>
+        <div className="prose" style={{ marginTop: 12 }}>
+          <p><strong>ポイント：統合政府で見ると金利上昇の影響は相殺される？</strong></p>
+          <p>一見すると、金利が上がれば政府の利払い費は増加しますが、日銀の保有国債からの利息収入も増えるため、統合政府としては相殺されるように見えます。しかし実際には：</p>
+          <ol style={{ paddingLeft: 20, marginTop: 8 }}>
+            <li><strong>タイムラグ</strong>：利払い費は9年借換ロジックで徐々に上昇するが、日銀の保有国債利回りはさらに遅れて上昇</li>
+            <li><strong>逆ざや問題</strong>：金利上昇初期は当座預金への付利コストが先に増え、日銀が赤字に陥る</li>
+            <li><strong>国債保有比率</strong>：日銀が全国債を保有しているわけではないため、完全な相殺にはならない</li>
+            <li><strong>信認リスク</strong>：金利が急騰する場合、国債市場の信認低下が同時に発生し、さらなる金利上昇を招く悪循環</li>
+          </ol>
+        </div>
+      </Expander>
+
+      <h2 className="section-title" style={{ marginTop: 24 }}>ウォーターフォール分析</h2>
+
+      <div className="year-slider-container">
+        <div className="slider-header">
+          <label>分析する年度</label>
+          <span className="slider-value">{wfYear}年度</span>
+        </div>
+        <input
+          type="range"
+          min={allYears[0]}
+          max={allYears[allYears.length - 1]}
+          value={wfYear}
+          onChange={e => setWfYear(parseInt(e.target.value))}
+          style={{ width: '100%' }}
+        />
+        <div className="year-slider-label">
+          <span>{allYears[0]}</span>
+          <span>{allYears[allYears.length - 1]}</span>
+        </div>
+      </div>
+
+      {wfData && (
+        <>
+          {wfData.isActual && (
+            <div className="info-box">
+              📊 {wfYear}年度は実績データです（出典：財務省・日本銀行）
+            </div>
+          )}
+          <WaterfallChart data={wfData.d} otherRev={wfData.otherRev} isActual={wfData.isActual} year={wfYear} />
+          <div className="metrics-row">
+            <div className="metric-card">
+              <div className="metric-label">歳入合計</div>
+              <div className="metric-value">{wfData.d.totalRevenue.toFixed(1)} 兆円</div>
+            </div>
+            <div className="metric-card">
+              <div className="metric-label">歳出合計</div>
+              <div className="metric-value">{wfData.d.totalCost.toFixed(1)} 兆円</div>
+            </div>
+            <div className="metric-card">
+              <div className="metric-label">財政収支</div>
+              <div className="metric-value">{wfData.d.fiscalBalance.toFixed(1)} 兆円</div>
+              <div className={`metric-delta ${wfData.d.fiscalBalance >= 0 ? 'positive' : 'negative'}`}>
+                {wfData.d.fiscalBalance >= 0 ? '黒字' : '赤字'}
+              </div>
+            </div>
+          </div>
+          <div className="metrics-row">
+            <div className="metric-card">
+              <div className="metric-label">税収</div>
+              <div className="metric-value">{wfData.d.tax.toFixed(1)} 兆円</div>
+            </div>
+            <div className="metric-card">
+              <div className="metric-label">利払い費</div>
+              <div className="metric-value">{wfData.d.interest.toFixed(1)} 兆円</div>
+            </div>
+            <div className="metric-card">
+              <div className="metric-label">利払負担率</div>
+              <div className="metric-value">{wfData.d.interestBurden.toFixed(1)}%</div>
+              <div className={`metric-delta ${wfData.d.interestBurden > 30 ? 'negative' : 'positive'}`}>
+                {wfData.d.interestBurden > 30 ? '危険' : '正常'}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      <h2 className="section-title" style={{ marginTop: 24 }}>データ出典</h2>
+      <ul className="source-list">
+        {dataSources.map((src, i) => (
+          <li key={i}>
+            <a href={src.url} target="_blank" rel="noopener noreferrer">{src.name}</a>
+            {' '}({src.desc})
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+function WaterfallChart({ data, otherRev, isActual, year }: {
+  data: SimResult | ActualDataPoint;
+  otherRev: number;
+  isActual: boolean;
+  year: number;
+}) {
+  const items = [
+    { label: '消費税', value: data.taxConsumption, type: 'income' as const },
+    { label: '所得税', value: data.taxIncome, type: 'income' as const },
+    { label: '法人税', value: data.taxCorporate, type: 'income' as const },
+    { label: 'その他税', value: data.taxOther, type: 'income' as const },
+    { label: '税収計', value: data.tax, type: 'total' as const },
+    { label: '日銀納付金', value: data.bojPayment, type: 'income' as const },
+    { label: 'その他', value: otherRev, type: 'income' as const },
+    { label: '歳入合計', value: data.totalRevenue, type: 'total' as const },
+    { label: '政策経費', value: -data.policyExp, type: 'expense' as const },
+    { label: '利払い費', value: -data.interest, type: 'expense' as const },
+    { label: '歳出合計', value: -data.totalCost, type: 'total' as const },
+    { label: '財政収支', value: data.fiscalBalance, type: 'total' as const },
+  ]
+
+  const maxVal = Math.max(...items.map(i => Math.abs(i.value))) * 1.1
+  const wfLabel = isActual ? '実績' : 'シミュレーション'
+
+  return (
+    <div className="chart-container">
+      <div className="chart-title">{year}年度 収支ウォーターフォール（{wfLabel}）</div>
+      <div className="waterfall-bar-group">
+        {items.map((item, idx) => {
+          const absVal = Math.abs(item.value)
+          const width = (absVal / maxVal) * 100
+          let color = '#3b82f6'
+          if (item.type === 'expense') color = '#ef4444'
+          else if (item.type === 'total') color = '#334155'
+          if (isActual && item.type === 'income') color = '#64748b'
+          if (isActual && item.type === 'expense') color = '#94a3b8'
+
+          return (
+            <div key={idx} className="wf-bar-container">
+              <div className="wf-bar-label">{item.label}</div>
+              <div className="wf-bar-track">
+                <div
+                  className="wf-bar"
+                  style={{
+                    width: `${Math.max(width, 3)}%`,
+                    left: item.value >= 0 ? '50%' : `${50 - width}%`,
+                    backgroundColor: color,
+                  }}
+                >
+                  {width > 8 && <span>{Math.abs(item.value).toFixed(1)}</span>}
+                </div>
+              </div>
+              <div className="wf-bar-value">{item.value >= 0 ? '+' : ''}{item.value.toFixed(1)}</div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
