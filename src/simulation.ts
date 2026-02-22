@@ -35,7 +35,25 @@ export interface SimResult {
   fxValuationGain: number;
   cpiIncrease: number;
   wageIncrease: number;
+  modelIncome: number;
+  modelDisposable: number;
+  modelFoodCost: number;
+  modelEnergyCost: number;
+  modelFoodCostChange: number;
+  modelEnergyCostChange: number;
+  modelDisposableChange: number;
+  incomeRatio: number;
 }
+
+function giniToIncomeRatio(gini: number): number {
+  const ratio = (1 + gini) / (1 - gini);
+  return Math.max(ratio, 1);
+}
+
+const BASE_INCOME = 400;
+const BASE_FOOD_RATIO = 0.255;
+const BASE_ENERGY_RATIO = 0.073;
+const TAX_SOCIAL_RATIO = 0.30;
 
 export function runSimulation(p: SimParams): SimResult[] {
   const B = p.inflationRate / 100;
@@ -108,6 +126,12 @@ export function runSimulation(p: SimParams): SimResult[] {
       const interestBurden = taxTotal !== 0 ? (interest / taxTotal) * 100 : 0;
       const bondIssuance = Math.max(totalCost - totalRevenue, 0);
 
+      const modelIncome = BASE_INCOME * (1 + nomWageG);
+      const modelFoodCost = BASE_INCOME * BASE_FOOD_RATIO * (1 + cpiIncrease);
+      const modelEnergyCost = BASE_INCOME * BASE_ENERGY_RATIO * (1 + cpiIncrease) * (1 + Math.max(yenFactor, 0) * 0.5);
+      const modelDisposable = modelIncome * (1 - TAX_SOCIAL_RATIO) - modelFoodCost - modelEnergyCost;
+      const baseDisposable = BASE_INCOME * (1 - TAX_SOCIAL_RATIO) - BASE_INCOME * BASE_FOOD_RATIO - BASE_INCOME * BASE_ENERGY_RATIO;
+
       results.push({
         year, tax: taxTotal, bojPayment, totalRevenue, policyExp,
         avgCoupon: avgCoupon * 100, interest, totalCost, debt,
@@ -125,6 +149,12 @@ export function runSimulation(p: SimParams): SimResult[] {
         energySubsidy, fxValuationGain,
         cpiIncrease: cpiIncrease * 100,
         wageIncrease: wageIncrease * 100,
+        modelIncome, modelDisposable,
+        modelFoodCost, modelEnergyCost,
+        modelFoodCostChange: modelFoodCost - BASE_INCOME * BASE_FOOD_RATIO,
+        modelEnergyCostChange: modelEnergyCost - BASE_INCOME * BASE_ENERGY_RATIO,
+        modelDisposableChange: modelDisposable - baseDisposable,
+        incomeRatio: giniToIncomeRatio(giniIndex),
       });
     } else {
       const prev = results[i - 1];
@@ -182,6 +212,15 @@ export function runSimulation(p: SimParams): SimResult[] {
       const interestBurden = tax !== 0 ? (interest / tax) * 100 : 0;
       const bondIssuance = Math.max(totalCost - totalRevenue, 0);
 
+      const cumulativeCpi = results.reduce((acc, r) => acc * (1 + r.cpiIncrease / 100), 1) * (1 + cpiIncrease);
+      const cumulativeWage = results.reduce((acc, r) => acc * (1 + r.wageIncrease / 100), 1) * (1 + wageIncrease);
+      const cumulativeYenDep = exchangeRate / p.initExchangeRate - 1;
+      const modelIncome = BASE_INCOME * cumulativeWage;
+      const modelFoodCost = BASE_INCOME * BASE_FOOD_RATIO * cumulativeCpi;
+      const modelEnergyCost = BASE_INCOME * BASE_ENERGY_RATIO * cumulativeCpi * (1 + Math.max(cumulativeYenDep, 0) * 0.5);
+      const modelDisposable = modelIncome * (1 - TAX_SOCIAL_RATIO) - modelFoodCost - modelEnergyCost;
+      const baseDisposable = BASE_INCOME * (1 - TAX_SOCIAL_RATIO) - BASE_INCOME * BASE_FOOD_RATIO - BASE_INCOME * BASE_ENERGY_RATIO;
+
       results.push({
         year, tax, bojPayment, totalRevenue, policyExp,
         avgCoupon: avgCouponDec * 100, interest, totalCost, debt,
@@ -199,6 +238,12 @@ export function runSimulation(p: SimParams): SimResult[] {
         energySubsidy, fxValuationGain,
         cpiIncrease: cpiIncrease * 100,
         wageIncrease: wageIncrease * 100,
+        modelIncome, modelDisposable,
+        modelFoodCost, modelEnergyCost,
+        modelFoodCostChange: modelFoodCost - BASE_INCOME * BASE_FOOD_RATIO,
+        modelEnergyCostChange: modelEnergyCost - BASE_INCOME * BASE_ENERGY_RATIO,
+        modelDisposableChange: modelDisposable - baseDisposable,
+        incomeRatio: giniToIncomeRatio(giniIndex),
       });
     }
   }

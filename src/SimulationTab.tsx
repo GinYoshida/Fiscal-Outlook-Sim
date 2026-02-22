@@ -105,6 +105,39 @@ export function SimulationTab({ params, simData, actualData }: Props) {
     return [...actual, ...sim]
   }, [actualData, simData])
 
+  const modelHouseholdData = useMemo(() => {
+    return simData.map(d => ({
+      year: d.year,
+      可処分所得変化: parseFloat(d.modelDisposableChange.toFixed(1)),
+      食費増加: parseFloat(d.modelFoodCostChange.toFixed(1)),
+      光熱費増加: parseFloat(d.modelEnergyCostChange.toFixed(1)),
+    }))
+  }, [simData])
+
+  const incomeRatioData = useMemo(() => {
+    const actual = actualData.map(d => ({
+      year: d.year,
+      所得格差倍率: parseFloat(((1 + d.giniIndex) / (1 - d.giniIndex)).toFixed(2)),
+      ジニ係数: parseFloat(d.giniIndex.toFixed(3)),
+    }))
+    const sim = simData.map(d => ({
+      year: d.year,
+      所得格差倍率: parseFloat(d.incomeRatio.toFixed(2)),
+      ジニ係数: parseFloat(d.giniIndex.toFixed(3)),
+    }))
+    return [...actual, ...sim]
+  }, [actualData, simData])
+
+  const modelSummaryData = useMemo(() => {
+    return simData.map(d => ({
+      year: d.year,
+      名目年収: parseFloat(d.modelIncome.toFixed(0)),
+      可処分所得: parseFloat(d.modelDisposable.toFixed(0)),
+      食費: parseFloat(d.modelFoodCost.toFixed(0)),
+      光熱費: parseFloat(d.modelEnergyCost.toFixed(0)),
+    }))
+  }, [simData])
+
   const tradeData = useMemo(() => {
     const actual = actualData.map(d => ({
       year: d.year,
@@ -175,6 +208,13 @@ export function SimulationTab({ params, simData, actualData }: Props) {
       { label: '─', values: years.map(() => '') },
       { label: '貧困率 (%)', values: data.map(d => fmt(d.povertyRate)) },
       { label: 'ジニ係数', values: data.map(d => fmt(d.giniIndex, 3)) },
+      { label: '所得格差倍率', values: data.map(d => fmt(d.incomeRatio, 2) + '倍') },
+      { label: '─', values: years.map(() => '') },
+      { label: 'モデル家計 (万円)', values: years.map(() => '') },
+      { label: '├ 名目年収', values: data.map(d => fmt(d.modelIncome, 0)), indent: 1 },
+      { label: '├ 可処分所得', values: data.map(d => fmt(d.modelDisposable, 0)), indent: 1 },
+      { label: '├ 食費', values: data.map(d => fmt(d.modelFoodCost, 0)), indent: 1 },
+      { label: '└ 光熱費', values: data.map(d => fmt(d.modelEnergyCost, 0)), indent: 1 },
     ]
     return { years, rows, actualYearCount: 0 }
   }
@@ -210,6 +250,13 @@ export function SimulationTab({ params, simData, actualData }: Props) {
       { label: '─', values: years.map(() => '') },
       { label: '貧困率 (%)', values: [...aData.map(d => fmt(d.povertyRate)), ...sFiltered.map(d => fmt(d.povertyRate))] },
       { label: 'ジニ係数', values: [...aData.map(d => fmt(d.giniIndex, 3)), ...sFiltered.map(d => fmt(d.giniIndex, 3))] },
+      { label: '所得格差倍率', values: [...aData.map(d => fmt(((1+d.giniIndex)/(1-d.giniIndex)), 2) + '倍'), ...sFiltered.map(d => fmt(d.incomeRatio, 2) + '倍')] },
+      { label: '─', values: years.map(() => '') },
+      { label: 'モデル家計 (万円)', values: years.map(() => '') },
+      { label: '├ 名目年収', values: [...aData.map(() => '―'), ...sFiltered.map(d => fmt(d.modelIncome, 0))] },
+      { label: '├ 可処分所得', values: [...aData.map(() => '―'), ...sFiltered.map(d => fmt(d.modelDisposable, 0))] },
+      { label: '├ 食費', values: [...aData.map(() => '―'), ...sFiltered.map(d => fmt(d.modelFoodCost, 0))] },
+      { label: '└ 光熱費', values: [...aData.map(() => '―'), ...sFiltered.map(d => fmt(d.modelEnergyCost, 0))] },
     ]
     return { years, rows, actualYearCount: actualCount }
   }
@@ -249,7 +296,14 @@ export function SimulationTab({ params, simData, actualData }: Props) {
       { label: '─', values: years.map(() => '') },
       { label: '貧困率 (%)', values: data.map(d => fmt(d.povertyRate)) },
       { label: 'ジニ係数', values: data.map(d => fmt(d.giniIndex, 3)) },
+      { label: '所得格差倍率', values: data.map(d => fmt(d.incomeRatio, 2) + '倍') },
       { label: '実質賃金伸び率 (%)', values: data.map(d => fmt(d.realWageGrowth)) },
+      { label: '─', values: years.map(() => '') },
+      { label: 'モデル家計 (万円)', values: years.map(() => '') },
+      { label: '├ 名目年収', values: data.map(d => fmt(d.modelIncome, 0)), indent: 1 },
+      { label: '├ 可処分所得', values: data.map(d => fmt(d.modelDisposable, 0)), indent: 1 },
+      { label: '├ 食費', values: data.map(d => fmt(d.modelFoodCost, 0)), indent: 1 },
+      { label: '└ 光熱費', values: data.map(d => fmt(d.modelEnergyCost, 0)), indent: 1 },
     ]
     return { years, rows, actualYearCount: 0 }
   }
@@ -324,6 +378,91 @@ export function SimulationTab({ params, simData, actualData }: Props) {
         <div className="chart-note">
           左軸: 貧困率(%)・実質賃金伸び率(%) / 右軸: ジニ係数(×100)
         </div>
+      </Collapsible>
+
+      <Collapsible title="家計の実感（モデル家計：年収中央値400万円）" defaultOpen={true}>
+        <div className="chart-note" style={{ marginBottom: 8, textAlign: 'left', fontSize: 12, color: '#64748b' }}>
+          年収400万円（中央値）の家計を想定。税・社会保険料30%、食費25.5%（エンゲル係数）、光熱費7.3%で計算。2026年との差額を表示。
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          <div>
+            <div className="chart-subtitle">可処分所得と生活費の変化（万円/年）</div>
+            <ResponsiveContainer width="100%" height={280}>
+              <ComposedChart data={modelHouseholdData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis dataKey="year" tick={{ fontSize: 10 }} />
+                <YAxis tick={{ fontSize: 10 }} unit="万円" />
+                <Tooltip formatter={(v: number) => `${v >= 0 ? '+' : ''}${v.toFixed(1)} 万円`} />
+                <Legend />
+                <ReferenceLine y={0} stroke="#94a3b8" strokeDasharray="3 3" />
+                <Bar dataKey="食費増加" fill="#f97316" opacity={0.7} stackId="cost" />
+                <Bar dataKey="光熱費増加" fill="#ef4444" opacity={0.7} stackId="cost" />
+                <Line type="monotone" dataKey="可処分所得変化" stroke="#3b82f6" strokeWidth={2.5} dot={false} />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+          <div>
+            <div className="chart-subtitle">所得格差倍率（上位20%÷下位20%）</div>
+            <ResponsiveContainer width="100%" height={280}>
+              <ComposedChart data={incomeRatioData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis dataKey="year" tick={{ fontSize: 10 }} />
+                <YAxis yAxisId="left" tick={{ fontSize: 10 }} unit="倍" />
+                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10 }} />
+                <Tooltip />
+                <Legend />
+                <Area yAxisId="left" type="monotone" dataKey="所得格差倍率" stroke="#8b5cf6" fill="#ede9fe" strokeWidth={2} />
+                <Line yAxisId="right" type="monotone" dataKey="ジニ係数" stroke="#64748b" strokeWidth={1.5} dot={false} strokeDasharray="5 3" />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+        {simData.length > 0 && (() => {
+          const d2035 = simData.find(d => d.year === 2035)
+          const d2055 = simData[simData.length - 1]
+          const first = simData[0]
+          return (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginTop: 12 }}>
+              <div className="metric-card">
+                <div className="metric-label">2035年 可処分所得変化</div>
+                <div className="metric-value" style={{ color: (d2035?.modelDisposableChange ?? 0) >= 0 ? '#22c55e' : '#ef4444' }}>
+                  {(d2035?.modelDisposableChange ?? 0) >= 0 ? '+' : ''}{(d2035?.modelDisposableChange ?? 0).toFixed(1)}万円
+                </div>
+              </div>
+              <div className="metric-card">
+                <div className="metric-label">{d2055.year}年 可処分所得変化</div>
+                <div className="metric-value" style={{ color: d2055.modelDisposableChange >= 0 ? '#22c55e' : '#ef4444' }}>
+                  {d2055.modelDisposableChange >= 0 ? '+' : ''}{d2055.modelDisposableChange.toFixed(1)}万円
+                </div>
+              </div>
+              <div className="metric-card">
+                <div className="metric-label">所得格差倍率（初年度）</div>
+                <div className="metric-value">{first.incomeRatio.toFixed(2)}倍</div>
+              </div>
+              <div className="metric-card">
+                <div className="metric-label">所得格差倍率（{d2055.year}年）</div>
+                <div className="metric-value" style={{ color: d2055.incomeRatio > first.incomeRatio ? '#ef4444' : '#22c55e' }}>
+                  {d2055.incomeRatio.toFixed(2)}倍
+                </div>
+              </div>
+            </div>
+          )
+        })()}
+        <Collapsible title="モデル家計の詳細推移（年収・可処分所得・食費・光熱費）">
+          <ResponsiveContainer width="100%" height={280}>
+            <LineChart data={modelSummaryData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+              <XAxis dataKey="year" tick={{ fontSize: 10 }} />
+              <YAxis tick={{ fontSize: 10 }} unit="万円" />
+              <Tooltip formatter={(v: number) => `${v.toFixed(0)} 万円`} />
+              <Legend />
+              <Line type="monotone" dataKey="名目年収" stroke="#3b82f6" strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="可処分所得" stroke="#22c55e" strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="食費" stroke="#f97316" strokeWidth={1.5} dot={false} strokeDasharray="5 3" />
+              <Line type="monotone" dataKey="光熱費" stroke="#ef4444" strokeWidth={1.5} dot={false} strokeDasharray="5 3" />
+            </LineChart>
+          </ResponsiveContainer>
+        </Collapsible>
       </Collapsible>
 
       <Collapsible title="貿易収支・為替レート" defaultOpen={true}>
