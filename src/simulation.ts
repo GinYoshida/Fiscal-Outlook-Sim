@@ -140,7 +140,7 @@ export function runSimulation(p: SimParams): SimResult[] {
       const importCost = Math.max(yenFactor, 0) * 0.2;
       const taxCorporateAdj = taxCorporate * (1 + exportProfit - importCost);
 
-      const energySubsidy = B * p.energySubsidyRate * 10;
+      const energySubsidy = p.inflationRate * p.energySubsidyRate * 10;
 
       const otherRevWithFx = p.otherRevenue + Math.max(fxValuationGain * 0.1, 0);
 
@@ -246,7 +246,7 @@ export function runSimulation(p: SimParams): SimResult[] {
       const otherRevWithFx = p.otherRevenue + Math.max(fxValuationGain * 0.1, 0);
       const totalRevenue = tax + bojPayment + otherRevWithFx;
 
-      const energySubsidy = B * p.energySubsidyRate * 10;
+      const energySubsidy = p.inflationRate * p.energySubsidyRate * 10;
       const policyExpBase = prev.policyExp - prev.energySubsidy;
       const policyExp = policyExpBase * (1 + B) + p.naturalIncrease + energySubsidy;
       const avgCouponDec = (prev.avgCoupon / 100 * 8 / 9) + (E * 1 / 9);
