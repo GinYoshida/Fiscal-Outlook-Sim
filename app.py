@@ -62,15 +62,15 @@ DATA_SOURCES = [
 
 SCENARIOS = [
     {"name": "① ベースライン（現状維持）", "label": "現在の政策を維持した場合の標準シナリオ",
-     "params": {"inflationRate": 2.0, "realGrowth": 0.5, "riskPremium": 0.5, "initDebt": 1100, "initTaxConsumption": 24, "initTaxIncome": 22, "initTaxCorporate": 17, "initTaxOther": 12, "initPolicyExp": 80, "initAvgCoupon": 0.8, "bojCA": 550, "bojYield": 0.2, "otherRevenue": 15, "naturalIncrease": 0.5, "policyRateSpread": 1.0}},
+     "params": {"inflationRate": 2.0, "realGrowth": 0.5, "riskPremium": 0.5, "initDebt": 1100, "initTaxConsumption": 24, "initTaxIncome": 22, "initTaxCorporate": 17, "initTaxOther": 12, "initPolicyExp": 80, "initAvgCoupon": 0.8, "bojCA": 550, "bojYield": 0.2, "otherRevenue": 15, "naturalIncrease": 0.5, "policyRateSpread": 1.0, "taxRateChangeYear": "なし", "taxRateNew": 10}},
     {"name": "② 高成長シナリオ", "label": "構造改革が奏功し、実質成長率が高まるケース",
-     "params": {"inflationRate": 2.0, "realGrowth": 2.0, "riskPremium": 0.3, "initDebt": 1100, "initTaxConsumption": 24, "initTaxIncome": 22, "initTaxCorporate": 17, "initTaxOther": 12, "initPolicyExp": 80, "initAvgCoupon": 0.8, "bojCA": 550, "bojYield": 0.2, "otherRevenue": 16, "naturalIncrease": 0.5, "policyRateSpread": 1.0}},
+     "params": {"inflationRate": 2.0, "realGrowth": 2.0, "riskPremium": 0.3, "initDebt": 1100, "initTaxConsumption": 24, "initTaxIncome": 22, "initTaxCorporate": 17, "initTaxOther": 12, "initPolicyExp": 80, "initAvgCoupon": 0.8, "bojCA": 550, "bojYield": 0.2, "otherRevenue": 16, "naturalIncrease": 0.5, "policyRateSpread": 1.0, "taxRateChangeYear": "なし", "taxRateNew": 10}},
     {"name": "③ スタグフレーション", "label": "高インフレ＋低成長が長期化するケース",
-     "params": {"inflationRate": 4.0, "realGrowth": 0.0, "riskPremium": 1.0, "initDebt": 1100, "initTaxConsumption": 24, "initTaxIncome": 22, "initTaxCorporate": 17, "initTaxOther": 12, "initPolicyExp": 80, "initAvgCoupon": 0.8, "bojCA": 550, "bojYield": 0.2, "otherRevenue": 15, "naturalIncrease": 1.0, "policyRateSpread": 0.5}},
+     "params": {"inflationRate": 4.0, "realGrowth": 0.0, "riskPremium": 1.0, "initDebt": 1100, "initTaxConsumption": 24, "initTaxIncome": 22, "initTaxCorporate": 17, "initTaxOther": 12, "initPolicyExp": 80, "initAvgCoupon": 0.8, "bojCA": 550, "bojYield": 0.2, "otherRevenue": 15, "naturalIncrease": 1.0, "policyRateSpread": 0.5, "taxRateChangeYear": "なし", "taxRateNew": 10}},
     {"name": "④ 金利急騰シナリオ", "label": "国債の信認低下でリスクプレミアムが上昇するケース",
-     "params": {"inflationRate": 2.5, "realGrowth": 0.3, "riskPremium": 2.0, "initDebt": 1100, "initTaxConsumption": 24, "initTaxIncome": 22, "initTaxCorporate": 17, "initTaxOther": 12, "initPolicyExp": 80, "initAvgCoupon": 0.8, "bojCA": 550, "bojYield": 0.2, "otherRevenue": 15, "naturalIncrease": 0.5, "policyRateSpread": 1.0}},
+     "params": {"inflationRate": 2.5, "realGrowth": 0.3, "riskPremium": 2.0, "initDebt": 1100, "initTaxConsumption": 24, "initTaxIncome": 22, "initTaxCorporate": 17, "initTaxOther": 12, "initPolicyExp": 80, "initAvgCoupon": 0.8, "bojCA": 550, "bojYield": 0.2, "otherRevenue": 15, "naturalIncrease": 0.5, "policyRateSpread": 1.0, "taxRateChangeYear": "なし", "taxRateNew": 10}},
     {"name": "⑤ 財政再建シナリオ", "label": "歳出削減と増税で財政健全化を目指すケース",
-     "params": {"inflationRate": 1.5, "realGrowth": 1.0, "riskPremium": 0.3, "initDebt": 1100, "initTaxConsumption": 26, "initTaxIncome": 24, "initTaxCorporate": 18, "initTaxOther": 12, "initPolicyExp": 75, "initAvgCoupon": 0.8, "bojCA": 550, "bojYield": 0.2, "otherRevenue": 17, "naturalIncrease": 0.3, "policyRateSpread": 1.0}},
+     "params": {"inflationRate": 1.5, "realGrowth": 1.0, "riskPremium": 0.3, "initDebt": 1100, "initTaxConsumption": 26, "initTaxIncome": 24, "initTaxCorporate": 18, "initTaxOther": 12, "initPolicyExp": 75, "initAvgCoupon": 0.8, "bojCA": 550, "bojYield": 0.2, "otherRevenue": 17, "naturalIncrease": 0.3, "policyRateSpread": 1.0, "taxRateChangeYear": "なし", "taxRateNew": 10}},
 ]
 
 PLOTLY_CONFIG = {
@@ -101,6 +101,9 @@ def run_simulation(p):
     C = p["realGrowth"] / 100
     D = B + C
     E = D + p["riskPremium"] / 100
+    change_year = None
+    if p.get("taxRateChangeYear", "なし") != "なし":
+        change_year = int(p["taxRateChangeYear"])
     results = []
     for i in range(30):
         year = 2026 + i
@@ -110,6 +113,8 @@ def run_simulation(p):
             boj_cost = p["bojCA"] * policy_rate
             boj_payment = max(boj_rev - boj_cost, 0)
             tax_consumption = p["initTaxConsumption"]
+            if change_year is not None and year >= change_year:
+                tax_consumption = tax_consumption * (p["taxRateNew"] / 10.0)
             tax_income = p["initTaxIncome"]
             tax_corporate = p["initTaxCorporate"]
             tax_other = p["initTaxOther"]
@@ -122,6 +127,11 @@ def run_simulation(p):
             fiscal_balance = total_revenue - total_cost
             debt = p["initDebt"] + (total_cost - total_revenue)
             interest_burden = (interest / tax) * 100 if tax != 0 else 0
+            bond_issuance = max(total_cost - total_revenue, 0)
+            other_rev_stamp = p["otherRevenue"] * 0.30
+            other_rev_gov = p["otherRevenue"] * 0.20
+            other_rev_asset = p["otherRevenue"] * 0.25
+            other_rev_misc = p["otherRevenue"] * 0.25
             results.append({
                 "year": year, "tax": tax, "bojPayment": boj_payment, "totalRevenue": total_revenue,
                 "policyExp": policy_exp, "avgCoupon": avg_coupon * 100, "interest": interest,
@@ -130,10 +140,15 @@ def run_simulation(p):
                 "bojRev": boj_rev, "bojCost": boj_cost, "policyRate": policy_rate * 100,
                 "taxConsumption": tax_consumption, "taxIncome": tax_income,
                 "taxCorporate": tax_corporate, "taxOther": tax_other,
+                "bondIssuance": bond_issuance,
+                "otherRevStamp": other_rev_stamp, "otherRevGov": other_rev_gov,
+                "otherRevAsset": other_rev_asset, "otherRevMisc": other_rev_misc,
             })
         else:
             prev = results[i - 1]
             tax_consumption = prev["taxConsumption"] * (1 + B * 1.0)
+            if change_year is not None and year == change_year:
+                tax_consumption = prev["taxConsumption"] * (1 + B * 1.0) * (p["taxRateNew"] / 10.0)
             tax_income = prev["taxIncome"] * (1 + D * 1.4)
             tax_corporate = prev["taxCorporate"] * (1 + C * 2.0 + B * 0.5)
             tax_other = prev["taxOther"] * (1 + D * 0.8)
@@ -150,6 +165,11 @@ def run_simulation(p):
             fiscal_balance = total_revenue - total_cost
             debt = prev["debt"] + (total_cost - total_revenue)
             interest_burden = (interest / tax) * 100 if tax != 0 else 0
+            bond_issuance = max(total_cost - total_revenue, 0)
+            other_rev_stamp = p["otherRevenue"] * 0.30
+            other_rev_gov = p["otherRevenue"] * 0.20
+            other_rev_asset = p["otherRevenue"] * 0.25
+            other_rev_misc = p["otherRevenue"] * 0.25
             results.append({
                 "year": year, "tax": tax, "bojPayment": boj_payment, "totalRevenue": total_revenue,
                 "policyExp": policy_exp, "avgCoupon": avg_coupon_dec * 100, "interest": interest,
@@ -158,6 +178,9 @@ def run_simulation(p):
                 "bojRev": boj_rev, "bojCost": boj_cost, "policyRate": policy_rate * 100,
                 "taxConsumption": tax_consumption, "taxIncome": tax_income,
                 "taxCorporate": tax_corporate, "taxOther": tax_other,
+                "bondIssuance": bond_issuance,
+                "otherRevStamp": other_rev_stamp, "otherRevGov": other_rev_gov,
+                "otherRevAsset": other_rev_asset, "otherRevMisc": other_rev_misc,
             })
     return results
 
@@ -202,6 +225,10 @@ with st.sidebar:
     init_tax_total = p["initTaxConsumption"] + p["initTaxIncome"] + p["initTaxCorporate"] + p["initTaxOther"]
     st.caption(f"税収合計: **{init_tax_total:.0f} 兆円**")
 
+    st.markdown("#### 消費税率設定")
+    p["taxRateChangeYear"] = st.selectbox("消費税率変更年度", ["なし", "2030", "2035", "2040"], index=["なし", "2030", "2035", "2040"].index(p.get("taxRateChangeYear", "なし")), key="trc_year")
+    p["taxRateNew"] = st.slider("新消費税率 (%)", 8, 20, p.get("taxRateNew", 10), 1, key="trc_rate")
+
     p["initPolicyExp"] = st.number_input("政策的経費 (兆円)", value=p["initPolicyExp"], step=5, key="pexp", help="2026年度の政策的経費の初期値。社会保障・公共事業・教育・防衛等の歳出合計（利払い費を除く）です。")
     p["initAvgCoupon"] = st.slider("平均クーポン (%)", 0.0, 5.0, p["initAvgCoupon"], 0.1, key="coup", help="政府債務全体の加重平均利率。既発債の金利が残るため、市場金利が上がってもすぐには上昇しません。9年借換ロジックで毎年1/9ずつ新金利に置き換わります。")
 
@@ -219,277 +246,271 @@ sim_data = run_simulation(p)
 st.title("🏛️ 統合政府 30年財政シミュレーター")
 st.caption("2026〜2055年：日本政府＋日銀の財政推移シミュレーション")
 
-tab1, tab2, tab4, tab3 = st.tabs(["📊 シミュレーション", "📉 ウォーターフォール", "🏦 統合政府の仕組み", "📖 変数説明"])
+tab1, tab2 = st.tabs(["📖 解説", "📊 シミュレーション"])
 
 with tab1:
-    summary_years = [2026, 2030, 2035, 2040, 2045, 2050, 2055]
-    summary = [d for d in sim_data if d["year"] in summary_years]
-    df_summary = pd.DataFrame(summary)
-    df_summary = df_summary[["year", "taxConsumption", "taxIncome", "taxCorporate", "taxOther", "tax", "totalRevenue", "policyExp", "interest", "debt", "fiscalBalance", "interestBurden"]]
-    df_summary.columns = ["年度", "┗消費税", "┗所得税", "┗法人税", "┗その他税", "税収計", "┗ 歳入計", "政策経費", "利払い", "債務残高", "┗ 収支", "┗ 負担率%"]
-    for col in ["┗消費税", "┗所得税", "┗法人税", "┗その他税", "税収計", "┗ 歳入計", "政策経費", "利払い", "┗ 収支"]:
-        df_summary[col] = df_summary[col].round(1)
-    df_summary["債務残高"] = df_summary["債務残高"].round(0).astype(int)
-    df_summary["┗ 負担率%"] = df_summary["┗ 負担率%"].round(1)
+    st.subheader("シミュレーターの目的")
+    st.markdown("""
+このシミュレーターは、日本政府と日本銀行を**一体（統合政府）**として捉え、
+2026年から2055年までの30年間の財政推移を予測するツールです。
 
-    st.subheader("シミュレーション結果（5年おき）")
-    st.dataframe(df_summary, use_container_width=True, hide_index=True)
+**なぜ統合政府で見るのか？**
 
-    warning_data = next((d for d in sim_data if d["interestBurden"] > 30), None)
-    if warning_data:
-        st.error(f"⚠️ {warning_data['year']}年に利払い負担率が {warning_data['interestBurden']:.1f}%に達し、30%の警戒ラインを超えます。")
-    else:
-        st.success("✅ シミュレーション期間中、利払い負担率は30%を超えませんでした。")
+日銀は国債を大量に保有しており、政府が支払う利息の一部は日銀を通じて国庫に戻ります。
+この「日銀納付金」の存在を無視すると、政府の財政負担を過大に見積もることになります。
+統合政府として分析することで、より現実的な財政の姿を把握できます。
 
-    st.subheader("実績データ（2015〜2024年度）")
-    actual_summary_years = [2015, 2018, 2021, 2024]
-    actual_summary = [d for d in ACTUAL_DATA if d["year"] in actual_summary_years]
-    df_actual = pd.DataFrame(actual_summary)[["year", "taxConsumption", "taxIncome", "taxCorporate", "taxOther", "tax", "interest", "debt", "interestBurden"]]
-    df_actual.columns = ["年度", "┗消費税", "┗所得税", "┗法人税", "┗その他税", "税収計", "利払い", "債務残高", "負担率%"]
-    st.dataframe(df_actual, use_container_width=True, hide_index=True)
+**このシミュレーターでわかること**
+- 金利上昇が財政に与える影響
+- 税収構造の変化（消費税・所得税・法人税・その他）
+- 債務残高と利払い費の長期トレンド
+- 日銀の金融政策が財政に与える影響
+- 消費税率変更や国債発行の効果
+""")
 
-    src_links = " / ".join([f"[{s['name']}]({s['url']})" for s in DATA_SOURCES[:3]])
-    st.caption(f"出典：{src_links}")
+    st.subheader("計算ロジックの全体像")
+    st.markdown("以下のツリー構造で、各年度の財政指標を計算しています。")
+    st.code("""
+A：歳入合計 = 税収合計 + 日銀納付金 + その他収入
+│
+├── 税収合計 = 消費税 + 所得税 + 法人税 + その他税
+│   ├── 消費税 = 前年消費税 × (1 + インフレ率 × 1.0)
+│   │   └── ※税率変更年度に (新税率/10) を乗じて水準調整
+│   ├── 所得税 = 前年所得税 × (1 + 名目成長率 × 1.4)
+│   │   └── 名目成長率 = インフレ率 + 実質成長率
+│   ├── 法人税 = 前年法人税 × (1 + 実質成長率×2.0 + インフレ率×0.5)
+│   └── その他税 = 前年その他税 × (1 + 名目成長率 × 0.8)
+│
+├── 日銀納付金 = max(納付可能金額, 0)
+│   └── 納付可能金額 = 国債利息収入 − 当座預金付利コスト
+│       ├── 国債利息収入 = 保有国債残高 × 保有国債利回り
+│       └── 当座預金付利コスト = 当座預金残高 × 政策金利
+│           └── 政策金利 = max(市場金利 − スプレッド, 0)
+│               └── 市場金利 = 名目成長率 + リスクプレミアム
+│
+└── その他収入 = 印紙収入 + 官業収入 + 資産売却収入 + 雑収入
 
-    st.subheader("利払い負担率の推移")
-    fig1 = make_chart("")
-    actual_years = [d["year"] for d in ACTUAL_DATA]
-    actual_burden = [d["interestBurden"] for d in ACTUAL_DATA]
-    sim_years = [d["year"] for d in sim_data]
-    sim_burden = [d["interestBurden"] for d in sim_data]
-    sim_colors = ["#ef4444" if b > 30 else "#ff8c8c" for b in sim_burden]
-    fig1.add_trace(go.Bar(x=actual_years, y=actual_burden, name="実績", marker_color="#94a3b8"))
-    fig1.add_trace(go.Bar(x=sim_years, y=sim_burden, name="シミュレーション", marker_color=sim_colors))
-    fig1.add_hline(y=30, line_dash="dash", line_color="#ef4444", annotation_text="30%警戒ライン", annotation_position="top right")
-    fig1.update_layout(yaxis_title="負担率 (%)", barmode="group")
-    st.plotly_chart(fig1, use_container_width=True, config=PLOTLY_CONFIG)
 
-    col1, col2 = st.columns(2)
-    with col1:
-        st.subheader("債務残高の推移")
-        fig2 = make_chart("", height=300)
-        actual_debt = [d["debt"] for d in ACTUAL_DATA]
-        sim_debt = [d["debt"] for d in sim_data]
-        fig2.add_trace(go.Bar(x=actual_years, y=actual_debt, name="実績", marker_color="#94a3b8"))
-        fig2.add_trace(go.Bar(x=sim_years, y=sim_debt, name="シミュレーション", marker_color="#f97316"))
-        fig2.update_layout(yaxis_title="兆円", barmode="group")
-        st.plotly_chart(fig2, use_container_width=True, config=PLOTLY_CONFIG)
+B：支出合計 = 政策経費 + 利払い費
+│
+├── 政策経費 = 前年政策経費 × (1 + インフレ率) + 自然増
+│
+└── 利払い費 = 前年債務残高 × 平均クーポン
+    └── 平均クーポン = 前年クーポン × 8/9 + 市場金利 × 1/9
+        └── 市場金利 = 名目成長率 + リスクプレミアム
 
-    with col2:
-        st.subheader("財政収支の推移")
-        fig3 = make_chart("", height=300)
-        actual_bal = [d["fiscalBalance"] for d in ACTUAL_DATA]
-        sim_bal = [d["fiscalBalance"] for d in sim_data]
-        sim_bal_colors = ["#22c55e" if b >= 0 else "#ef4444" for b in sim_bal]
-        fig3.add_trace(go.Bar(x=actual_years, y=actual_bal, name="実績", marker_color="#94a3b8"))
-        fig3.add_trace(go.Bar(x=sim_years, y=sim_bal, name="シミュレーション", marker_color=sim_bal_colors))
-        fig3.add_hline(y=0, line_color="#94a3b8")
-        fig3.update_layout(yaxis_title="兆円", barmode="group")
-        st.plotly_chart(fig3, use_container_width=True, config=PLOTLY_CONFIG)
 
-    st.subheader("税収内訳 vs 利払い費")
-    fig4 = make_chart("")
-    actual_tc = [d["taxConsumption"] for d in ACTUAL_DATA]
-    actual_ti = [d["taxIncome"] for d in ACTUAL_DATA]
-    actual_tp = [d["taxCorporate"] for d in ACTUAL_DATA]
-    actual_to = [d["taxOther"] for d in ACTUAL_DATA]
-    actual_int = [d["interest"] for d in ACTUAL_DATA]
-    sim_tc = [d["taxConsumption"] for d in sim_data]
-    sim_ti = [d["taxIncome"] for d in sim_data]
-    sim_tp = [d["taxCorporate"] for d in sim_data]
-    sim_to = [d["taxOther"] for d in sim_data]
-    sim_int = [d["interest"] for d in sim_data]
+C：収支・残高
+├── 財政収支 = 歳入合計 − 支出合計
+├── 債務残高 = 前年債務残高 + (支出合計 − 歳入合計)
+├── 国債発行額 = max(支出合計 − 歳入合計, 0)
+└── 利払負担率 = (利払い費 ÷ 税収合計) × 100
+""", language=None)
 
-    fig4.add_trace(go.Bar(x=actual_years, y=actual_tc, name="消費税(実績)", marker_color="#94a3b8", legendgroup="actual"))
-    fig4.add_trace(go.Bar(x=actual_years, y=actual_ti, name="所得税(実績)", marker_color="#b0bec5", legendgroup="actual"))
-    fig4.add_trace(go.Bar(x=actual_years, y=actual_tp, name="法人税(実績)", marker_color="#cfd8dc", legendgroup="actual"))
-    fig4.add_trace(go.Bar(x=actual_years, y=actual_to, name="その他税(実績)", marker_color="#e0e0e0", legendgroup="actual"))
+    st.subheader("各変数の解説")
 
-    fig4.add_trace(go.Bar(x=sim_years, y=sim_tc, name="消費税(予測)", marker_color="#22c55e", legendgroup="sim"))
-    fig4.add_trace(go.Bar(x=sim_years, y=sim_ti, name="所得税(予測)", marker_color="#3b82f6", legendgroup="sim"))
-    fig4.add_trace(go.Bar(x=sim_years, y=sim_tp, name="法人税(予測)", marker_color="#8b5cf6", legendgroup="sim"))
-    fig4.add_trace(go.Bar(x=sim_years, y=sim_to, name="その他税(予測)", marker_color="#f59e0b", legendgroup="sim"))
-
-    fig4.add_trace(go.Scatter(x=actual_years + sim_years, y=actual_int + sim_int, name="利払い費", mode="lines+markers", line=dict(color="#ef4444", width=3), marker=dict(size=5)))
-
-    fig4.update_layout(yaxis_title="兆円", barmode="stack")
-    st.plotly_chart(fig4, use_container_width=True, config=PLOTLY_CONFIG)
-
-    st.subheader("日銀納付金の推移")
-    fig5 = make_chart("")
-    actual_boj = [d["bojPayment"] for d in ACTUAL_DATA]
-    sim_boj = [d["bojPayment"] for d in sim_data]
-    fig5.add_trace(go.Bar(x=actual_years, y=actual_boj, name="実績", marker_color="#94a3b8"))
-    fig5.add_trace(go.Bar(x=sim_years, y=sim_boj, name="予測", marker_color="#8b5cf6"))
-    fig5.update_layout(yaxis_title="兆円", barmode="group")
-    st.plotly_chart(fig5, use_container_width=True, config=PLOTLY_CONFIG)
-
-    st.subheader("金利・成長率・リスクプレミアムの推移")
-
-    nominal_g_sim = p["inflationRate"] + p["realGrowth"]
-    market_rate_sim = nominal_g_sim + p["riskPremium"]
-
-    actual_macro_years = [d["year"] for d in ACTUAL_MACRO]
-    actual_jgb = [d["jgb10y"] for d in ACTUAL_MACRO]
-    actual_ng = [d["nominalGrowth"] for d in ACTUAL_MACRO]
-    actual_rp = [d["jgb10y"] - d["nominalGrowth"] for d in ACTUAL_MACRO]
-
-    fig6 = make_chart("", height=400)
-
-    fig6.add_trace(go.Scatter(
-        x=actual_macro_years, y=actual_jgb, name="10Y国債利回り(実績)",
-        mode="lines+markers", line=dict(color="#f97316", width=2),
-        marker=dict(size=6),
-    ))
-    fig6.add_trace(go.Scatter(
-        x=actual_macro_years, y=actual_ng, name="名目GDP成長率(実績)",
-        mode="lines+markers", line=dict(color="#3b82f6", width=2),
-        marker=dict(size=6),
-    ))
-    fig6.add_trace(go.Bar(
-        x=actual_macro_years, y=actual_rp, name="r−g スプレッド(実績)",
-        marker_color=["#ef4444" if v > 0 else "#22c55e" for v in actual_rp],
-        opacity=0.5,
-    ))
-
-    fig6.add_trace(go.Scatter(
-        x=sim_years, y=[market_rate_sim] * len(sim_years), name=f"市場金利(設定: {market_rate_sim:.1f}%)",
-        mode="lines", line=dict(color="#f97316", width=2, dash="dash"),
-    ))
-    fig6.add_trace(go.Scatter(
-        x=sim_years, y=[nominal_g_sim] * len(sim_years), name=f"名目成長率(設定: {nominal_g_sim:.1f}%)",
-        mode="lines", line=dict(color="#3b82f6", width=2, dash="dash"),
-    ))
-
-    fig6.add_hline(y=0, line_color="#94a3b8", line_dash="dot", line_width=1)
-
-    fig6.add_annotation(
-        x=2040, y=p["riskPremium"],
-        text=f"設定リスクプレミアム: {p['riskPremium']:.1f}%",
-        showarrow=True, arrowhead=2, font=dict(size=11, color="#ef4444"),
-        bgcolor="rgba(255,255,255,0.9)", bordercolor="#ef4444", borderpad=4,
-        ax=0, ay=-40,
-    )
-
-    fig6.update_layout(
-        yaxis_title="%",
-        barmode="overlay",
-    )
-    st.plotly_chart(fig6, use_container_width=True, config=PLOTLY_CONFIG)
-
-    avg_rp = sum(actual_rp) / len(actual_rp)
-    recent_rp = sum(actual_rp[-3:]) / 3
-    st.caption(f"r−gスプレッド（リスクプレミアムに相当）: 2015〜2024年平均 **{avg_rp:.1f}%** / 直近3年平均 **{recent_rp:.1f}%** / 設定値 **{p['riskPremium']:.1f}%**")
-    st.caption("※ 実績のr−gスプレッドはYCC（イールドカーブ・コントロール）により人為的に抑制されていた期間を含むため、将来の正常化後はスプレッドが拡大する可能性があります。")
-    st.caption("出典：財務省「国債金利情報」、内閣府「国民経済計算」")
-
-    with st.expander("リスクプレミアムの算出方法と意味"):
+    with st.expander("A：歳入の計算ロジック"):
         st.markdown(f"""
-**リスクプレミアムとは？**
+**税収：4区分に分解して個別の弾性値で推計**
 
-リスクプレミアムとは、投資家が国債を保有する際に、名目GDP成長率（≒安全資産の期待リターン）に対して追加で要求する上乗せ金利のことです。国の財政状態が悪化したり、インフレの不確実性が高まると、投資家はより高い利回りを求めるため、リスクプレミアムが拡大します。
+税目ごとに経済変数への感応度が異なるため、以下のように分解してシミュレーションしています：
 
----
+| 税目 | 計算式 | 弾性値 | 連動する経済変数 |
+|:--|:--|:--:|:--|
+| 消費税 | 前年 × (1 + インフレ率 × 1.0) | 1.0 | 物価上昇で消費税額が自動増加 |
+| 所得税 | 前年 × (1 + 名目成長率 × 1.4) | 1.4 | 累進課税で所得増以上に税収増 |
+| 法人税 | 前年 × (1 + 実質成長率×2.0 + インフレ率×0.5) | ≈2.0 | 企業利益は景気変動に敏感 |
+| その他税 | 前年 × (1 + 名目成長率 × 0.8) | 0.8 | 相続税・酒税等は比較的安定 |
 
-**このシミュレーターでの算出方法**
-
-本シミュレーターでは以下の関係式を使っています：
-
-> **市場長期金利（r）= 名目GDP成長率（g）+ リスクプレミアム**
-
-つまり：
-
-> **リスクプレミアム = r − g = 市場長期金利 − 名目GDP成長率**
-
-現在の設定では：
-- 名目成長率（g）= インフレ率 {p['inflationRate']:.1f}% + 実質成長率 {p['realGrowth']:.1f}% = **{nominal_g_sim:.1f}%**
-- リスクプレミアム = **{p['riskPremium']:.1f}%**
-- 市場長期金利（r）= {nominal_g_sim:.1f}% + {p['riskPremium']:.1f}% = **{market_rate_sim:.1f}%**
+- **消費税**：税率10%（軽減8%）が一定なので、消費額（≒物価水準）に比例。インフレ率に1:1で連動。
+- **所得税**：累進課税のため名目賃金の伸び以上に税収が増加。弾性値1.4は国際的にも標準的な仮定。
+- **法人税**：企業利益は実質GDPの変動に大きく左右される（弾性値2.0）。インフレによる名目利益増の効果は限定的（0.5）。
+- **その他税**：相続税・酒税・たばこ税・関税等。名目GDPに緩やかに連動（弾性値0.8）。
 
 ---
 
-**上のグラフの見方**
+**日銀納付金：max(保有国債 × 利回り − 当座預金 × 政策金利, 0)**
 
-- **オレンジ実線（10Y国債利回り）**：各年度の10年物国債の平均利回り（r に相当）
-- **青実線（名目GDP成長率）**：各年度の名目GDP成長率（g に相当）
-- **棒グラフ（r−gスプレッド）**：両者の差で、実質的なリスクプレミアムの実績値
-  - 赤（正）= 金利 > 成長率：債務が自然に膨張しやすい危険な状態
-  - 緑（負）= 金利 < 成長率：経済成長が金利を上回り、債務が自然に縮小しやすい
-- **破線**：シミュレーション期間中に使用する設定値
-
----
-
-**r−gスプレッドがなぜ重要か**
-
-財政の持続可能性を判断する上で最も重要な指標の一つです：
-
-- **r < g（スプレッドが負）**の場合：経済成長率が金利を上回るため、プライマリーバランスが赤字でも、GDP比での債務残高は自然に縮小する傾向があります。日本は2015〜2024年の大部分でこの状態にありました。
-- **r > g（スプレッドが正）**の場合：金利が成長率を上回るため、プライマリーバランスが均衡していても債務残高のGDP比は拡大します。いわゆる「雪だるま効果」が発生します。
-
----
-
-**実績データから見る設定値の妥当性**
-
-| 期間 | r−gスプレッド平均 | 背景 |
-|:--|--:|:--|
-| 2015〜2024年 | {avg_rp:.1f}% | YCC政策で金利を人為的に抑制 |
-| 直近3年（2022〜2024年） | {recent_rp:.1f}% | YCC修正・撤廃、金利正常化の開始 |
-| **現在の設定値** | **{p['riskPremium']:.1f}%** | シミュレーション前提 |
-
-過去10年間はYCC（イールドカーブ・コントロール）政策により、日銀が10年国債利回りを0%付近に抑え込んでいたため、r−gスプレッドは大幅なマイナスでした。しかし2022年以降、YCCの柔軟化・撤廃に伴い金利は上昇傾向にあります。
-
-先進国の長期平均では、r−gスプレッドは概ね **0〜1%程度** が標準的とされています。財政状態が悪化した国（ギリシャ危機時のギリシャやイタリア等）では **2〜5%以上** に急拡大した事例があります。
-
-設定値の {p['riskPremium']:.1f}% が妥当かどうかは、日本の金融政策の正常化がどこまで進むか、財政への市場の信認が維持されるかにかかっています。
-""")
-        st.markdown("""
-**実績データの出典**
-- 10年国債利回り：[財務省 国債金利情報](https://www.mof.go.jp/jgbs/reference/interest_rate/)（各年度の平均値）
-- 名目GDP成長率：[内閣府 国民経済計算（GDP統計）](https://www.esri.cao.go.jp/jp/sna/menu.html)
+日銀は保有する国債から利息収入を得る一方、金融機関から預かる当座預金に利息を支払います。この差額（利ざや）が日銀の利益となり、国庫に納付されます。金利上昇局面では当座預金への付利コストが先に上昇する一方、保有国債の利回りは既発債のため簡単には上がらず、逆ざやで納付金がゼロになるリスクがあります。max関数は、赤字になっても国が日銀に補填する仕組みがないため、下限をゼロとしています。
 """)
 
-    with st.expander("📋 全年度データを表示"):
-        df_all = pd.DataFrame(sim_data)
-        df_all = df_all[["year", "taxConsumption", "taxIncome", "taxCorporate", "taxOther", "tax", "bojPayment", "totalRevenue", "policyExp", "avgCoupon", "interest", "totalCost", "debt", "fiscalBalance", "interestBurden"]]
-        df_all.columns = [
-            "年度",
-            "┗消費税",
-            "┗所得税",
-            "┗法人税",
-            "┗その他税",
-            "税収計",
-            "日銀納付金",
-            "┗ 歳入計",
-            "政策経費",
-            "平均ｸｰﾎﾟﾝ%",
-            "利払い",
-            "┗ 歳出計",
-            "債務残高",
-            "┗ 財政収支",
-            "┗ 負担率%",
+    with st.expander("B：支出の計算ロジック"):
+        st.markdown(f"""
+**政策経費：前年 × (1 + インフレ率) + 自然増{p['naturalIncrease']:.1f}兆円**
+
+社会保障・公共事業・教育・防衛等の歳出は、物価上昇に伴い名目額が膨らみます。インフレ率で調整する理由は、公務員給与・調達価格・年金の物価スライドなどが物価に連動するためです。さらに高齢化により年金・医療・介護の給付が毎年構造的に増加するため、自然増（年{p['naturalIncrease']:.1f}兆円）を加算しています。財務省の試算でも社会保障の自然増は年0.3〜0.7兆円とされています。
+
+---
+
+**平均クーポン：前年 × 8/9 + 市場金利 × 1/9（9年借換ロジック）**
+
+日本国債の平均残存期間は約9年です。これは、毎年およそ全体の1/9が満期を迎え、その時点の市場金利で新たに借り換えられることを意味します。残りの8/9は既発債のため金利は変わりません。このモデルにより、金利が急上昇しても利払い負担はすぐには跳ね上がらず、9年かけて徐々に波及する現実の動きを再現しています。
+
+---
+
+**利払い費：債務残高 × 平均クーポン**
+
+国が発行している国債の元本（債務残高）に対して、加重平均の利率（平均クーポン）を掛けた金額が年間の利息支払い額です。債務残高が大きくなるほど、また平均クーポンが上昇するほど、利払い費は加速度的に増大します。
+""")
+
+    with st.expander("C：収支・残高の計算ロジック"):
+        st.markdown(f"""
+**利払負担率：(利払い費 / 税収) × 100**
+
+税収に対する利払い費の比率を見ることで、「稼ぎのうちどれだけが借金の利息に消えるか」を示します。30%を警戒ラインとしているのは、過去に財政危機に陥った国々（ギリシャ、イタリア等）がこの水準前後で市場の信認を失った事例があるためです。日本は現在約{ACTUAL_DATA[-1]['interestBurden']:.0f}%ですが、金利上昇シナリオでは急速に悪化する可能性があります。
+
+---
+
+**債務残高：前年残高 + (歳出 − 歳入)**
+
+財政赤字（歳出 > 歳入）が発生すると、その分だけ新たに国債を発行して資金を調達するため、債務残高が積み上がります。これは会計上の恒等式であり、黒字なら残高は減少します。利払い費が増えると赤字が拡大し、さらに債務が増えて利払い費が増える「債務の雪だるま効果」が発生し得ます。
+""")
+
+    st.subheader("統合政府の仕組み")
+
+    nominal_g_tab4 = p["inflationRate"] + p["realGrowth"]
+    market_rate_tab4 = nominal_g_tab4 + p["riskPremium"]
+    policy_rate_tab4 = max(market_rate_tab4 / 100 - p["policyRateSpread"] / 100, 0) * 100
+
+    with st.expander("統合政府の資金フロー図"):
+        fig_flow = go.Figure()
+
+        box_colors = {"gov": "#3b82f6", "boj": "#8b5cf6", "market": "#64748b", "bank": "#059669"}
+
+        boxes = [
+            (0.5, 0.92, "日本政府（財務省）", box_colors["gov"], "税収・歳出・国債発行を管理"),
+            (0.5, 0.08, "日本銀行（BOJ）", box_colors["boj"], "金融政策・国債保有・当座預金管理"),
+            (0.05, 0.50, "国民・企業", box_colors["market"], "納税者・サービス受益者"),
+            (0.95, 0.50, "金融機関", box_colors["bank"], "国債購入・当座預金"),
         ]
-        for col in ["┗消費税", "┗所得税", "┗法人税", "┗その他税", "税収計", "日銀納付金", "┗ 歳入計", "政策経費", "利払い", "┗ 歳出計", "┗ 財政収支"]:
-            df_all[col] = df_all[col].round(1)
-        df_all["平均ｸｰﾎﾟﾝ%"] = df_all["平均ｸｰﾎﾟﾝ%"].round(2)
-        df_all["債務残高"] = df_all["債務残高"].round(0).astype(int)
-        df_all["┗ 負担率%"] = df_all["┗ 負担率%"].round(1)
 
-        st.caption("┗ は他の列から計算される項目です（税収計＝消費税+所得税+法人税+その他税、歳入計＝税収計+日銀納付金+その他、歳出計＝政策経費+利払い、財政収支＝歳入計−歳出計、負担率＝利払い÷税収計×100）")
-        st.dataframe(df_all, use_container_width=True, hide_index=True, height=800)
+        for x, y, label, color, sub in boxes:
+            fig_flow.add_annotation(
+                x=x, y=y, text=f"<b>{label}</b><br><span style='font-size:10px'>{sub}</span>",
+                showarrow=False, font=dict(size=13, color="white"),
+                bgcolor=color, bordercolor=color, borderwidth=2, borderpad=10,
+                opacity=0.95, xanchor="center", yanchor="middle",
+            )
 
-    with st.expander("📋 日銀納付金の内訳データ"):
-        df_boj = pd.DataFrame(sim_data)
-        df_boj = df_boj[["year", "bojRev", "bojCost", "bojPayment", "policyRate"]]
-        df_boj.columns = ["年度", "利息収入 (国債)", "付利コスト (当座預金)", "┗ 納付金", "政策金利%"]
-        df_boj["利息収入 (国債)"] = df_boj["利息収入 (国債)"].round(2)
-        df_boj["付利コスト (当座預金)"] = df_boj["付利コスト (当座預金)"].round(2)
-        df_boj["┗ 納付金"] = df_boj["┗ 納付金"].round(2)
-        df_boj["政策金利%"] = df_boj["政策金利%"].round(2)
-        st.caption(f"利息収入＝債務残高×保有国債利回り({p['bojYield']:.2f}%)、付利コスト＝当座預金({p['bojCA']:.0f}兆円)×政策金利、納付金＝max(利息収入−付利コスト, 0)")
-        st.dataframe(df_boj, use_container_width=True, hide_index=True, height=800)
+        arrows = [
+            (0.20, 0.55, 0.30, 0.85, "税金", "#3b82f6"),
+            (0.30, 0.85, 0.20, 0.55, "公共サービス\n社会保障", "#ef4444"),
+            (0.70, 0.85, 0.80, 0.55, "国債発行", "#f97316"),
+            (0.80, 0.45, 0.70, 0.15, "国債売却\n(公開市場操作)", "#8b5cf6"),
+            (0.50, 0.22, 0.50, 0.78, "国庫納付金", "#22c55e"),
+            (0.80, 0.55, 0.80, 0.45, "当座預金\n(付利)", "#94a3b8"),
+        ]
 
-with tab2:
-    st.subheader("単年度 収支ウォーターフォール")
+        for ax, ay, x, y, text, color in arrows:
+            fig_flow.add_annotation(
+                x=x, y=y, ax=ax, ay=ay, text=f"<b>{text}</b>",
+                showarrow=True, arrowhead=3, arrowsize=1.5, arrowwidth=2.5,
+                arrowcolor=color, font=dict(size=10, color=color),
+                bgcolor="rgba(255,255,255,0.85)", borderpad=3,
+            )
+
+        fig_flow.update_layout(
+            xaxis=dict(visible=False, range=[-0.05, 1.05]),
+            yaxis=dict(visible=False, range=[-0.05, 1.05]),
+            plot_bgcolor="white", paper_bgcolor="white",
+            height=500, margin=dict(l=10, r=10, t=10, b=10),
+            font=dict(family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', sans-serif"),
+        )
+        st.plotly_chart(fig_flow, use_container_width=True, config={"displayModeBar": False})
+
+        st.markdown("""
+このシミュレーターでは、日本政府と日本銀行を**一体（統合政府）**として捉え、
+財政の持続可能性を分析しています。
+""")
+
+    with st.expander("日銀納付金の計算構造"):
+        boj_rev_val = p["initDebt"] * (p["bojYield"] / 100)
+        boj_cost_val = p["bojCA"] * (policy_rate_tab4 / 100)
+        boj_profit = max(boj_rev_val - boj_cost_val, 0)
+
+        col_boj1, col_boj2 = st.columns(2)
+        with col_boj1:
+            fig_boj = go.Figure()
+            fig_boj.add_trace(go.Bar(
+                name="利息収入", x=["日銀損益"], y=[boj_rev_val],
+                marker_color="#22c55e", text=[f"{boj_rev_val:.1f}"], textposition="inside",
+            ))
+            fig_boj.add_trace(go.Bar(
+                name="付利コスト", x=["日銀損益"], y=[-boj_cost_val],
+                marker_color="#ef4444", text=[f"{boj_cost_val:.1f}"], textposition="inside",
+            ))
+            fig_boj.update_layout(
+                **PLOTLY_LAYOUT, height=300,
+                title=dict(text="日銀の収益構造（初年度）", font=dict(size=13)),
+                yaxis_title="兆円", barmode="relative", showlegend=True,
+            )
+            st.plotly_chart(fig_boj, use_container_width=True, config={"displayModeBar": False})
+
+        with col_boj2:
+            st.markdown(f"""
+**利息収入（国債保有から）**
+- 保有国債（＝債務残高）: **{p['initDebt']:.0f} 兆円**
+- 保有国債利回り: **{p['bojYield']:.2f}%**
+- 利息収入 = {p['initDebt']:.0f} x {p['bojYield']:.2f}% = **{boj_rev_val:.1f} 兆円**
+
+**付利コスト（当座預金への利払い）**
+- 当座預金残高: **{p['bojCA']:.0f} 兆円**
+- 政策金利: **{policy_rate_tab4:.2f}%**
+- 付利コスト = {p['bojCA']:.0f} x {policy_rate_tab4:.2f}% = **{boj_cost_val:.1f} 兆円**
+
+**国庫納付金 = max(利息収入 - 付利コスト, 0)**
+= max({boj_rev_val:.1f} - {boj_cost_val:.1f}, 0) = **{boj_profit:.1f} 兆円**
+""")
+
+    with st.expander("金利感応度分析"):
+        test_rates = [0.0, 0.5, 1.0, 1.5, 2.0, 3.0, 4.0, 5.0]
+        boj_payments_test = []
+        interest_costs_test = []
+        for rate in test_rates:
+            pr = max(rate / 100 - p["policyRateSpread"] / 100, 0)
+            boj_p = max(p["initDebt"] * (p["bojYield"] / 100) - p["bojCA"] * pr, 0)
+            int_c = p["initDebt"] * rate / 100
+            boj_payments_test.append(boj_p)
+            interest_costs_test.append(int_c)
+
+        fig_sens = go.Figure()
+        fig_sens.add_trace(go.Scatter(
+            x=test_rates, y=boj_payments_test, name="日銀納付金",
+            line=dict(color="#22c55e", width=3), mode="lines+markers",
+        ))
+        fig_sens.add_trace(go.Scatter(
+            x=test_rates, y=interest_costs_test, name="利払い費",
+            line=dict(color="#ef4444", width=3), mode="lines+markers",
+        ))
+        net_effect = [boj_payments_test[i] - interest_costs_test[i] for i in range(len(test_rates))]
+        fig_sens.add_trace(go.Scatter(
+            x=test_rates, y=net_effect, name="統合政府ネット効果",
+            line=dict(color="#3b82f6", width=2, dash="dash"), mode="lines+markers",
+        ))
+        fig_sens.add_hline(y=0, line_color="#94a3b8", line_dash="dot")
+        fig_sens.update_layout(
+            **PLOTLY_LAYOUT, height=400,
+            title=dict(text="市場金利と統合政府の収支感応度", font=dict(size=14)),
+            xaxis_title="市場金利 (%)", yaxis_title="兆円",
+        )
+        st.plotly_chart(fig_sens, use_container_width=True, config=PLOTLY_CONFIG)
+
+        st.markdown("""
+**ポイント：統合政府で見ると金利上昇の影響は相殺される？**
+
+一見すると、金利が上がれば政府の利払い費は増加しますが、日銀の保有国債からの利息収入も増えるため、
+統合政府としては相殺されるように見えます。しかし実際には：
+
+1. **タイムラグ**：利払い費は9年借換ロジックで徐々に上昇するが、日銀の保有国債利回りはさらに遅れて上昇
+2. **逆ざや問題**：金利上昇初期は当座預金への付利コストが先に増え、日銀が赤字（逆ざや）に陥る
+3. **国債保有比率**：日銀が全国債を保有しているわけではないため、完全な相殺にはならない
+4. **信認リスク**：金利が急騰する場合、国債市場の信認低下が同時に発生し、さらなる金利上昇を招く悪循環
+
+このシミュレーターでは、これらの動態を簡易的にモデル化して将来の財政リスクを可視化しています。
+""")
+
+    st.subheader("ウォーターフォール分析")
+
     available_years = sorted([d["year"] for d in ACTUAL_DATA] + [d["year"] for d in sim_data])
     wf_year = st.select_slider("分析する年度", options=available_years, value=2035, key="wf_year")
 
@@ -722,213 +743,286 @@ with tab2:
 財政赤字（歳出 > 歳入）が発生すると、その分だけ新たに国債を発行して資金を調達するため、債務残高が積み上がります。これは会計上の恒等式であり、黒字なら残高は減少します。利払い費が増えると赤字が拡大し、さらに債務が増えて利払い費が増える「債務の雪だるま効果」が発生し得ます。
 """)
 
-with tab4:
-    st.subheader("統合政府と日銀納付金の仕組み")
-
-    st.markdown("""
-このシミュレーターでは、日本政府と日本銀行を**一体（統合政府）**として捉え、
-財政の持続可能性を分析しています。以下の図で資金の流れを解説します。
-""")
-
-    nominal_g_tab4 = p["inflationRate"] + p["realGrowth"]
-    market_rate_tab4 = nominal_g_tab4 + p["riskPremium"]
-    policy_rate_tab4 = max(market_rate_tab4 / 100 - p["policyRateSpread"] / 100, 0) * 100
-
-    fig_flow = go.Figure()
-
-    box_colors = {"gov": "#3b82f6", "boj": "#8b5cf6", "market": "#64748b", "bank": "#059669"}
-
-    boxes = [
-        (0.5, 0.92, "日本政府（財務省）", box_colors["gov"], "税収・歳出・国債発行を管理"),
-        (0.5, 0.08, "日本銀行（BOJ）", box_colors["boj"], "金融政策・国債保有・当座預金管理"),
-        (0.05, 0.50, "国民・企業", box_colors["market"], "納税者・サービス受益者"),
-        (0.95, 0.50, "金融機関", box_colors["bank"], "国債購入・当座預金"),
-    ]
-
-    for x, y, label, color, sub in boxes:
-        fig_flow.add_annotation(
-            x=x, y=y, text=f"<b>{label}</b><br><span style='font-size:10px'>{sub}</span>",
-            showarrow=False, font=dict(size=13, color="white"),
-            bgcolor=color, bordercolor=color, borderwidth=2, borderpad=10,
-            opacity=0.95, xanchor="center", yanchor="middle",
-        )
-
-    arrows = [
-        (0.20, 0.55, 0.30, 0.85, "税金", "#3b82f6"),
-        (0.30, 0.85, 0.20, 0.55, "公共サービス\n社会保障", "#ef4444"),
-        (0.70, 0.85, 0.80, 0.55, "国債発行", "#f97316"),
-        (0.80, 0.45, 0.70, 0.15, "国債売却\n(公開市場操作)", "#8b5cf6"),
-        (0.50, 0.22, 0.50, 0.78, "国庫納付金", "#22c55e"),
-        (0.80, 0.55, 0.80, 0.45, "当座預金\n(付利)", "#94a3b8"),
-    ]
-
-    for ax, ay, x, y, text, color in arrows:
-        fig_flow.add_annotation(
-            x=x, y=y, ax=ax, ay=ay, text=f"<b>{text}</b>",
-            showarrow=True, arrowhead=3, arrowsize=1.5, arrowwidth=2.5,
-            arrowcolor=color, font=dict(size=10, color=color),
-            bgcolor="rgba(255,255,255,0.85)", borderpad=3,
-        )
-
-    fig_flow.update_layout(
-        xaxis=dict(visible=False, range=[-0.05, 1.05]),
-        yaxis=dict(visible=False, range=[-0.05, 1.05]),
-        plot_bgcolor="white", paper_bgcolor="white",
-        height=500, margin=dict(l=10, r=10, t=10, b=10),
-        font=dict(family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', sans-serif"),
-    )
-    st.plotly_chart(fig_flow, use_container_width=True, config={"displayModeBar": False})
-
-    st.markdown("---")
-    st.subheader("日銀納付金の計算構造")
-
-    boj_rev_val = p["initDebt"] * (p["bojYield"] / 100)
-    boj_cost_val = p["bojCA"] * (policy_rate_tab4 / 100)
-    boj_profit = max(boj_rev_val - boj_cost_val, 0)
-
-    col_boj1, col_boj2 = st.columns(2)
-    with col_boj1:
-        fig_boj = go.Figure()
-        fig_boj.add_trace(go.Bar(
-            name="利息収入", x=["日銀損益"], y=[boj_rev_val],
-            marker_color="#22c55e", text=[f"{boj_rev_val:.1f}"], textposition="inside",
-        ))
-        fig_boj.add_trace(go.Bar(
-            name="付利コスト", x=["日銀損益"], y=[-boj_cost_val],
-            marker_color="#ef4444", text=[f"{boj_cost_val:.1f}"], textposition="inside",
-        ))
-        fig_boj.update_layout(
-            **PLOTLY_LAYOUT, height=300,
-            title=dict(text="日銀の収益構造（初年度）", font=dict(size=13)),
-            yaxis_title="兆円", barmode="relative", showlegend=True,
-        )
-        st.plotly_chart(fig_boj, use_container_width=True, config={"displayModeBar": False})
-
-    with col_boj2:
-        st.markdown(f"""
-**利息収入（国債保有から）**
-- 保有国債（＝債務残高）: **{p['initDebt']:.0f} 兆円**
-- 保有国債利回り: **{p['bojYield']:.2f}%**
-- 利息収入 = {p['initDebt']:.0f} x {p['bojYield']:.2f}% = **{boj_rev_val:.1f} 兆円**
-
-**付利コスト（当座預金への利払い）**
-- 当座預金残高: **{p['bojCA']:.0f} 兆円**
-- 政策金利: **{policy_rate_tab4:.2f}%**
-- 付利コスト = {p['bojCA']:.0f} x {policy_rate_tab4:.2f}% = **{boj_cost_val:.1f} 兆円**
-
-**国庫納付金 = max(利息収入 - 付利コスト, 0)**
-= max({boj_rev_val:.1f} - {boj_cost_val:.1f}, 0) = **{boj_profit:.1f} 兆円**
-""")
-
-    st.markdown("---")
-    st.subheader("金利上昇が統合政府に与える影響")
-
-    test_rates = [0.0, 0.5, 1.0, 1.5, 2.0, 3.0, 4.0, 5.0]
-    boj_payments_test = []
-    interest_costs_test = []
-    for rate in test_rates:
-        pr = max(rate / 100 - p["policyRateSpread"] / 100, 0)
-        boj_p = max(p["initDebt"] * (p["bojYield"] / 100) - p["bojCA"] * pr, 0)
-        int_c = p["initDebt"] * rate / 100
-        boj_payments_test.append(boj_p)
-        interest_costs_test.append(int_c)
-
-    fig_sens = go.Figure()
-    fig_sens.add_trace(go.Scatter(
-        x=test_rates, y=boj_payments_test, name="日銀納付金",
-        line=dict(color="#22c55e", width=3), mode="lines+markers",
-    ))
-    fig_sens.add_trace(go.Scatter(
-        x=test_rates, y=interest_costs_test, name="利払い費",
-        line=dict(color="#ef4444", width=3), mode="lines+markers",
-    ))
-    net_effect = [boj_payments_test[i] - interest_costs_test[i] for i in range(len(test_rates))]
-    fig_sens.add_trace(go.Scatter(
-        x=test_rates, y=net_effect, name="統合政府ネット効果",
-        line=dict(color="#3b82f6", width=2, dash="dash"), mode="lines+markers",
-    ))
-    fig_sens.add_hline(y=0, line_color="#94a3b8", line_dash="dot")
-    fig_sens.update_layout(
-        **PLOTLY_LAYOUT, height=400,
-        title=dict(text="市場金利と統合政府の収支感応度", font=dict(size=14)),
-        xaxis_title="市場金利 (%)", yaxis_title="兆円",
-    )
-    st.plotly_chart(fig_sens, use_container_width=True, config=PLOTLY_CONFIG)
-
-    st.markdown("""
-**ポイント：統合政府で見ると金利上昇の影響は相殺される？**
-
-一見すると、金利が上がれば政府の利払い費は増加しますが、日銀の保有国債からの利息収入も増えるため、
-統合政府としては相殺されるように見えます。しかし実際には：
-
-1. **タイムラグ**：利払い費は9年借換ロジックで徐々に上昇するが、日銀の保有国債利回りはさらに遅れて上昇
-2. **逆ざや問題**：金利上昇初期は当座預金への付利コストが先に増え、日銀が赤字（逆ざや）に陥る
-3. **国債保有比率**：日銀が全国債を保有しているわけではないため、完全な相殺にはならない
-4. **信認リスク**：金利が急騰する場合、国債市場の信認低下が同時に発生し、さらなる金利上昇を招く悪循環
-
-このシミュレーターでは、これらの動態を簡易的にモデル化して将来の財政リスクを可視化しています。
-""")
-
-with tab3:
-    st.subheader("変数・計算ロジック説明")
-
-    st.markdown("#### マクロ環境")
-    macro_data = pd.DataFrame([
-        ["[A]", "年度", "シミュレーション対象年度（2026〜2055年）"],
-        ["[B]", "インフレ率", "年間の消費者物価上昇率。政策経費や金利に影響"],
-        ["[C]", "実質成長率", "物価変動を除いた実質GDP成長率"],
-        ["[D]", "名目成長率", "[B]+[C]。税収の伸びに直結"],
-        ["[E]", "市場長期金利", "[D]+リスクプレミアム。国債の新規発行利率に影響"],
-    ], columns=["列", "変数名", "説明"])
-    st.dataframe(macro_data, use_container_width=True, hide_index=True)
-
-    st.markdown("#### 歳入（収入）")
-    revenue_data = pd.DataFrame([
-        ["[F1]", "消費税", "前年×(1+インフレ率×1.0)。物価に比例して増加"],
-        ["[F2]", "所得税", "前年×(1+名目成長率×1.4)。累進課税で弾性値が高い"],
-        ["[F3]", "法人税", "前年×(1+実質成長率×2.0+インフレ率×0.5)。景気に敏感"],
-        ["[F4]", "その他税", "前年×(1+名目成長率×0.8)。相続税・酒税等。比較的安定"],
-        ["[F]", "税収計", "消費税+所得税+法人税+その他税"],
-        ["[G]", "日銀納付金", "max(保有国債×利回り−当座預金×政策金利, 0)"],
-        ["[H]", "合計収益", "税収計+日銀納付金+その他収入"],
-    ], columns=["列", "変数名", "計算式と説明"])
-    st.dataframe(revenue_data, use_container_width=True, hide_index=True)
-
-    st.markdown("#### 歳出（支出）")
-    expense_data = pd.DataFrame([
-        ["[I]", "政策経費", "前年×(1+インフレ率)+自然増0.5兆円。社会保障費等"],
-        ["[J]", "平均クーポン", "(前年×8/9)+(市場金利×1/9)。9年借換ロジック"],
-        ["[K]", "利払い費", "債務残高×平均クーポン"],
-        ["[L]", "合計費用", "政策経費+利払い費"],
-    ], columns=["列", "変数名", "計算式と説明"])
-    st.dataframe(expense_data, use_container_width=True, hide_index=True)
-
-    st.markdown("#### 収支・残高")
-    balance_data = pd.DataFrame([
-        ["[M]", "債務残高", "前年残高+(合計費用−合計収益)。赤字で雪だるま式に増加"],
-        ["[N]", "財政収支", "合計収益−合計費用。＋黒字/−赤字"],
-        ["[O]", "利払負担率", "(利払い費/税収)×100。30%超で危険水準"],
-    ], columns=["列", "変数名", "計算式と説明"])
-    st.dataframe(balance_data, use_container_width=True, hide_index=True)
-
-    st.markdown("#### 主要パラメータの補足")
-    st.markdown("""
-- **リスクプレミアム**：国債の信用リスクに対する上乗せ金利。財政悪化で上昇傾向
-- **税収4区分の弾性値**：消費税(1.0)＝インフレ連動、所得税(1.4)＝累進課税で高弾性、法人税(≈2.0)＝景気敏感、その他(0.8)＝安定
-- **政策金利スプレッド**：日銀の政策金利と市場金利の差。通常1%程度
-- **日銀当座預金**：金融機関が日銀に預ける預金。利上げ時のコスト負担要因
-- **9年借換ロジック**：国債の平均残存期間（約9年）に基づき毎年約1/9が新金利で借換
-""")
-
-    st.markdown("#### シナリオ一覧")
-    for s in SCENARIOS:
-        with st.container():
-            st.markdown(f"**{s['name']}**")
-            st.caption(f"{s['label']} — インフレ{s['params']['inflationRate']}% / 成長{s['params']['realGrowth']}% / リスクP {s['params']['riskPremium']}%")
-
-    st.markdown("#### 実績データ出典")
+    st.subheader("データ出典")
     for src in DATA_SOURCES:
         st.markdown(f"- [{src['name']}]({src['url']}) ({src['desc']})")
+
+with tab2:
+    actual_years = [d["year"] for d in ACTUAL_DATA]
+    sim_years = [d["year"] for d in sim_data]
+
+    warning_data = next((d for d in sim_data if d["interestBurden"] > 30), None)
+    if warning_data:
+        st.error(f"⚠️ {warning_data['year']}年に利払い負担率が {warning_data['interestBurden']:.1f}%に達し、30%の警戒ラインを超えます。")
+    else:
+        st.success("✅ シミュレーション期間中、利払い負担率は30%を超えませんでした。")
+
+    st.subheader("利払い負担率の推移")
+    fig1 = make_chart("")
+    actual_burden = [d["interestBurden"] for d in ACTUAL_DATA]
+    sim_burden = [d["interestBurden"] for d in sim_data]
+    sim_colors = ["#ef4444" if b > 30 else "#ff8c8c" for b in sim_burden]
+    fig1.add_trace(go.Bar(x=actual_years, y=actual_burden, name="実績", marker_color="#94a3b8"))
+    fig1.add_trace(go.Bar(x=sim_years, y=sim_burden, name="シミュレーション", marker_color=sim_colors))
+    fig1.add_hline(y=30, line_dash="dash", line_color="#ef4444", annotation_text="30%警戒ライン", annotation_position="top right")
+    fig1.update_layout(yaxis_title="負担率 (%)", barmode="group")
+    st.plotly_chart(fig1, use_container_width=True, config=PLOTLY_CONFIG)
+
+    col1, col2 = st.columns(2)
+    with col1:
+        st.subheader("財政収支の推移")
+        fig3 = make_chart("", height=300)
+        actual_bal = [d["fiscalBalance"] for d in ACTUAL_DATA]
+        sim_bal = [d["fiscalBalance"] for d in sim_data]
+        sim_bal_colors = ["#22c55e" if b >= 0 else "#ef4444" for b in sim_bal]
+        fig3.add_trace(go.Bar(x=actual_years, y=actual_bal, name="実績", marker_color="#94a3b8"))
+        fig3.add_trace(go.Bar(x=sim_years, y=sim_bal, name="シミュレーション", marker_color=sim_bal_colors))
+        fig3.add_hline(y=0, line_color="#94a3b8")
+        fig3.update_layout(yaxis_title="兆円", barmode="group")
+        st.plotly_chart(fig3, use_container_width=True, config=PLOTLY_CONFIG)
+
+    with col2:
+        st.subheader("債務残高の推移")
+        fig2 = make_chart("", height=300)
+        actual_debt = [d["debt"] for d in ACTUAL_DATA]
+        sim_debt = [d["debt"] for d in sim_data]
+        fig2.add_trace(go.Bar(x=actual_years, y=actual_debt, name="実績", marker_color="#94a3b8"))
+        fig2.add_trace(go.Bar(x=sim_years, y=sim_debt, name="シミュレーション", marker_color="#f97316"))
+        fig2.update_layout(yaxis_title="兆円", barmode="group")
+        st.plotly_chart(fig2, use_container_width=True, config=PLOTLY_CONFIG)
+
+    with st.expander("歳入合計・税収内訳"):
+        fig4 = make_chart("")
+        actual_tc = [d["taxConsumption"] for d in ACTUAL_DATA]
+        actual_ti = [d["taxIncome"] for d in ACTUAL_DATA]
+        actual_tp = [d["taxCorporate"] for d in ACTUAL_DATA]
+        actual_to = [d["taxOther"] for d in ACTUAL_DATA]
+        actual_int = [d["interest"] for d in ACTUAL_DATA]
+        sim_tc = [d["taxConsumption"] for d in sim_data]
+        sim_ti = [d["taxIncome"] for d in sim_data]
+        sim_tp = [d["taxCorporate"] for d in sim_data]
+        sim_to = [d["taxOther"] for d in sim_data]
+        sim_int = [d["interest"] for d in sim_data]
+
+        fig4.add_trace(go.Bar(x=actual_years, y=actual_tc, name="消費税(実績)", marker_color="#94a3b8", legendgroup="actual"))
+        fig4.add_trace(go.Bar(x=actual_years, y=actual_ti, name="所得税(実績)", marker_color="#b0bec5", legendgroup="actual"))
+        fig4.add_trace(go.Bar(x=actual_years, y=actual_tp, name="法人税(実績)", marker_color="#cfd8dc", legendgroup="actual"))
+        fig4.add_trace(go.Bar(x=actual_years, y=actual_to, name="その他税(実績)", marker_color="#e0e0e0", legendgroup="actual"))
+
+        fig4.add_trace(go.Bar(x=sim_years, y=sim_tc, name="消費税(予測)", marker_color="#22c55e", legendgroup="sim"))
+        fig4.add_trace(go.Bar(x=sim_years, y=sim_ti, name="所得税(予測)", marker_color="#3b82f6", legendgroup="sim"))
+        fig4.add_trace(go.Bar(x=sim_years, y=sim_tp, name="法人税(予測)", marker_color="#8b5cf6", legendgroup="sim"))
+        fig4.add_trace(go.Bar(x=sim_years, y=sim_to, name="その他税(予測)", marker_color="#f59e0b", legendgroup="sim"))
+
+        fig4.add_trace(go.Scatter(x=actual_years + sim_years, y=actual_int + sim_int, name="利払い費", mode="lines+markers", line=dict(color="#ef4444", width=3), marker=dict(size=5)))
+
+        fig4.update_layout(yaxis_title="兆円", barmode="stack")
+        st.plotly_chart(fig4, use_container_width=True, config=PLOTLY_CONFIG)
+
+    with st.expander("支出合計"):
+        fig_exp = make_chart("")
+        actual_pe = [d["policyExp"] for d in ACTUAL_DATA]
+        actual_int_exp = [d["interest"] for d in ACTUAL_DATA]
+        sim_pe = [d["policyExp"] for d in sim_data]
+        sim_int_exp = [d["interest"] for d in sim_data]
+
+        fig_exp.add_trace(go.Bar(x=actual_years, y=actual_pe, name="政策経費(実績)", marker_color="#94a3b8", legendgroup="actual"))
+        fig_exp.add_trace(go.Bar(x=actual_years, y=actual_int_exp, name="利払い費(実績)", marker_color="#b0bec5", legendgroup="actual"))
+
+        fig_exp.add_trace(go.Bar(x=sim_years, y=sim_pe, name="政策経費(予測)", marker_color="#f97316", legendgroup="sim"))
+        fig_exp.add_trace(go.Bar(x=sim_years, y=sim_int_exp, name="利払い費(予測)", marker_color="#ef4444", legendgroup="sim"))
+
+        fig_exp.update_layout(yaxis_title="兆円", barmode="stack")
+        st.plotly_chart(fig_exp, use_container_width=True, config=PLOTLY_CONFIG)
+
+    with st.expander("日銀納付金"):
+        fig5 = make_chart("")
+        actual_boj = [d["bojPayment"] for d in ACTUAL_DATA]
+        sim_boj = [d["bojPayment"] for d in sim_data]
+        fig5.add_trace(go.Bar(x=actual_years, y=actual_boj, name="実績", marker_color="#94a3b8"))
+        fig5.add_trace(go.Bar(x=sim_years, y=sim_boj, name="予測", marker_color="#8b5cf6"))
+        fig5.update_layout(yaxis_title="兆円", barmode="group")
+        st.plotly_chart(fig5, use_container_width=True, config=PLOTLY_CONFIG)
+
+    with st.expander("金利・成長率・リスクプレミアム"):
+        nominal_g_sim = p["inflationRate"] + p["realGrowth"]
+        market_rate_sim = nominal_g_sim + p["riskPremium"]
+
+        actual_macro_years = [d["year"] for d in ACTUAL_MACRO]
+        actual_jgb = [d["jgb10y"] for d in ACTUAL_MACRO]
+        actual_ng = [d["nominalGrowth"] for d in ACTUAL_MACRO]
+        actual_rp = [d["jgb10y"] - d["nominalGrowth"] for d in ACTUAL_MACRO]
+
+        fig6 = make_chart("", height=400)
+
+        fig6.add_trace(go.Scatter(
+            x=actual_macro_years, y=actual_jgb, name="10Y国債利回り(実績)",
+            mode="lines+markers", line=dict(color="#f97316", width=2),
+            marker=dict(size=6),
+        ))
+        fig6.add_trace(go.Scatter(
+            x=actual_macro_years, y=actual_ng, name="名目GDP成長率(実績)",
+            mode="lines+markers", line=dict(color="#3b82f6", width=2),
+            marker=dict(size=6),
+        ))
+        fig6.add_trace(go.Bar(
+            x=actual_macro_years, y=actual_rp, name="r−g スプレッド(実績)",
+            marker_color=["#ef4444" if v > 0 else "#22c55e" for v in actual_rp],
+            opacity=0.5,
+        ))
+
+        fig6.add_trace(go.Scatter(
+            x=sim_years, y=[market_rate_sim] * len(sim_years), name=f"市場金利(設定: {market_rate_sim:.1f}%)",
+            mode="lines", line=dict(color="#f97316", width=2, dash="dash"),
+        ))
+        fig6.add_trace(go.Scatter(
+            x=sim_years, y=[nominal_g_sim] * len(sim_years), name=f"名目成長率(設定: {nominal_g_sim:.1f}%)",
+            mode="lines", line=dict(color="#3b82f6", width=2, dash="dash"),
+        ))
+
+        fig6.add_hline(y=0, line_color="#94a3b8", line_dash="dot", line_width=1)
+
+        fig6.add_annotation(
+            x=2040, y=p["riskPremium"],
+            text=f"設定リスクプレミアム: {p['riskPremium']:.1f}%",
+            showarrow=True, arrowhead=2, font=dict(size=11, color="#ef4444"),
+            bgcolor="rgba(255,255,255,0.9)", bordercolor="#ef4444", borderpad=4,
+            ax=0, ay=-40,
+        )
+
+        fig6.update_layout(
+            yaxis_title="%",
+            barmode="overlay",
+        )
+        st.plotly_chart(fig6, use_container_width=True, config=PLOTLY_CONFIG)
+
+        avg_rp = sum(actual_rp) / len(actual_rp)
+        recent_rp = sum(actual_rp[-3:]) / 3
+        st.caption(f"r−gスプレッド（リスクプレミアムに相当）: 2015〜2024年平均 **{avg_rp:.1f}%** / 直近3年平均 **{recent_rp:.1f}%** / 設定値 **{p['riskPremium']:.1f}%**")
+        st.caption("※ 実績のr−gスプレッドはYCC（イールドカーブ・コントロール）により人為的に抑制されていた期間を含むため、将来の正常化後はスプレッドが拡大する可能性があります。")
+        st.caption("出典：財務省「国債金利情報」、内閣府「国民経済計算」")
+
+    st.subheader("データ表")
+
+    summary_years = [2026, 2030, 2035, 2040, 2045, 2050, 2055]
+    summary_data = [d for d in sim_data if d["year"] in summary_years]
+
+    rows = [
+        ("歳入合計", [d["totalRevenue"] for d in summary_data]),
+        ("　├ 税収合計", [d["tax"] for d in summary_data]),
+        ("　│　├ 消費税", [d["taxConsumption"] for d in summary_data]),
+        ("　│　├ 所得税", [d["taxIncome"] for d in summary_data]),
+        ("　│　├ 法人税", [d["taxCorporate"] for d in summary_data]),
+        ("　│　└ その他税", [d["taxOther"] for d in summary_data]),
+        ("　├ 日銀納付金", [d["bojPayment"] for d in summary_data]),
+        ("　└ その他収入", [p["otherRevenue"]] * len(summary_data)),
+        ("　　　├ 印紙収入", [d["otherRevStamp"] for d in summary_data]),
+        ("　　　├ 官業収入", [d["otherRevGov"] for d in summary_data]),
+        ("　　　├ 資産売却", [d["otherRevAsset"] for d in summary_data]),
+        ("　　　└ 雑収入", [d["otherRevMisc"] for d in summary_data]),
+        ("─", [None] * len(summary_data)),
+        ("支出合計", [d["totalCost"] for d in summary_data]),
+        ("　├ 政策経費", [d["policyExp"] for d in summary_data]),
+        ("　└ 利払い費", [d["interest"] for d in summary_data]),
+        ("　　　├ 債務残高", [d["debt"] for d in summary_data]),
+        ("　　　└ 平均クーポン(%)", [d["avgCoupon"] for d in summary_data]),
+        ("──", [None] * len(summary_data)),
+        ("財政収支", [d["fiscalBalance"] for d in summary_data]),
+        ("国債発行額", [d["bondIssuance"] for d in summary_data]),
+        ("利払負担率(%)", [d["interestBurden"] for d in summary_data]),
+    ]
+
+    col_names = [str(y) for y in summary_years]
+    data_dict = {}
+    labels = []
+    for label, vals in rows:
+        labels.append(label)
+        for j, cn in enumerate(col_names):
+            if cn not in data_dict:
+                data_dict[cn] = []
+            if vals[j] is None:
+                data_dict[cn].append(np.nan)
+            else:
+                data_dict[cn].append(round(vals[j], 1))
+
+    df_table = pd.DataFrame(data_dict, index=labels)
+    df_table.index.name = "項目"
+    st.dataframe(df_table, use_container_width=True, hide_index=False)
+
+    with st.expander("全年度データ（30年分）"):
+        all_col_names = [str(d["year"]) for d in sim_data]
+        all_rows = [
+            ("歳入合計", [d["totalRevenue"] for d in sim_data]),
+            ("　├ 税収合計", [d["tax"] for d in sim_data]),
+            ("　│　├ 消費税", [d["taxConsumption"] for d in sim_data]),
+            ("　│　├ 所得税", [d["taxIncome"] for d in sim_data]),
+            ("　│　├ 法人税", [d["taxCorporate"] for d in sim_data]),
+            ("　│　└ その他税", [d["taxOther"] for d in sim_data]),
+            ("　├ 日銀納付金", [d["bojPayment"] for d in sim_data]),
+            ("　└ その他収入", [p["otherRevenue"]] * len(sim_data)),
+            ("　　　├ 印紙収入", [d["otherRevStamp"] for d in sim_data]),
+            ("　　　├ 官業収入", [d["otherRevGov"] for d in sim_data]),
+            ("　　　├ 資産売却", [d["otherRevAsset"] for d in sim_data]),
+            ("　　　└ 雑収入", [d["otherRevMisc"] for d in sim_data]),
+            ("─", [None] * len(sim_data)),
+            ("支出合計", [d["totalCost"] for d in sim_data]),
+            ("　├ 政策経費", [d["policyExp"] for d in sim_data]),
+            ("　└ 利払い費", [d["interest"] for d in sim_data]),
+            ("　　　├ 債務残高", [d["debt"] for d in sim_data]),
+            ("　　　└ 平均クーポン(%)", [d["avgCoupon"] for d in sim_data]),
+            ("──", [None] * len(sim_data)),
+            ("財政収支", [d["fiscalBalance"] for d in sim_data]),
+            ("国債発行額", [d["bondIssuance"] for d in sim_data]),
+            ("利払負担率(%)", [d["interestBurden"] for d in sim_data]),
+        ]
+        all_data_dict = {}
+        all_labels = []
+        for label, vals in all_rows:
+            all_labels.append(label)
+            for j, cn in enumerate(all_col_names):
+                if cn not in all_data_dict:
+                    all_data_dict[cn] = []
+                if vals[j] is None:
+                    all_data_dict[cn].append(np.nan)
+                else:
+                    all_data_dict[cn].append(round(vals[j], 1))
+        df_all = pd.DataFrame(all_data_dict, index=all_labels)
+        df_all.index.name = "項目"
+        st.dataframe(df_all, use_container_width=True, hide_index=False)
+
+    with st.expander("実績データ（2015〜2024年度）"):
+        act_col_names = [str(d["year"]) for d in ACTUAL_DATA]
+        act_rows = [
+            ("税収合計", [d["tax"] for d in ACTUAL_DATA]),
+            ("　├ 消費税", [d["taxConsumption"] for d in ACTUAL_DATA]),
+            ("　├ 所得税", [d["taxIncome"] for d in ACTUAL_DATA]),
+            ("　├ 法人税", [d["taxCorporate"] for d in ACTUAL_DATA]),
+            ("　└ その他税", [d["taxOther"] for d in ACTUAL_DATA]),
+            ("日銀納付金", [d["bojPayment"] for d in ACTUAL_DATA]),
+            ("歳入合計", [d["totalRevenue"] for d in ACTUAL_DATA]),
+            ("─", [None] * len(ACTUAL_DATA)),
+            ("政策経費", [d["policyExp"] for d in ACTUAL_DATA]),
+            ("利払い費", [d["interest"] for d in ACTUAL_DATA]),
+            ("歳出合計", [d["totalCost"] for d in ACTUAL_DATA]),
+            ("──", [None] * len(ACTUAL_DATA)),
+            ("財政収支", [d["fiscalBalance"] for d in ACTUAL_DATA]),
+            ("債務残高", [d["debt"] for d in ACTUAL_DATA]),
+            ("利払負担率(%)", [d["interestBurden"] for d in ACTUAL_DATA]),
+        ]
+        act_data_dict = {}
+        act_labels = []
+        for label, vals in act_rows:
+            act_labels.append(label)
+            for j, cn in enumerate(act_col_names):
+                if cn not in act_data_dict:
+                    act_data_dict[cn] = []
+                if vals[j] is None:
+                    act_data_dict[cn].append(np.nan)
+                else:
+                    act_data_dict[cn].append(round(vals[j], 1))
+        df_act = pd.DataFrame(act_data_dict, index=act_labels)
+        df_act.index.name = "項目"
+        st.dataframe(df_act, use_container_width=True, hide_index=False)
 
 st.divider()
 st.caption("※ このシミュレーターは簡易モデルです。実際の財政運営はより複雑な要因に影響されます。パラメータを変更して様々なシナリオを検討してください。")
