@@ -43,6 +43,7 @@ export interface SimParams {
   initAvgCoupon: number;
   bojCA: number;
   bojYield: number;
+  bojCapitalBuffer: number;
   otherRevenue: number;
   naturalIncrease: number;
   policyRateSpread: number;
@@ -123,6 +124,7 @@ const baseParams: SimParams = {
   initAvgCoupon: 0.8,
   bojCA: 550,
   bojYield: 0.2,
+  bojCapitalBuffer: 12,
   otherRevenue: 15,
   naturalIncrease: 0.5,
   policyRateSpread: 1.0,

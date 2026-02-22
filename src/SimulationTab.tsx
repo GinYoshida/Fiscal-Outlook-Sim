@@ -65,6 +65,22 @@ export function SimulationTab({ params, simData, actualData }: Props) {
     return [...actual, ...sim]
   }, [actualData, simData])
 
+  const revenueRatioData = useMemo(() => {
+    const toRatio = (d: { 消費税: number; 所得税: number; 法人税: number; その他税: number }) => {
+      const total = d.消費税 + d.所得税 + d.法人税 + d.その他税
+      if (total === 0) return { 消費税: 0, 所得税: 0, 法人税: 0, その他税: 0 }
+      return {
+        消費税: parseFloat((d.消費税 / total * 100).toFixed(1)),
+        所得税: parseFloat((d.所得税 / total * 100).toFixed(1)),
+        法人税: parseFloat((d.法人税 / total * 100).toFixed(1)),
+        その他税: parseFloat((d.その他税 / total * 100).toFixed(1)),
+      }
+    }
+    const actual = actualData.map(d => ({ year: d.year, ...toRatio({ 消費税: d.taxConsumption, 所得税: d.taxIncome, 法人税: d.taxCorporate, その他税: d.taxOther }) }))
+    const sim = simData.map(d => ({ year: d.year, ...toRatio({ 消費税: d.taxConsumption, 所得税: d.taxIncome, 法人税: d.taxCorporate, その他税: d.taxOther }) }))
+    return [...actual, ...sim]
+  }, [actualData, simData])
+
   const expenditureData = useMemo(() => {
     const actual = actualData.map(d => ({ year: d.year, 政策経費: d.policyExp, 利払い費: d.interest }))
     const sim = simData.map(d => ({
@@ -73,9 +89,26 @@ export function SimulationTab({ params, simData, actualData }: Props) {
     return [...actual, ...sim]
   }, [actualData, simData])
 
+  const expenditureRatioData = useMemo(() => {
+    const actual = actualData.map(d => {
+      const total = d.policyExp + d.interest
+      return { year: d.year, 政策経費: parseFloat((d.policyExp / total * 100).toFixed(1)), 利払い費: parseFloat((d.interest / total * 100).toFixed(1)) }
+    })
+    const sim = simData.map(d => {
+      const total = d.policyExp + d.interest
+      return { year: d.year, 政策経費: parseFloat((d.policyExp / total * 100).toFixed(1)), 利払い費: parseFloat((d.interest / total * 100).toFixed(1)) }
+    })
+    return [...actual, ...sim]
+  }, [actualData, simData])
+
   const bojData = useMemo(() => {
-    const actual = actualData.map(d => ({ year: d.year, 日銀納付金: d.bojPayment }))
-    const sim = simData.map(d => ({ year: d.year, 日銀納付金: parseFloat(d.bojPayment.toFixed(1)) }))
+    const actual = actualData.map(d => ({ year: d.year, '日銀純利益': d.bojPayment, '統合政府への反映額': d.bojPayment }))
+    const sim = simData.map(d => ({
+      year: d.year,
+      '日銀純利益': parseFloat(d.bojNetIncome.toFixed(1)),
+      '統合政府への反映額': parseFloat(d.bojPayment.toFixed(1)),
+      '累積損失': parseFloat((-d.bojCumulativeLoss).toFixed(1)),
+    }))
     return [...actual, ...sim]
   }, [actualData, simData])
 
@@ -190,6 +223,8 @@ export function SimulationTab({ params, simData, actualData }: Props) {
       { label: '│　├ 法人税', values: data.map(d => fmt(d.taxCorporate)), indent: 2 },
       { label: '│　└ その他税', values: data.map(d => fmt(d.taxOther)), indent: 2 },
       { label: '├ 日銀納付金', values: data.map(d => fmt(d.bojPayment)), indent: 1 },
+      { label: '│  └ 日銀純利益', values: data.map(d => fmt(d.bojNetIncome)), indent: 2 },
+      { label: '│  └ 累積損失', values: data.map(d => fmt(d.bojCumulativeLoss)), indent: 2 },
       { label: '└ その他収入', values: data.map(d => fmt(d.totalRevenue - d.tax - d.bojPayment)), indent: 1 },
       { label: '─', values: years.map(() => '') },
       { label: '支出合計', values: data.map(d => fmt(d.totalCost)) },
@@ -232,6 +267,8 @@ export function SimulationTab({ params, simData, actualData }: Props) {
       { label: '│　├ 法人税', values: [...aData.map(d => fmt(d.taxCorporate)), ...sFiltered.map(d => fmt(d.taxCorporate))], indent: 2 },
       { label: '│　└ その他税', values: [...aData.map(d => fmt(d.taxOther)), ...sFiltered.map(d => fmt(d.taxOther))], indent: 2 },
       { label: '├ 日銀納付金', values: [...aData.map(d => fmt(d.bojPayment)), ...sFiltered.map(d => fmt(d.bojPayment))], indent: 1 },
+      { label: '│  └ 日銀純利益', values: [...aData.map(() => '―'), ...sFiltered.map(d => fmt(d.bojNetIncome))], indent: 2 },
+      { label: '│  └ 累積損失', values: [...aData.map(() => '―'), ...sFiltered.map(d => fmt(d.bojCumulativeLoss))], indent: 2 },
       { label: '└ その他収入', values: [...aData.map(d => fmt(d.totalRevenue - d.tax - d.bojPayment)), ...sFiltered.map(d => fmt(d.otherRevStamp + d.otherRevGov + d.otherRevAsset + d.otherRevMisc))], indent: 1 },
       { label: '─', values: years.map(() => '') },
       { label: '支出合計', values: [...aData.map(d => fmt(d.totalCost)), ...sFiltered.map(d => fmt(d.totalCost))] },
@@ -271,6 +308,8 @@ export function SimulationTab({ params, simData, actualData }: Props) {
       { label: '│　├ 法人税', values: data.map(d => fmt(d.taxCorporate)), indent: 2 },
       { label: '│　└ その他税', values: data.map(d => fmt(d.taxOther)), indent: 2 },
       { label: '├ 日銀納付金', values: data.map(d => fmt(d.bojPayment)), indent: 1 },
+      { label: '│  └ 日銀純利益', values: data.map(d => fmt(d.bojNetIncome)), indent: 2 },
+      { label: '│  └ 累積損失', values: data.map(d => fmt(d.bojCumulativeLoss)), indent: 2 },
       { label: '└ その他収入', values: data.map(d => fmt(d.otherRevStamp + d.otherRevGov + d.otherRevAsset + d.otherRevMisc)), indent: 1 },
       { label: '　　├ 印紙収入', values: data.map(d => fmt(d.otherRevStamp)), indent: 2 },
       { label: '　　├ 官業収入', values: data.map(d => fmt(d.otherRevGov)), indent: 2 },
@@ -498,45 +537,92 @@ export function SimulationTab({ params, simData, actualData }: Props) {
       </Collapsible>
 
       <Collapsible title="歳入合計・税収内訳">
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={revenueData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-            <XAxis dataKey="year" tick={{ fontSize: 11 }} />
-            <YAxis tick={{ fontSize: 11 }} unit="兆円" />
-            <Tooltip />
-            <Legend />
-            <Bar dataKey="消費税" stackId="a" fill="#3b82f6" />
-            <Bar dataKey="所得税" stackId="a" fill="#22c55e" />
-            <Bar dataKey="法人税" stackId="a" fill="#f97316" />
-            <Bar dataKey="その他税" stackId="a" fill="#8b5cf6" />
-          </BarChart>
-        </ResponsiveContainer>
+        <div className="responsive-grid-2col">
+          <div>
+            <div className="chart-subtitle">税収内訳（兆円）</div>
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={revenueData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis dataKey="year" tick={{ fontSize: 10 }} />
+                <YAxis tick={{ fontSize: 10 }} unit="兆円" />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="消費税" stackId="a" fill="#3b82f6" />
+                <Bar dataKey="所得税" stackId="a" fill="#22c55e" />
+                <Bar dataKey="法人税" stackId="a" fill="#f97316" />
+                <Bar dataKey="その他税" stackId="a" fill="#8b5cf6" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          <div>
+            <div className="chart-subtitle">税収構成比（%）</div>
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={revenueRatioData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis dataKey="year" tick={{ fontSize: 10 }} />
+                <YAxis tick={{ fontSize: 10 }} unit="%" domain={[0, 100]} />
+                <Tooltip formatter={(v: number) => `${v.toFixed(1)}%`} />
+                <Legend />
+                <Bar dataKey="消費税" stackId="a" fill="#3b82f6" />
+                <Bar dataKey="所得税" stackId="a" fill="#22c55e" />
+                <Bar dataKey="法人税" stackId="a" fill="#f97316" />
+                <Bar dataKey="その他税" stackId="a" fill="#8b5cf6" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
       </Collapsible>
 
       <Collapsible title="支出合計">
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={expenditureData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-            <XAxis dataKey="year" tick={{ fontSize: 11 }} />
-            <YAxis tick={{ fontSize: 11 }} unit="兆円" />
-            <Tooltip />
-            <Legend />
-            <Bar dataKey="政策経費" stackId="a" fill="#3b82f6" />
-            <Bar dataKey="利払い費" stackId="a" fill="#ef4444" />
-          </BarChart>
-        </ResponsiveContainer>
+        <div className="responsive-grid-2col">
+          <div>
+            <div className="chart-subtitle">支出内訳（兆円）</div>
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={expenditureData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis dataKey="year" tick={{ fontSize: 10 }} />
+                <YAxis tick={{ fontSize: 10 }} unit="兆円" />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="政策経費" stackId="a" fill="#3b82f6" />
+                <Bar dataKey="利払い費" stackId="a" fill="#ef4444" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          <div>
+            <div className="chart-subtitle">支出構成比（%）</div>
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={expenditureRatioData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis dataKey="year" tick={{ fontSize: 10 }} />
+                <YAxis tick={{ fontSize: 10 }} unit="%" domain={[0, 100]} />
+                <Tooltip formatter={(v: number) => `${v.toFixed(1)}%`} />
+                <Legend />
+                <Bar dataKey="政策経費" stackId="a" fill="#3b82f6" />
+                <Bar dataKey="利払い費" stackId="a" fill="#ef4444" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
       </Collapsible>
 
-      <Collapsible title="日銀納付金">
+      <Collapsible title="日銀収支（統合政府への影響）">
         <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={bojData}>
+          <ComposedChart data={bojData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis dataKey="year" tick={{ fontSize: 11 }} />
             <YAxis tick={{ fontSize: 11 }} unit="兆円" />
             <Tooltip formatter={(v: number) => `${v.toFixed(1)} 兆円`} />
-            <Bar dataKey="日銀納付金" fill="#22c55e" />
-          </BarChart>
+            <Legend />
+            <ReferenceLine y={0} stroke="#94a3b8" />
+            <Bar dataKey="日銀純利益" fill="#94a3b8" opacity={0.5} />
+            <Bar dataKey="統合政府への反映額" fill="#22c55e" />
+            <Bar dataKey="累積損失" fill="#ef4444" opacity={0.4} />
+          </ComposedChart>
         </ResponsiveContainer>
+        <div className="chart-note">
+          逆ザヤ時（純利益マイナス）の累積損失が自己資本バッファ（{params.bojCapitalBuffer}兆円）を超えると、マイナスが歳入を直接減少させます
+        </div>
       </Collapsible>
 
       <Collapsible title="金利・成長率・リスクプレミアム">

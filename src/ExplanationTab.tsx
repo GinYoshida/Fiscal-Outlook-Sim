@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
-  ResponsiveContainer, LineChart, Line, ReferenceLine, Cell
+  ResponsiveContainer, ReferenceLine, Cell
 } from 'recharts'
 import type { SimResult } from './simulation'
 import type { ActualDataPoint, SimParams, DataSource } from './data'
@@ -35,7 +35,8 @@ export function ExplanationTab({ params, simData, actualData, dataSources }: Pro
 
   const bojRevVal = p.initDebt * (p.bojYield / 100)
   const bojCostVal = p.bojCA * (policyRate / 100)
-  const bojProfit = Math.max(bojRevVal - bojCostVal, 0)
+  const bojNetIncome = bojRevVal - bojCostVal
+  const bojProfit = bojNetIncome
 
   const allYears = useMemo(() => {
     const ay = actualData.map(d => d.year)
@@ -60,13 +61,13 @@ export function ExplanationTab({ params, simData, actualData, dataSources }: Pro
     const rates = [0.0, 0.5, 1.0, 1.5, 2.0, 3.0, 4.0, 5.0]
     return rates.map(rate => {
       const pr = Math.max(rate / 100 - p.policyRateSpread / 100, 0)
-      const bojP = Math.max(p.initDebt * (p.bojYield / 100) - p.bojCA * pr, 0)
+      const bojP = p.initDebt * (p.bojYield / 100) - p.bojCA * pr
       const intC = p.initDebt * rate / 100
       return {
         市場金利: rate,
-        日銀納付金: parseFloat(bojP.toFixed(1)),
+        '日銀純利益': parseFloat(bojP.toFixed(1)),
         利払い費: parseFloat(intC.toFixed(1)),
-        ネット効果: parseFloat((bojP - intC).toFixed(1)),
+        'ネット効果': parseFloat((bojP - intC).toFixed(1)),
       }
     })
   }, [p])
@@ -129,8 +130,10 @@ export function ExplanationTab({ params, simData, actualData, dataSources }: Pro
 │   │   └── ※円安効果: × (1 + 輸出利益 − 輸入コスト)
 │   └── その他税 = 前年その他税 × (1 + 名目成長率 × 0.8)
 │
-├── 日銀納付金 = max(納付可能金額, 0)
-│   └── 納付可能金額 = 国債利息収入 − 当座預金付利コスト
+├── 日銀納付金（統合政府への反映額）
+│   ├── 日銀純利益 = 国債利息収入 − 当座預金付利コスト
+│   ├── 累積損失 > 自己資本バッファ → マイナスが歳入を直接減少
+│   └── 累積損失 ≤ バッファ → max(純利益, 0)で損失を吸収
 │
 └── その他収入 = 基本その他収入 + 外貨準備評価益×0.1
 
@@ -193,8 +196,9 @@ E：家計インパクト
           <li><strong>その他税</strong>：相続税・酒税・たばこ税・関税等。名目GDPに緩やかに連動（弾性値0.8）。</li>
         </ul>
         <hr style={{ margin: '16px 0', borderColor: '#e2e8f0' }} />
-        <p><strong>日銀納付金：max(保有国債 × 利回り − 当座預金 × 政策金利, 0)</strong></p>
-        <p>日銀は保有する国債から利息収入を得る一方、金融機関から預かる当座預金に利息を支払います。この差額（利ざや）が日銀の利益となり、国庫に納付されます。</p>
+        <p><strong>日銀納付金（逆ザヤ対応）</strong></p>
+        <p>日銀純利益 = 保有国債 × 利回り − 当座預金 × 政策金利</p>
+        <p>純利益がマイナス（逆ザヤ）の場合、損失は累積されます。累積損失が自己資本バッファ（引当金・準備金 約{p.bojCapitalBuffer}兆円）を超えると、マイナスの納付金が統合政府の歳入を直接減少させます。バッファ内であれば損失は吸収され、納付金はゼロで下げ止まります。</p>
         <hr style={{ margin: '16px 0', borderColor: '#e2e8f0' }} />
         <p><strong>その他収入：基本その他収入 + 外貨準備評価益×0.1</strong></p>
         <p>円安が進行すると、政府が保有する外貨準備（約1.3兆ドル ≒ 180兆円）のドル建て資産の円換算額が増加し、評価益が発生します。この評価益の一部（10%）を歳入に計上しています。</p>
@@ -617,9 +621,14 @@ E：家計インパクト
                 <span><strong>{bojCostVal.toFixed(1)} 兆円</strong></span>
               </div>
               <div className="boj-calc-row total">
-                <span>国庫納付金</span>
-                <span style={{ color: '#22c55e' }}><strong>{bojProfit.toFixed(1)} 兆円</strong></span>
+                <span>日銀純利益</span>
+                <span style={{ color: bojNetIncome >= 0 ? '#22c55e' : '#ef4444' }}><strong>{bojNetIncome.toFixed(1)} 兆円</strong></span>
               </div>
+              {bojNetIncome < 0 && (
+                <div style={{ fontSize: 12, color: '#ef4444', marginTop: 4 }}>
+                  逆ザヤ：累積損失が自己資本バッファ（{p.bojCapitalBuffer}兆円）を超えると歳入を減少させます
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -627,20 +636,21 @@ E：家計インパクト
 
       <Expander title="金利感応度分析">
         <ResponsiveContainer width="100%" height={350}>
-          <LineChart data={sensitivityData}>
+          <BarChart data={sensitivityData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis dataKey="市場金利" tick={{ fontSize: 11 }} unit="%" />
             <YAxis tick={{ fontSize: 11 }} unit="兆円" />
             <Tooltip />
             <Legend />
             <ReferenceLine y={0} stroke="#94a3b8" strokeDasharray="3 3" />
-            <Line type="monotone" dataKey="日銀納付金" stroke="#22c55e" strokeWidth={2} />
-            <Line type="monotone" dataKey="利払い費" stroke="#ef4444" strokeWidth={2} />
-            <Line type="monotone" dataKey="ネット効果" stroke="#3b82f6" strokeWidth={2} strokeDasharray="5 5" />
-          </LineChart>
+            <Bar dataKey="日銀純利益" fill="#22c55e" />
+            <Bar dataKey="利払い費" fill="#ef4444" />
+            <Bar dataKey="ネット効果" fill="#3b82f6" />
+          </BarChart>
         </ResponsiveContainer>
         <div className="prose" style={{ marginTop: 12 }}>
           <p><strong>ポイント：統合政府で見ると金利上昇の影響は相殺される？</strong></p>
+          <p>上図は各金利水準での日銀純利益（逆ザヤ時はマイナス）を示しています。累積損失が自己資本バッファ（{p.bojCapitalBuffer}兆円）を超えた場合、マイナスの純利益が統合政府の歳入を直接減少させます。</p>
           <p>一見すると、金利が上がれば政府の利払い費は増加しますが、日銀の保有国債からの利息収入も増えるため、統合政府としては相殺されるように見えます。しかし実際には：</p>
           <ol style={{ paddingLeft: 20, marginTop: 8 }}>
             <li><strong>タイムラグ</strong>：利払い費は9年借換ロジックで徐々に上昇するが、日銀の保有国債利回りはさらに遅れて上昇</li>

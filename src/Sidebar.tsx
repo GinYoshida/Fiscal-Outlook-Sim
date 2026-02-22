@@ -153,6 +153,9 @@ export function Sidebar({ params, scenarioIndex, onScenarioChange, onParamChange
       <Slider label="保有国債利回り (%)" value={p.bojYield} min={0} max={2} step={0.05}
         tooltip="日銀が保有する国債の平均利回り。低金利時代に大量購入したため現在は非常に低い水準です。この利回りから得る利息が日銀の主な収入源です。"
         onChange={v => onParamChange('bojYield', v)} />
+      <NumberInput label="日銀自己資本バッファ (兆円)" value={p.bojCapitalBuffer} step={1}
+        tooltip="日銀の引当金・準備金（約12兆円）。逆ザヤの累積損失がこのバッファを超えると、マイナスの日銀純利益が統合政府の歳入を直接減少させます。"
+        onChange={v => onParamChange('bojCapitalBuffer', v)} />
 
       <h4>貿易・為替初期値</h4>
       <NumberInput label="為替レート (円/ドル)" value={p.initExchangeRate} step={5}

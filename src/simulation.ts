@@ -4,6 +4,8 @@ export interface SimResult {
   year: number;
   tax: number;
   bojPayment: number;
+  bojNetIncome: number;
+  bojCumulativeLoss: number;
   totalRevenue: number;
   policyExp: number;
   avgCoupon: number;
@@ -67,6 +69,7 @@ export function runSimulation(p: SimParams): SimResult[] {
   const globalG = p.globalGrowth / 100;
 
   const results: SimResult[] = [];
+  let bojCumulativeLoss = 0;
 
   for (let i = 0; i < 30; i++) {
     const year = 2026 + i;
@@ -75,7 +78,15 @@ export function runSimulation(p: SimParams): SimResult[] {
       const policyRate = Math.max(E - p.policyRateSpread / 100, 0);
       const bojRev = p.initDebt * (p.bojYield / 100);
       const bojCost = p.bojCA * policyRate;
-      const bojPayment = Math.max(bojRev - bojCost, 0);
+      const bojNetIncome = bojRev - bojCost;
+      if (bojNetIncome < 0) {
+        bojCumulativeLoss += Math.abs(bojNetIncome);
+      } else {
+        bojCumulativeLoss = Math.max(bojCumulativeLoss - bojNetIncome, 0);
+      }
+      const bojPayment = bojCumulativeLoss > p.bojCapitalBuffer
+        ? bojNetIncome
+        : Math.max(bojNetIncome, 0);
       let taxConsumption = p.initTaxConsumption;
       if (changeYear !== null && year >= changeYear) {
         taxConsumption = taxConsumption * (p.taxRateNew / 10.0);
@@ -133,7 +144,8 @@ export function runSimulation(p: SimParams): SimResult[] {
       const baseDisposable = BASE_INCOME * (1 - TAX_SOCIAL_RATIO) - BASE_INCOME * BASE_FOOD_RATIO - BASE_INCOME * BASE_ENERGY_RATIO;
 
       results.push({
-        year, tax: taxTotal, bojPayment, totalRevenue, policyExp,
+        year, tax: taxTotal, bojPayment, bojNetIncome, bojCumulativeLoss: bojCumulativeLoss,
+        totalRevenue, policyExp,
         avgCoupon: avgCoupon * 100, interest, totalCost, debt,
         fiscalBalance, interestBurden, bojRev, bojCost,
         policyRate: policyRate * 100,
@@ -196,7 +208,15 @@ export function runSimulation(p: SimParams): SimResult[] {
       const policyRate = Math.max(E - p.policyRateSpread / 100, 0);
       const bojRev = prev.debt * (p.bojYield / 100);
       const bojCost = p.bojCA * policyRate;
-      const bojPayment = Math.max(bojRev - bojCost, 0);
+      const bojNetIncome = bojRev - bojCost;
+      if (bojNetIncome < 0) {
+        bojCumulativeLoss += Math.abs(bojNetIncome);
+      } else {
+        bojCumulativeLoss = Math.max(bojCumulativeLoss - bojNetIncome, 0);
+      }
+      const bojPayment = bojCumulativeLoss > p.bojCapitalBuffer
+        ? bojNetIncome
+        : Math.max(bojNetIncome, 0);
 
       const otherRevWithFx = p.otherRevenue + Math.max(fxValuationGain * 0.1, 0);
       const totalRevenue = tax + bojPayment + otherRevWithFx;
@@ -222,7 +242,8 @@ export function runSimulation(p: SimParams): SimResult[] {
       const baseDisposable = BASE_INCOME * (1 - TAX_SOCIAL_RATIO) - BASE_INCOME * BASE_FOOD_RATIO - BASE_INCOME * BASE_ENERGY_RATIO;
 
       results.push({
-        year, tax, bojPayment, totalRevenue, policyExp,
+        year, tax, bojPayment, bojNetIncome, bojCumulativeLoss: bojCumulativeLoss,
+        totalRevenue, policyExp,
         avgCoupon: avgCouponDec * 100, interest, totalCost, debt,
         fiscalBalance, interestBurden, bojRev, bojCost,
         policyRate: policyRate * 100,
