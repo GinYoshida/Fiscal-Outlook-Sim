@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
-  ResponsiveContainer, LineChart, Line, ReferenceLine
+  ResponsiveContainer, LineChart, Line, ReferenceLine, Cell
 } from 'recharts'
 import type { SimResult } from './simulation'
 import type { ActualDataPoint, SimParams, DataSource } from './data'
@@ -52,9 +52,9 @@ export function ExplanationTab({ params, simData, actualData, dataSources }: Pro
       return d ? { d, isActual: true, otherRev: d.totalRevenue - d.tax - d.bojPayment } : null
     } else {
       const d = simData.find(item => item.year === wfYear)
-      return d ? { d, isActual: false, otherRev: p.otherRevenue } : null
+      return d ? { d, isActual: false, otherRev: d.otherRevStamp + d.otherRevGov + d.otherRevAsset + d.otherRevMisc } : null
     }
-  }, [wfYear, simData, p.otherRevenue])
+  }, [wfYear, simData])
 
   const sensitivityData = useMemo(() => {
     const rates = [0.0, 0.5, 1.0, 1.5, 2.0, 3.0, 4.0, 5.0]
@@ -96,6 +96,8 @@ export function ExplanationTab({ params, simData, actualData, dataSources }: Pro
           <li>債務残高と利払い費の長期トレンド</li>
           <li>日銀の金融政策が財政に与える影響</li>
           <li>消費税率変更や国債発行の効果</li>
+          <li><strong>円安・貿易収支が家計と財政に与える影響</strong></li>
+          <li><strong>貧困率・ジニ係数の長期推移（格差シミュレーション）</strong></li>
         </ul>
       </div>
 
@@ -109,32 +111,43 @@ export function ExplanationTab({ params, simData, actualData, dataSources }: Pro
 │   ├── 所得税 = 前年所得税 × (1 + 名目成長率 × 1.4)
 │   │   └── 名目成長率 = インフレ率 + 実質成長率
 │   ├── 法人税 = 前年法人税 × (1 + 実質成長率×2.0 + インフレ率×0.5)
+│   │   └── ※円安効果: × (1 + 輸出利益 − 輸入コスト)
 │   └── その他税 = 前年その他税 × (1 + 名目成長率 × 0.8)
 │
 ├── 日銀納付金 = max(納付可能金額, 0)
 │   └── 納付可能金額 = 国債利息収入 − 当座預金付利コスト
-│       ├── 国債利息収入 = 保有国債残高 × 保有国債利回り
-│       └── 当座預金付利コスト = 当座預金残高 × 政策金利
-│           └── 政策金利 = max(市場金利 − スプレッド, 0)
-│               └── 市場金利 = 名目成長率 + リスクプレミアム
 │
-└── その他収入 = 印紙収入 + 官業収入 + 資産売却収入 + 雑収入
+└── その他収入 = 基本その他収入 + 外貨準備評価益×0.1
 
 
 B：支出合計 = 政策経費 + 利払い費
 │
-├── 政策経費 = 前年政策経費 × (1 + インフレ率) + 自然増
+├── 政策経費 = 前年政策経費 × (1 + インフレ率) + 自然増 + エネルギー補助金
+│   └── エネルギー補助金 = インフレ率 × 補助金率 × 10
 │
 └── 利払い費 = 前年債務残高 × 平均クーポン
     └── 平均クーポン = 前年クーポン × 8/9 + 市場金利 × 1/9
-        └── 市場金利 = 名目成長率 + リスクプレミアム
 
 
 C：収支・残高
 ├── 財政収支 = 歳入合計 − 支出合計
 ├── 債務残高 = 前年債務残高 + (支出合計 − 歳入合計)
 ├── 国債発行額 = max(支出合計 − 歳入合計, 0)
-└── 利払負担率 = (利払い費 ÷ 税収合計) × 100`}</div>
+└── 利払負担率 = (利払い費 ÷ 税収合計) × 100
+
+
+D：貿易収支
+├── 為替レート = 前年レート × (1 + 円安進行率)
+├── 輸入額 = 前年 × (1 + 実質成長率) × (1 + インフレ × 円安係数)
+├── 輸出額 = 前年 × (1 + 世界成長率) × (1 + 円安メリット)
+└── 貿易収支 = 輸出 − 輸入
+
+
+E：家計インパクト
+├── CPI上昇 = インフレ率 + 円安コストプッシュ×0.3
+├── 実質賃金伸び率 = 名目賃金上昇率 − CPI上昇
+├── 貧困率 = 前年 × (1 + (CPI-賃金)差 × 感応度)
+└── ジニ係数 = 前年 + (資産成長率 − 実質賃金伸び率) × 0.01`}</div>
 
       <h2 className="section-title">各変数の解説</h2>
 
@@ -148,27 +161,31 @@ C：収支・残高
           <tbody>
             <tr><td>消費税</td><td>前年 × (1 + インフレ率 × 1.0)</td><td>1.0</td><td>物価上昇で消費税額が自動増加</td></tr>
             <tr><td>所得税</td><td>前年 × (1 + 名目成長率 × 1.4)</td><td>1.4</td><td>累進課税で所得増以上に税収増</td></tr>
-            <tr><td>法人税</td><td>前年 × (1 + 実質成長率×2.0 + インフレ率×0.5)</td><td>≈2.0</td><td>企業利益は景気変動に敏感</td></tr>
+            <tr><td>法人税</td><td>前年 × (1 + 実質成長率×2.0 + インフレ率×0.5) × 円安効果</td><td>≈2.0</td><td>企業利益は景気変動に敏感＋円安効果</td></tr>
             <tr><td>その他税</td><td>前年 × (1 + 名目成長率 × 0.8)</td><td>0.8</td><td>相続税・酒税等は比較的安定</td></tr>
           </tbody>
         </table>
         <ul style={{ marginTop: 8 }}>
           <li><strong>消費税</strong>：税率10%（軽減8%）が一定なので、消費額（≒物価水準）に比例。インフレ率に1:1で連動。</li>
           <li><strong>所得税</strong>：累進課税のため名目賃金の伸び以上に税収が増加。弾性値1.4は国際的にも標準的な仮定。</li>
-          <li><strong>法人税</strong>：企業利益は実質GDPの変動に大きく左右される（弾性値2.0）。インフレによる名目利益増の効果は限定的（0.5）。</li>
+          <li><strong>法人税</strong>：企業利益は実質GDPの変動に大きく左右される（弾性値2.0）。インフレによる名目利益増の効果は限定的（0.5）。<strong>円安時は輸出企業利益増（+30%×円安率）と輸入企業コスト増（−20%×円安率）のネットで調整。</strong></li>
           <li><strong>その他税</strong>：相続税・酒税・たばこ税・関税等。名目GDPに緩やかに連動（弾性値0.8）。</li>
         </ul>
         <hr style={{ margin: '16px 0', borderColor: '#e2e8f0' }} />
         <p><strong>日銀納付金：max(保有国債 × 利回り − 当座預金 × 政策金利, 0)</strong></p>
-        <p>日銀は保有する国債から利息収入を得る一方、金融機関から預かる当座預金に利息を支払います。この差額（利ざや）が日銀の利益となり、国庫に納付されます。金利上昇局面では当座預金への付利コストが先に上昇する一方、保有国債の利回りは既発債のため簡単には上がらず、逆ざやで納付金がゼロになるリスクがあります。</p>
+        <p>日銀は保有する国債から利息収入を得る一方、金融機関から預かる当座預金に利息を支払います。この差額（利ざや）が日銀の利益となり、国庫に納付されます。</p>
+        <hr style={{ margin: '16px 0', borderColor: '#e2e8f0' }} />
+        <p><strong>その他収入：基本その他収入 + 外貨準備評価益×0.1</strong></p>
+        <p>円安が進行すると、政府が保有する外貨準備（約1.3兆ドル ≒ 180兆円）のドル建て資産の円換算額が増加し、評価益が発生します。この評価益の一部（10%）を歳入に計上しています。</p>
       </Expander>
 
       <Expander title="B：支出の計算ロジック">
-        <p><strong>政策経費：前年 × (1 + インフレ率) + 自然増{p.naturalIncrease.toFixed(1)}兆円</strong></p>
+        <p><strong>政策経費：前年 × (1 + インフレ率) + 自然増{p.naturalIncrease.toFixed(1)}兆円 + エネルギー補助金</strong></p>
         <p>社会保障・公共事業・教育・防衛等の歳出は、物価上昇に伴い名目額が膨らみます。さらに高齢化により年金・医療・介護の給付が毎年構造的に増加するため、自然増を加算しています。</p>
+        <p style={{ marginTop: 8 }}><strong>エネルギー補助金</strong>：インフレ率に比例して自動的に増加する政策コスト。高インフレ時（特に円安による輸入物価高騰時）に燃料・電気代の家計負担を軽減する補助金として歳出を押し上げます。</p>
         <hr style={{ margin: '16px 0', borderColor: '#e2e8f0' }} />
         <p><strong>平均クーポン：前年 × 8/9 + 市場金利 × 1/9（9年借換ロジック）</strong></p>
-        <p>日本国債の平均残存期間は約9年です。毎年およそ全体の1/9が満期を迎え、その時点の市場金利で借り換えられます。残りの8/9は既発債のため金利は変わりません。金利が急上昇しても利払い負担はすぐには跳ね上がらず、9年かけて徐々に波及する現実の動きを再現しています。</p>
+        <p>日本国債の平均残存期間は約9年です。毎年およそ全体の1/9が満期を迎え、その時点の市場金利で借り換えられます。残りの8/9は既発債のため金利は変わりません。</p>
         <hr style={{ margin: '16px 0', borderColor: '#e2e8f0' }} />
         <p><strong>利払い費：債務残高 × 平均クーポン</strong></p>
         <p>国が発行している国債の元本（債務残高）に対して、加重平均の利率（平均クーポン）を掛けた金額が年間の利息支払い額です。</p>
@@ -179,7 +196,61 @@ C：収支・残高
         <p>税収に対する利払い費の比率を見ることで、「稼ぎのうちどれだけが借金の利息に消えるか」を示します。30%を警戒ラインとしているのは、過去に財政危機に陥った国々（ギリシャ、イタリア等）がこの水準前後で市場の信認を失った事例があるためです。</p>
         <hr style={{ margin: '16px 0', borderColor: '#e2e8f0' }} />
         <p><strong>債務残高：前年残高 + (歳出 − 歳入)</strong></p>
-        <p>財政赤字（歳出 {'>'} 歳入）が発生すると、その分だけ新たに国債を発行して資金を調達するため、債務残高が積み上がります。利払い費が増えると赤字が拡大し、さらに債務が増えて利払い費が増える「債務の雪だるま効果」が発生し得ます。</p>
+        <p>財政赤字（歳出 {'>'} 歳入）が発生すると、その分だけ新たに国債を発行して資金を調達するため、債務残高が積み上がります。</p>
+      </Expander>
+
+      <Expander title="D：貿易収支と為替の影響">
+        <p><strong>為替レートの変動メカニズム</strong></p>
+        <p>為替レートは「円安進行率」パラメータに基づいて毎年変動します。円安が進行すると：</p>
+        <ul style={{ paddingLeft: 20, marginTop: 8 }}>
+          <li><strong>輸入物価の上昇</strong>：エネルギー・食料品等の輸入コストが増加し、CPIを押し上げます（コストプッシュ・インフレ）</li>
+          <li><strong>輸出企業の利益増</strong>：ドル建ての売上が円換算で増加。法人税収にプラスの影響</li>
+          <li><strong>貿易赤字の拡大</strong>：日本はエネルギー輸入国のため、円安では輸入額の増加が輸出増を上回りやすい</li>
+        </ul>
+        <hr style={{ margin: '16px 0', borderColor: '#e2e8f0' }} />
+        <p><strong>貿易の逆累進性</strong></p>
+        <p>円安による物価上昇は、低所得者ほど重い負担を強います：</p>
+        <ul style={{ paddingLeft: 20, marginTop: 8 }}>
+          <li>食料品・エネルギーなどの必需品は、消費に占める割合が低所得者ほど高い（エンゲル係数の逆累進性）</li>
+          <li>円安の恩恵（資産の外貨評価増）は金融資産を持つ高所得者に集中</li>
+          <li>結果として、円安は貧困率とジニ係数の両方を押し上げる「格差拡大要因」として機能</li>
+        </ul>
+        <hr style={{ margin: '16px 0', borderColor: '#e2e8f0' }} />
+        <p><strong>計算式</strong></p>
+        <table>
+          <thead>
+            <tr><th>項目</th><th>計算式</th><th>解説</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>輸入額</td><td>前年 × (1+実質成長率) × (1+インフレ×円安係数)</td><td>円安で輸入物価が上昇</td></tr>
+            <tr><td>輸出額</td><td>前年 × (1+世界成長率) × (1+円安メリット)</td><td>円安で価格競争力が向上</td></tr>
+            <tr><td>貿易収支</td><td>輸出 − 輸入</td><td>マイナスは貿易赤字</td></tr>
+            <tr><td>外貨準備評価益</td><td>外貨準備 × 円安進行率</td><td>ドル資産の円換算増</td></tr>
+          </tbody>
+        </table>
+      </Expander>
+
+      <Expander title="E：家計インパクトの計算ロジック">
+        <p><strong>実質賃金伸び率</strong></p>
+        <p>実質賃金伸び率 = 名目賃金上昇率 − (インフレ率 + 円安コストプッシュ)</p>
+        <p>インフレ（特に円安起因のコストプッシュ・インフレ）が賃金上昇を上回る場合、実質賃金が低下し、家計の購買力が減少します。</p>
+        <hr style={{ margin: '16px 0', borderColor: '#e2e8f0' }} />
+        <p><strong>貧困率モデル</strong></p>
+        <p>貧困率 = 前年貧困率 × (1 + (CPI上昇率 − 賃金上昇率) × 感応度)</p>
+        <p>CPI上昇がインフレ率 + 円安コストプッシュ（円安率×0.3）で計算されます。物価上昇が賃金を上回るほど、可処分所得が減り貧困層が拡大します。</p>
+        <ul style={{ paddingLeft: 20, marginTop: 8 }}>
+          <li><strong>感応度パラメータ</strong>：物価と賃金の乖離がどの程度貧困率に影響するかを調整（デフォルト0.5）</li>
+          <li>賃金 {'>'} 物価の場合は改善するが、改善速度は悪化の30%程度（非対称性を反映）</li>
+        </ul>
+        <hr style={{ margin: '16px 0', borderColor: '#e2e8f0' }} />
+        <p><strong>ジニ係数モデル</strong></p>
+        <p>ジニ係数 = 前年ジニ + (資産成長率 − 実質賃金伸び率) × 0.01</p>
+        <p>「資産価格の伸び」と「労働所得の伸び」の差が格差を拡大させるモデルです。</p>
+        <ul style={{ paddingLeft: 20, marginTop: 8 }}>
+          <li><strong>資産成長率</strong>：円安による外貨建て資産の増加（円安率×0.5）＋実質GDP成長率</li>
+          <li>円安時は株式・不動産・外貨資産が増加するが、恩恵は資産を持つ高所得者に偏る</li>
+          <li>一方、実質賃金の低下は低〜中所得者の生活を直撃する</li>
+        </ul>
       </Expander>
 
       <h2 className="section-title" style={{ marginTop: 24 }}>統合政府の仕組み</h2>
@@ -211,9 +282,6 @@ C：収支・残高
           <div>🟢 <strong>日銀→政府</strong>：国庫納付金</div>
           <div>⚪ <strong>金融機関⇄日銀</strong>：当座預金（付利）</div>
         </div>
-        <p style={{ marginTop: 12 }}>
-          このシミュレーターでは、日本政府と日本銀行を<strong>一体（統合政府）</strong>として捉え、財政の持続可能性を分析しています。
-        </p>
       </Expander>
 
       <Expander title="日銀納付金の計算構造">
@@ -387,52 +455,84 @@ function WaterfallChart({ data, otherRev, isActual, year }: {
     { label: '所得税', value: data.taxIncome, type: 'income' as const },
     { label: '法人税', value: data.taxCorporate, type: 'income' as const },
     { label: 'その他税', value: data.taxOther, type: 'income' as const },
-    { label: '税収計', value: data.tax, type: 'total' as const },
+    { label: '税収計', value: data.tax, type: 'subtotal' as const },
     { label: '日銀納付金', value: data.bojPayment, type: 'income' as const },
     { label: 'その他', value: otherRev, type: 'income' as const },
     { label: '歳入合計', value: data.totalRevenue, type: 'total' as const },
     { label: '政策経費', value: -data.policyExp, type: 'expense' as const },
     { label: '利払い費', value: -data.interest, type: 'expense' as const },
     { label: '歳出合計', value: -data.totalCost, type: 'total' as const },
-    { label: '財政収支', value: data.fiscalBalance, type: 'total' as const },
+    { label: '財政収支', value: data.fiscalBalance, type: 'result' as const },
   ]
 
-  const maxVal = Math.max(...items.map(i => Math.abs(i.value))) * 1.1
+  const wfChartData = useMemo(() => {
+    let runningTotal = 0;
+    return items.map((item) => {
+      if (item.type === 'subtotal' || item.type === 'total' || item.type === 'result') {
+        const base = 0;
+        const val = item.value;
+        return {
+          name: item.label,
+          base: val >= 0 ? 0 : val,
+          value: Math.abs(val),
+          rawValue: val,
+          type: item.type,
+        };
+      }
+      const start = runningTotal;
+      runningTotal += item.value;
+      if (item.value >= 0) {
+        return {
+          name: item.label,
+          base: start,
+          value: item.value,
+          rawValue: item.value,
+          type: item.type,
+        };
+      } else {
+        return {
+          name: item.label,
+          base: start + item.value,
+          value: -item.value,
+          rawValue: item.value,
+          type: item.type,
+        };
+      }
+    });
+  }, [data, otherRev]);
+
   const wfLabel = isActual ? '実績' : 'シミュレーション'
+
+  const getColor = (type: string, rawValue: number) => {
+    if (type === 'total' || type === 'subtotal') return '#334155';
+    if (type === 'result') return rawValue >= 0 ? '#22c55e' : '#ef4444';
+    if (type === 'expense') return '#ef4444';
+    if (isActual) return '#64748b';
+    return '#3b82f6';
+  };
 
   return (
     <div className="chart-container">
       <div className="chart-title">{year}年度 収支ウォーターフォール（{wfLabel}）</div>
-      <div className="waterfall-bar-group">
-        {items.map((item, idx) => {
-          const absVal = Math.abs(item.value)
-          const width = (absVal / maxVal) * 100
-          let color = '#3b82f6'
-          if (item.type === 'expense') color = '#ef4444'
-          else if (item.type === 'total') color = '#334155'
-          if (isActual && item.type === 'income') color = '#64748b'
-          if (isActual && item.type === 'expense') color = '#94a3b8'
-
-          return (
-            <div key={idx} className="wf-bar-container">
-              <div className="wf-bar-label">{item.label}</div>
-              <div className="wf-bar-track">
-                <div
-                  className="wf-bar"
-                  style={{
-                    width: `${Math.max(width, 3)}%`,
-                    left: item.value >= 0 ? '50%' : `${50 - width}%`,
-                    backgroundColor: color,
-                  }}
-                >
-                  {width > 8 && <span>{Math.abs(item.value).toFixed(1)}</span>}
-                </div>
-              </div>
-              <div className="wf-bar-value">{item.value >= 0 ? '+' : ''}{item.value.toFixed(1)}</div>
-            </div>
-          )
-        })}
-      </div>
+      <ResponsiveContainer width="100%" height={380}>
+        <BarChart data={wfChartData} barCategoryGap="20%">
+          <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+          <XAxis dataKey="name" tick={{ fontSize: 10, angle: -30 }} height={50} interval={0} />
+          <YAxis tick={{ fontSize: 11 }} unit="兆円" />
+          <Tooltip
+            formatter={(value: number, name: string, props: { payload: { rawValue: number } }) => {
+              if (name === 'base') return [null, null];
+              return [`${props.payload.rawValue >= 0 ? '+' : ''}${props.payload.rawValue.toFixed(1)} 兆円`, props.payload.name];
+            }}
+          />
+          <Bar dataKey="base" stackId="a" fill="transparent" />
+          <Bar dataKey="value" stackId="a" radius={[2, 2, 0, 0]}>
+            {wfChartData.map((entry, index) => (
+              <Cell key={index} fill={getColor(entry.type, entry.rawValue)} />
+            ))}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
     </div>
   )
 }

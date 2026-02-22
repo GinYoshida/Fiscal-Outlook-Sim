@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
-  ResponsiveContainer, BarChart, Bar, ReferenceLine, AreaChart, Area
+  ResponsiveContainer, BarChart, Bar, ReferenceLine, AreaChart, Area,
+  ComposedChart
 } from 'recharts'
 import type { SimResult } from './simulation'
 import type { ActualDataPoint, SimParams } from './data'
@@ -89,6 +90,31 @@ export function SimulationTab({ params, simData, actualData }: Props) {
     }))
   }, [params, simData])
 
+  const householdData = useMemo(() => {
+    return simData.map(d => ({
+      year: d.year,
+      貧困率: parseFloat(d.povertyRate.toFixed(1)),
+      ジニ係数: parseFloat((d.giniIndex * 100).toFixed(1)),
+      実質賃金伸び率: parseFloat(d.realWageGrowth.toFixed(1)),
+    }))
+  }, [simData])
+
+  const tradeData = useMemo(() => {
+    return simData.map(d => ({
+      year: d.year,
+      輸出: parseFloat(d.exportAmount.toFixed(1)),
+      輸入: parseFloat(d.importAmount.toFixed(1)),
+      貿易収支: parseFloat(d.tradeBalance.toFixed(1)),
+    }))
+  }, [simData])
+
+  const fxData = useMemo(() => {
+    return simData.map(d => ({
+      year: d.year,
+      為替レート: parseFloat(d.exchangeRate.toFixed(0)),
+    }))
+  }, [simData])
+
   const tableData = useMemo(() => {
     if (tableView === 'actual') {
       return buildActualTable()
@@ -134,7 +160,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
       { label: '│　├ 法人税', values: data.map(d => fmt(d.taxCorporate)), indent: 2 },
       { label: '│　└ その他税', values: data.map(d => fmt(d.taxOther)), indent: 2 },
       { label: '├ 日銀納付金', values: data.map(d => fmt(d.bojPayment)), indent: 1 },
-      { label: '└ その他収入', values: data.map(() => fmt(p.otherRevenue)), indent: 1 },
+      { label: '└ その他収入', values: data.map(d => fmt(d.otherRevStamp + d.otherRevGov + d.otherRevAsset + d.otherRevMisc)), indent: 1 },
       { label: '　　├ 印紙収入', values: data.map(d => fmt(d.otherRevStamp)), indent: 2 },
       { label: '　　├ 官業収入', values: data.map(d => fmt(d.otherRevGov)), indent: 2 },
       { label: '　　├ 資産売却', values: data.map(d => fmt(d.otherRevAsset)), indent: 2 },
@@ -142,6 +168,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
       { label: '─', values: years.map(() => '') },
       { label: '支出合計', values: data.map(d => fmt(d.totalCost)) },
       { label: '├ 政策経費', values: data.map(d => fmt(d.policyExp)), indent: 1 },
+      { label: '│　└ エネルギー補助金', values: data.map(d => fmt(d.energySubsidy)), indent: 2 },
       { label: '└ 利払い費', values: data.map(d => fmt(d.interest)), indent: 1 },
       { label: '　　├ 債務残高', values: data.map(d => fmt(d.debt, 0)), indent: 2 },
       { label: '　　└ 平均クーポン', values: data.map(d => fmt(d.avgCoupon, 2) + '%'), indent: 2 },
@@ -150,6 +177,15 @@ export function SimulationTab({ params, simData, actualData }: Props) {
       { label: '国債発行額', values: data.map(d => fmt(d.bondIssuance)) },
       { label: '債務残高', values: data.map(d => fmt(d.debt, 0)) },
       { label: '利払負担率 (%)', values: data.map(d => fmt(d.interestBurden)) },
+      { label: '─', values: years.map(() => '') },
+      { label: '為替レート (円/$)', values: data.map(d => fmt(d.exchangeRate, 0)) },
+      { label: '貿易収支 (兆円)', values: data.map(d => fmt(d.tradeBalance)) },
+      { label: '├ 輸出', values: data.map(d => fmt(d.exportAmount)), indent: 1 },
+      { label: '└ 輸入', values: data.map(d => fmt(d.importAmount)), indent: 1 },
+      { label: '─', values: years.map(() => '') },
+      { label: '貧困率 (%)', values: data.map(d => fmt(d.povertyRate)) },
+      { label: 'ジニ係数', values: data.map(d => fmt(d.giniIndex, 3)) },
+      { label: '実質賃金伸び率 (%)', values: data.map(d => fmt(d.realWageGrowth)) },
     ]
     return { years, rows }
   }
@@ -206,6 +242,57 @@ export function SimulationTab({ params, simData, actualData }: Props) {
           </AreaChart>
         </ResponsiveContainer>
       </div>
+
+      <Collapsible title="家計への影響（貧困率・ジニ係数・実質賃金）" defaultOpen={true}>
+        <ResponsiveContainer width="100%" height={300}>
+          <ComposedChart data={householdData}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+            <XAxis dataKey="year" tick={{ fontSize: 11 }} />
+            <YAxis yAxisId="left" tick={{ fontSize: 11 }} unit="%" />
+            <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11 }} />
+            <Tooltip />
+            <Legend />
+            <Area yAxisId="left" type="monotone" dataKey="貧困率" stroke="#ef4444" fill="#fecaca" strokeWidth={2} />
+            <Line yAxisId="right" type="monotone" dataKey="ジニ係数" stroke="#8b5cf6" strokeWidth={2} dot={false} />
+            <Line yAxisId="left" type="monotone" dataKey="実質賃金伸び率" stroke="#22c55e" strokeWidth={2} dot={false} strokeDasharray="5 5" />
+          </ComposedChart>
+        </ResponsiveContainer>
+        <div className="chart-note">
+          左軸: 貧困率(%)・実質賃金伸び率(%) / 右軸: ジニ係数(×100)
+        </div>
+      </Collapsible>
+
+      <Collapsible title="貿易収支・為替レート" defaultOpen={true}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          <div>
+            <div className="chart-subtitle">貿易収支の推移</div>
+            <ResponsiveContainer width="100%" height={250}>
+              <ComposedChart data={tradeData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis dataKey="year" tick={{ fontSize: 10 }} />
+                <YAxis tick={{ fontSize: 10 }} unit="兆円" />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="輸出" fill="#22c55e" opacity={0.6} />
+                <Bar dataKey="輸入" fill="#ef4444" opacity={0.6} />
+                <Line type="monotone" dataKey="貿易収支" stroke="#3b82f6" strokeWidth={2} dot={false} />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+          <div>
+            <div className="chart-subtitle">為替レートの推移</div>
+            <ResponsiveContainer width="100%" height={250}>
+              <LineChart data={fxData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis dataKey="year" tick={{ fontSize: 10 }} />
+                <YAxis tick={{ fontSize: 10 }} unit="円/$" />
+                <Tooltip formatter={(v: number) => `${v.toFixed(0)} 円/$`} />
+                <Line type="monotone" dataKey="為替レート" stroke="#f97316" strokeWidth={2} dot={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </Collapsible>
 
       <Collapsible title="歳入合計・税収内訳">
         <ResponsiveContainer width="100%" height={300}>

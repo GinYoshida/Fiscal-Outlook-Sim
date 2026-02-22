@@ -89,6 +89,23 @@ export function Sidebar({ params, scenarioIndex, onScenarioChange, onParamChange
         tooltip="国債の信用リスクに対する上乗せ金利。財政悪化や市場の不安が高まると上昇し、市場金利＝名目成長率＋リスクプレミアムとなります。"
         onChange={v => onParamChange('riskPremium', v)} />
 
+      <h4>外部環境・家計</h4>
+      <Slider label="円安進行率 (%/年)" value={p.yenDepreciation} min={-3} max={10} step={0.5}
+        tooltip="為替レートの年間変化率。プラスで円安、マイナスで円高。円安は輸入物価を押し上げ家計を圧迫する一方、輸出企業の利益を増やします。"
+        onChange={v => onParamChange('yenDepreciation', v)} />
+      <Slider label="名目賃金上昇率 (%/年)" value={p.nominalWageGrowth} min={0} max={5} step={0.1}
+        tooltip="労働者の名目賃金の年間上昇率。インフレ率を下回ると実質賃金が低下し、貧困率の上昇・消費の停滞を招きます。"
+        onChange={v => onParamChange('nominalWageGrowth', v)} />
+      <Slider label="世界経済成長率 (%)" value={p.globalGrowth} min={0} max={5} step={0.1}
+        tooltip="世界経済全体の成長率。日本の輸出額に直接影響します。先進国中心に2〜3%が一般的です。"
+        onChange={v => onParamChange('globalGrowth', v)} />
+      <Slider label="貧困率感応度" value={p.povertySensitivity} min={0.1} max={1.0} step={0.1}
+        tooltip="物価上昇と賃金の乖離が貧困率にどれだけ影響するかの感応度パラメータ。値が大きいほどインフレが家計に打撃を与えます。"
+        onChange={v => onParamChange('povertySensitivity', v)} />
+      <Slider label="エネルギー補助金率" value={p.energySubsidyRate} min={0} max={1.0} step={0.1}
+        tooltip="インフレに応じて政府が投入するエネルギー補助金の比率。高インフレ時に燃料・電気代への補助金が歳出を押し上げます。"
+        onChange={v => onParamChange('energySubsidyRate', v)} />
+
       <h4>初期値（2026年）</h4>
       <NumberInput label="債務残高 (兆円)" value={p.initDebt} step={50}
         tooltip="2026年度のスタート時点での国の借金総額。2024年度末で約1,100兆円です。"
@@ -136,6 +153,28 @@ export function Sidebar({ params, scenarioIndex, onScenarioChange, onParamChange
       <Slider label="保有国債利回り (%)" value={p.bojYield} min={0} max={2} step={0.05}
         tooltip="日銀が保有する国債の平均利回り。低金利時代に大量購入したため現在は非常に低い水準です。この利回りから得る利息が日銀の主な収入源です。"
         onChange={v => onParamChange('bojYield', v)} />
+
+      <h4>貿易・為替初期値</h4>
+      <NumberInput label="為替レート (円/ドル)" value={p.initExchangeRate} step={5}
+        tooltip="初期の為替レート（円/ドル）。2024年は約150円/ドルです。円安進行率で毎年変動します。"
+        onChange={v => onParamChange('initExchangeRate', v)} />
+      <NumberInput label="輸出額 (兆円)" value={p.initExport} step={5}
+        tooltip="初期の年間輸出額。2024年度は約100兆円です。世界経済成長率と円安による価格競争力で変動します。"
+        onChange={v => onParamChange('initExport', v)} />
+      <NumberInput label="輸入額 (兆円)" value={p.initImport} step={5}
+        tooltip="初期の年間輸入額。2024年度は約110兆円です。国内成長率とインフレ、円安による輸入物価上昇で変動します。"
+        onChange={v => onParamChange('initImport', v)} />
+      <NumberInput label="外貨準備 (兆円)" value={p.fxReserves} step={10}
+        tooltip="政府の外貨準備高。約1.3兆ドル（約180兆円）。円安時にはドル建て資産の円換算が増加し、評価益が発生します。"
+        onChange={v => onParamChange('fxReserves', v)} />
+
+      <h4>家計初期値</h4>
+      <NumberInput label="貧困率 (%)" value={p.initPovertyRate} step={0.1}
+        tooltip="相対的貧困率の初期値。2021年の厚労省調査では15.4%です。実質賃金の低下（インフレ＞賃金上昇）で悪化します。"
+        onChange={v => onParamChange('initPovertyRate', v)} />
+      <NumberInput label="ジニ係数" value={p.initGini} step={0.001}
+        tooltip="所得格差を示す指標（0=完全平等、1=完全不平等）。日本は約0.334（2021年）。資産価格上昇と実質賃金低下の差で拡大します。"
+        onChange={v => onParamChange('initGini', v)} />
 
       <h4>その他</h4>
       <NumberInput label="その他収入 (兆円/年)" value={p.otherRevenue} step={1}

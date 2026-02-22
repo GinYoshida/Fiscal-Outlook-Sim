@@ -24,6 +24,17 @@ export interface SimResult {
   otherRevGov: number;
   otherRevAsset: number;
   otherRevMisc: number;
+  exchangeRate: number;
+  importAmount: number;
+  exportAmount: number;
+  tradeBalance: number;
+  realWageGrowth: number;
+  povertyRate: number;
+  giniIndex: number;
+  energySubsidy: number;
+  fxValuationGain: number;
+  cpiIncrease: number;
+  wageIncrease: number;
 }
 
 export function runSimulation(p: SimParams): SimResult[] {
@@ -32,6 +43,10 @@ export function runSimulation(p: SimParams): SimResult[] {
   const D = B + C;
   const E = D + p.riskPremium / 100;
   const changeYear = p.taxRateChangeYear !== "なし" ? parseInt(p.taxRateChangeYear) : null;
+
+  const yenDep = p.yenDepreciation / 100;
+  const nomWageG = p.nominalWageGrowth / 100;
+  const globalG = p.globalGrowth / 100;
 
   const results: SimResult[] = [];
 
@@ -51,44 +66,114 @@ export function runSimulation(p: SimParams): SimResult[] {
       const taxCorporate = p.initTaxCorporate;
       const taxOther = p.initTaxOther;
       const tax = taxConsumption + taxIncome + taxCorporate + taxOther;
-      const totalRevenue = tax + bojPayment + p.otherRevenue;
+
+      const exchangeRate = p.initExchangeRate * (1 + yenDep);
+      const yenFactor = (exchangeRate / p.initExchangeRate - 1);
+      const yenBenefit = yenFactor * 0.5;
+
+      const importAmount = p.initImport * (1 + C) * (1 + B * (1 + yenFactor));
+      const exportAmount = p.initExport * (1 + globalG) * (1 + yenBenefit);
+      const tradeBalance = exportAmount - importAmount;
+
+      const fxValuationGain = p.fxReserves * yenFactor;
+
+      const yenCostPush = Math.max(yenFactor, 0) * 0.3;
+      const cpiIncrease = B + yenCostPush;
+      const wageIncrease = nomWageG;
+      const realWageGrowth = wageIncrease - cpiIncrease;
+
+      const povertyRate = cpiIncrease > wageIncrease
+        ? p.initPovertyRate * (1 + (cpiIncrease - wageIncrease) * p.povertySensitivity)
+        : p.initPovertyRate * (1 - (wageIncrease - cpiIncrease) * p.povertySensitivity * 0.3);
+
+      const assetGrowth = yenFactor * 0.5 + C;
+      const giniIndex = p.initGini + (assetGrowth - realWageGrowth) * 0.01;
+
+      const exportProfit = Math.max(yenFactor, 0) * 0.3;
+      const importCost = Math.max(yenFactor, 0) * 0.2;
+      const taxCorporateAdj = taxCorporate * (1 + exportProfit - importCost);
+
+      const energySubsidy = B * p.energySubsidyRate * 10;
+
+      const otherRevWithFx = p.otherRevenue + Math.max(fxValuationGain * 0.1, 0);
+
+      const totalRevenue = taxConsumption + taxIncome + taxCorporateAdj + taxOther + bojPayment + otherRevWithFx;
       const avgCoupon = p.initAvgCoupon / 100;
       const interest = p.initDebt * avgCoupon;
-      const policyExp = p.initPolicyExp;
+      const policyExp = p.initPolicyExp + energySubsidy;
       const totalCost = policyExp + interest;
       const fiscalBalance = totalRevenue - totalCost;
       const debt = p.initDebt + (totalCost - totalRevenue);
-      const interestBurden = tax !== 0 ? (interest / tax) * 100 : 0;
+      const taxTotal = taxConsumption + taxIncome + taxCorporateAdj + taxOther;
+      const interestBurden = taxTotal !== 0 ? (interest / taxTotal) * 100 : 0;
       const bondIssuance = Math.max(totalCost - totalRevenue, 0);
 
       results.push({
-        year, tax, bojPayment, totalRevenue, policyExp,
+        year, tax: taxTotal, bojPayment, totalRevenue, policyExp,
         avgCoupon: avgCoupon * 100, interest, totalCost, debt,
         fiscalBalance, interestBurden, bojRev, bojCost,
         policyRate: policyRate * 100,
-        taxConsumption, taxIncome, taxCorporate, taxOther,
+        taxConsumption, taxIncome, taxCorporate: taxCorporateAdj, taxOther,
         bondIssuance,
-        otherRevStamp: p.otherRevenue * 0.30,
-        otherRevGov: p.otherRevenue * 0.20,
-        otherRevAsset: p.otherRevenue * 0.25,
-        otherRevMisc: p.otherRevenue * 0.25,
+        otherRevStamp: otherRevWithFx * 0.30,
+        otherRevGov: otherRevWithFx * 0.20,
+        otherRevAsset: otherRevWithFx * 0.25,
+        otherRevMisc: otherRevWithFx * 0.25,
+        exchangeRate, importAmount, exportAmount, tradeBalance,
+        realWageGrowth: realWageGrowth * 100,
+        povertyRate, giniIndex,
+        energySubsidy, fxValuationGain,
+        cpiIncrease: cpiIncrease * 100,
+        wageIncrease: wageIncrease * 100,
       });
     } else {
       const prev = results[i - 1];
+
+      const exchangeRate = prev.exchangeRate * (1 + yenDep);
+      const yenFactor = (exchangeRate / p.initExchangeRate - 1);
+      const yenBenefit = yenFactor * 0.5;
+
+      const importAmount = prev.importAmount * (1 + C) * (1 + B * (1 + Math.max(yenDep, 0)));
+      const exportAmount = prev.exportAmount * (1 + globalG) * (1 + Math.max(yenDep, 0) * 0.5);
+      const tradeBalance = exportAmount - importAmount;
+
+      const fxValuationGain = p.fxReserves * yenDep;
+
+      const yenCostPush = Math.max(yenDep, 0) * 0.3;
+      const cpiIncrease = B + yenCostPush;
+      const wageIncrease = nomWageG;
+      const realWageGrowth = wageIncrease - cpiIncrease;
+
+      const povertyRate = cpiIncrease > wageIncrease
+        ? prev.povertyRate * (1 + (cpiIncrease - wageIncrease) * p.povertySensitivity)
+        : prev.povertyRate * (1 - (wageIncrease - cpiIncrease) * p.povertySensitivity * 0.3);
+
+      const assetGrowth = Math.max(yenDep, 0) * 0.5 + C;
+      const giniIndex = prev.giniIndex + (assetGrowth - realWageGrowth) * 0.01;
+
       let taxConsumption = prev.taxConsumption * (1 + B * 1.0);
       if (changeYear !== null && year === changeYear) {
         taxConsumption = prev.taxConsumption * (1 + B * 1.0) * (p.taxRateNew / 10.0);
       }
       const taxIncome = prev.taxIncome * (1 + D * 1.4);
-      const taxCorporate = prev.taxCorporate * (1 + C * 2.0 + B * 0.5);
+
+      const exportProfit = Math.max(yenDep, 0) * 0.3;
+      const importCost = Math.max(yenDep, 0) * 0.2;
+      const taxCorporate = prev.taxCorporate * (1 + C * 2.0 + B * 0.5) * (1 + exportProfit - importCost);
       const taxOther = prev.taxOther * (1 + D * 0.8);
       const tax = taxConsumption + taxIncome + taxCorporate + taxOther;
+
       const policyRate = Math.max(E - p.policyRateSpread / 100, 0);
       const bojRev = prev.debt * (p.bojYield / 100);
       const bojCost = p.bojCA * policyRate;
       const bojPayment = Math.max(bojRev - bojCost, 0);
-      const totalRevenue = tax + bojPayment + p.otherRevenue;
-      const policyExp = prev.policyExp * (1 + B) + p.naturalIncrease;
+
+      const otherRevWithFx = p.otherRevenue + Math.max(fxValuationGain * 0.1, 0);
+      const totalRevenue = tax + bojPayment + otherRevWithFx;
+
+      const energySubsidy = B * p.energySubsidyRate * 10;
+      const policyExpBase = prev.policyExp - (results.length > 0 ? prev.energySubsidy : 0);
+      const policyExp = policyExpBase * (1 + B) + p.naturalIncrease + energySubsidy;
       const avgCouponDec = (prev.avgCoupon / 100 * 8 / 9) + (E * 1 / 9);
       const interest = prev.debt * avgCouponDec;
       const totalCost = policyExp + interest;
@@ -104,10 +189,16 @@ export function runSimulation(p: SimParams): SimResult[] {
         policyRate: policyRate * 100,
         taxConsumption, taxIncome, taxCorporate, taxOther,
         bondIssuance,
-        otherRevStamp: p.otherRevenue * 0.30,
-        otherRevGov: p.otherRevenue * 0.20,
-        otherRevAsset: p.otherRevenue * 0.25,
-        otherRevMisc: p.otherRevenue * 0.25,
+        otherRevStamp: otherRevWithFx * 0.30,
+        otherRevGov: otherRevWithFx * 0.20,
+        otherRevAsset: otherRevWithFx * 0.25,
+        otherRevMisc: otherRevWithFx * 0.25,
+        exchangeRate, importAmount, exportAmount, tradeBalance,
+        realWageGrowth: realWageGrowth * 100,
+        povertyRate, giniIndex,
+        energySubsidy, fxValuationGain,
+        cpiIncrease: cpiIncrease * 100,
+        wageIncrease: wageIncrease * 100,
       });
     }
   }

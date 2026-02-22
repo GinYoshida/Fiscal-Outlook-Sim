@@ -42,6 +42,17 @@ export interface SimParams {
   policyRateSpread: number;
   taxRateChangeYear: string;
   taxRateNew: number;
+  yenDepreciation: number;
+  nominalWageGrowth: number;
+  globalGrowth: number;
+  initExport: number;
+  initImport: number;
+  fxReserves: number;
+  initPovertyRate: number;
+  initGini: number;
+  initExchangeRate: number;
+  povertySensitivity: number;
+  energySubsidyRate: number;
 }
 
 export interface Scenario {
@@ -89,32 +100,70 @@ export const DATA_SOURCES: DataSource[] = [
   { name: "利払費と金利の推移", url: "https://www.mof.go.jp/tax_policy/summary/condition/005.pdf", desc: "利払い費" },
   { name: "日本の統計 2025 第5章", url: "https://www.stat.go.jp/data/nihon/05.html", desc: "統計局" },
   { name: "日本銀行 決算", url: "https://www.boj.or.jp/about/account/index.htm", desc: "国庫納付金" },
+  { name: "貿易統計", url: "https://www.customs.go.jp/toukei/info/index.htm", desc: "財務省貿易統計" },
+  { name: "国民生活基礎調査", url: "https://www.mhlw.go.jp/toukei/list/20-21.html", desc: "貧困率・所得分布" },
 ];
+
+const baseParams: SimParams = {
+  inflationRate: 2.0,
+  realGrowth: 0.5,
+  riskPremium: 0.5,
+  initDebt: 1100,
+  initTaxConsumption: 24,
+  initTaxIncome: 22,
+  initTaxCorporate: 17,
+  initTaxOther: 12,
+  initPolicyExp: 80,
+  initAvgCoupon: 0.8,
+  bojCA: 550,
+  bojYield: 0.2,
+  otherRevenue: 15,
+  naturalIncrease: 0.5,
+  policyRateSpread: 1.0,
+  taxRateChangeYear: "なし",
+  taxRateNew: 10,
+  yenDepreciation: 2.0,
+  nominalWageGrowth: 1.5,
+  globalGrowth: 2.5,
+  initExport: 100,
+  initImport: 110,
+  fxReserves: 180,
+  initPovertyRate: 15.4,
+  initGini: 0.334,
+  initExchangeRate: 150,
+  povertySensitivity: 0.5,
+  energySubsidyRate: 0.3,
+};
 
 export const SCENARIOS: Scenario[] = [
   {
     name: "① ベースライン（現状維持）",
     label: "現在の政策を維持した場合の標準シナリオ",
-    params: { inflationRate: 2.0, realGrowth: 0.5, riskPremium: 0.5, initDebt: 1100, initTaxConsumption: 24, initTaxIncome: 22, initTaxCorporate: 17, initTaxOther: 12, initPolicyExp: 80, initAvgCoupon: 0.8, bojCA: 550, bojYield: 0.2, otherRevenue: 15, naturalIncrease: 0.5, policyRateSpread: 1.0, taxRateChangeYear: "なし", taxRateNew: 10 },
+    params: { ...baseParams },
   },
   {
     name: "② 高成長シナリオ",
     label: "構造改革が奏功し、実質成長率が高まるケース",
-    params: { inflationRate: 2.0, realGrowth: 2.0, riskPremium: 0.3, initDebt: 1100, initTaxConsumption: 24, initTaxIncome: 22, initTaxCorporate: 17, initTaxOther: 12, initPolicyExp: 80, initAvgCoupon: 0.8, bojCA: 550, bojYield: 0.2, otherRevenue: 16, naturalIncrease: 0.5, policyRateSpread: 1.0, taxRateChangeYear: "なし", taxRateNew: 10 },
+    params: { ...baseParams, realGrowth: 2.0, riskPremium: 0.3, otherRevenue: 16, nominalWageGrowth: 3.0, globalGrowth: 3.0, yenDepreciation: 0.5 },
   },
   {
     name: "③ スタグフレーション",
     label: "高インフレ＋低成長が長期化するケース",
-    params: { inflationRate: 4.0, realGrowth: 0.0, riskPremium: 1.0, initDebt: 1100, initTaxConsumption: 24, initTaxIncome: 22, initTaxCorporate: 17, initTaxOther: 12, initPolicyExp: 80, initAvgCoupon: 0.8, bojCA: 550, bojYield: 0.2, otherRevenue: 15, naturalIncrease: 1.0, policyRateSpread: 0.5, taxRateChangeYear: "なし", taxRateNew: 10 },
+    params: { ...baseParams, inflationRate: 4.0, realGrowth: 0.0, riskPremium: 1.0, naturalIncrease: 1.0, policyRateSpread: 0.5, yenDepreciation: 5.0, nominalWageGrowth: 1.0, povertySensitivity: 0.8, energySubsidyRate: 0.5 },
   },
   {
     name: "④ 金利急騰シナリオ",
     label: "国債の信認低下でリスクプレミアムが上昇するケース",
-    params: { inflationRate: 2.5, realGrowth: 0.3, riskPremium: 2.0, initDebt: 1100, initTaxConsumption: 24, initTaxIncome: 22, initTaxCorporate: 17, initTaxOther: 12, initPolicyExp: 80, initAvgCoupon: 0.8, bojCA: 550, bojYield: 0.2, otherRevenue: 15, naturalIncrease: 0.5, policyRateSpread: 1.0, taxRateChangeYear: "なし", taxRateNew: 10 },
+    params: { ...baseParams, inflationRate: 2.5, realGrowth: 0.3, riskPremium: 2.0, yenDepreciation: 4.0, nominalWageGrowth: 1.0 },
   },
   {
     name: "⑤ 財政再建シナリオ",
     label: "歳出削減と増税で財政健全化を目指すケース",
-    params: { inflationRate: 1.5, realGrowth: 1.0, riskPremium: 0.3, initDebt: 1100, initTaxConsumption: 26, initTaxIncome: 24, initTaxCorporate: 18, initTaxOther: 12, initPolicyExp: 75, initAvgCoupon: 0.8, bojCA: 550, bojYield: 0.2, otherRevenue: 17, naturalIncrease: 0.3, policyRateSpread: 1.0, taxRateChangeYear: "なし", taxRateNew: 10 },
+    params: { ...baseParams, inflationRate: 1.5, realGrowth: 1.0, riskPremium: 0.3, initTaxConsumption: 26, initTaxIncome: 24, initTaxCorporate: 18, initPolicyExp: 75, otherRevenue: 17, naturalIncrease: 0.3, yenDepreciation: 1.0, nominalWageGrowth: 2.0 },
+  },
+  {
+    name: "⑥ 急激円安シナリオ",
+    label: "円安が急激に進行し、輸入物価高騰と家計圧迫が進むケース",
+    params: { ...baseParams, inflationRate: 3.5, realGrowth: 0.3, riskPremium: 1.0, yenDepreciation: 6.0, nominalWageGrowth: 1.0, globalGrowth: 2.0, povertySensitivity: 0.7, energySubsidyRate: 0.6 },
   },
 ];
