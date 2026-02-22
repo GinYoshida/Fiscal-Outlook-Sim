@@ -58,4 +58,13 @@ if os.path.exists(assets_dir):
                 f'<script type="module">{content}</script>'
             )
 
-st.components.v1.html(html, height=4000, scrolling=True)
+st.markdown("""
+<style>
+    .stApp header { display: none !important; }
+    .stMainBlockContainer { padding: 0 !important; max-width: 100% !important; }
+    .block-container { padding: 0 !important; max-width: 100% !important; }
+    iframe { min-height: 100vh !important; }
+</style>
+""", unsafe_allow_html=True)
+
+st.components.v1.html(html, height=900, scrolling=False)
