@@ -60,6 +60,9 @@ export interface SimParams {
   initExchangeRate: number;
   povertySensitivity: number;
   energySubsidyRate: number;
+  initNFA: number;
+  nfaThreshold: number;
+  currencyRiskPremium: number;
 }
 
 export interface Scenario {
@@ -141,6 +144,9 @@ const baseParams: SimParams = {
   initExchangeRate: 150,
   povertySensitivity: 0.5,
   energySubsidyRate: 0.3,
+  initNFA: 420,
+  nfaThreshold: 200,
+  currencyRiskPremium: 2.0,
 };
 
 export const SCENARIOS: Scenario[] = [

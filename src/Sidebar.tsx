@@ -61,12 +61,15 @@ function NumberInput({ label, value, step, tooltip, onChange }: {
   )
 }
 
-export function Sidebar({ params, scenarioIndex, onScenarioChange, onParamChange, isOpen }: SidebarProps) {
+export function Sidebar({ params, scenarioIndex, onScenarioChange, onParamChange, isOpen, onClose }: SidebarProps & { onClose?: () => void }) {
   const p = params;
   const taxTotal = p.initTaxConsumption + p.initTaxIncome + p.initTaxCorporate + p.initTaxOther;
 
   return (
     <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
+      {onClose && (
+        <button className="sidebar-close" onClick={onClose}>✕</button>
+      )}
       <h3>シナリオ選択</h3>
       <select
         value={scenarioIndex}
@@ -170,6 +173,17 @@ export function Sidebar({ params, scenarioIndex, onScenarioChange, onParamChange
       <NumberInput label="外貨準備 (兆円)" value={p.fxReserves} step={10}
         tooltip="政府の外貨準備高。約1.3兆ドル（約180兆円）。円安時にはドル建て資産の円換算が増加し、評価益が発生します。"
         onChange={v => onParamChange('fxReserves', v)} />
+
+      <h4>対外資産・経常収支</h4>
+      <NumberInput label="対外純資産 (兆円)" value={p.initNFA} step={10}
+        tooltip="日本の対外純資産。約420兆円（2024年）で世界最大の債権国です。経常収支が赤字になると減少し、一定水準以下で通貨信任リスクが発生します。"
+        onChange={v => onParamChange('initNFA', v)} />
+      <NumberInput label="NFA防衛ライン (兆円)" value={p.nfaThreshold} step={10}
+        tooltip="対外純資産がこの水準を下回り、かつ経常収支が赤字の場合、通貨信任リスクプレミアムが市場金利に自動加算されます。"
+        onChange={v => onParamChange('nfaThreshold', v)} />
+      <Slider label="通貨リスクプレミアム (%)" value={p.currencyRiskPremium} min={0} max={5} step={0.5}
+        tooltip="経常赤字＋NFA低下時に自動で市場金利に上乗せされるリスクプレミアム。通貨の信認低下による国債金利の跳ね上がりを表現します。"
+        onChange={v => onParamChange('currencyRiskPremium', v)} />
 
       <h4>家計初期値</h4>
       <NumberInput label="貧困率 (%)" value={p.initPovertyRate} step={0.1}

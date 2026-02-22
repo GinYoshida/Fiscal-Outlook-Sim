@@ -45,6 +45,10 @@ export interface SimResult {
   modelEnergyCostChange: number;
   modelDisposableChange: number;
   incomeRatio: number;
+  currentAccount: number;
+  nfa: number;
+  dynamicRiskPremium: number;
+  effectiveMarketRate: number;
 }
 
 function giniToIncomeRatio(gini: number): number {
@@ -61,7 +65,7 @@ export function runSimulation(p: SimParams): SimResult[] {
   const B = p.inflationRate / 100;
   const C = p.realGrowth / 100;
   const D = B + C;
-  const E = D + p.riskPremium / 100;
+  const baseMarketRate = D + p.riskPremium / 100;
   const changeYear = p.taxRateChangeYear !== "なし" ? parseInt(p.taxRateChangeYear) : null;
 
   const yenDep = p.yenDepreciation / 100;
@@ -73,6 +77,16 @@ export function runSimulation(p: SimParams): SimResult[] {
 
   for (let i = 0; i < 30; i++) {
     const year = 2026 + i;
+
+    const prevNFA = i === 0 ? p.initNFA : results[i - 1].nfa;
+    const prevCurrentAccount = i === 0 ? 0 : results[i - 1].currentAccount;
+
+    let dynamicRiskPremium = 0;
+    if (i > 0 && prevCurrentAccount < 0 && prevNFA < p.nfaThreshold) {
+      dynamicRiskPremium = p.currencyRiskPremium / 100;
+    }
+
+    const E = baseMarketRate + dynamicRiskPremium;
 
     if (i === 0) {
       const policyRate = Math.max(E - p.policyRateSpread / 100, 0);
@@ -103,6 +117,10 @@ export function runSimulation(p: SimParams): SimResult[] {
       const importAmount = p.initImport * (1 + C) * (1 + B * (1 + yenFactor));
       const exportAmount = p.initExport * (1 + globalG) * (1 + yenBenefit);
       const tradeBalance = exportAmount - importAmount;
+
+      const investmentIncome = prevNFA * 0.03;
+      const currentAccount = tradeBalance + investmentIncome;
+      const nfa = prevNFA + currentAccount;
 
       const fxValuationGain = p.fxReserves * yenFactor;
 
@@ -144,7 +162,7 @@ export function runSimulation(p: SimParams): SimResult[] {
       const baseDisposable = BASE_INCOME * (1 - TAX_SOCIAL_RATIO) - BASE_INCOME * BASE_FOOD_RATIO - BASE_INCOME * BASE_ENERGY_RATIO;
 
       results.push({
-        year, tax: taxTotal, bojPayment, bojNetIncome, bojCumulativeLoss: bojCumulativeLoss,
+        year, tax: taxTotal, bojPayment, bojNetIncome, bojCumulativeLoss,
         totalRevenue, policyExp,
         avgCoupon: avgCoupon * 100, interest, totalCost, debt,
         fiscalBalance, interestBurden, bojRev, bojCost,
@@ -167,6 +185,9 @@ export function runSimulation(p: SimParams): SimResult[] {
         modelEnergyCostChange: modelEnergyCost - BASE_INCOME * BASE_ENERGY_RATIO,
         modelDisposableChange: modelDisposable - baseDisposable,
         incomeRatio: giniToIncomeRatio(giniIndex),
+        currentAccount, nfa,
+        dynamicRiskPremium: dynamicRiskPremium * 100,
+        effectiveMarketRate: E * 100,
       });
     } else {
       const prev = results[i - 1];
@@ -178,6 +199,10 @@ export function runSimulation(p: SimParams): SimResult[] {
       const importAmount = prev.importAmount * (1 + C) * (1 + B * (1 + Math.max(yenDep, 0)));
       const exportAmount = prev.exportAmount * (1 + globalG) * (1 + Math.max(yenDep, 0) * 0.5);
       const tradeBalance = exportAmount - importAmount;
+
+      const investmentIncome = prevNFA * 0.03;
+      const currentAccount = tradeBalance + investmentIncome;
+      const nfa = prevNFA + currentAccount;
 
       const fxValuationGain = p.fxReserves * yenDep;
 
@@ -222,7 +247,7 @@ export function runSimulation(p: SimParams): SimResult[] {
       const totalRevenue = tax + bojPayment + otherRevWithFx;
 
       const energySubsidy = B * p.energySubsidyRate * 10;
-      const policyExpBase = prev.policyExp - (results.length > 0 ? prev.energySubsidy : 0);
+      const policyExpBase = prev.policyExp - prev.energySubsidy;
       const policyExp = policyExpBase * (1 + B) + p.naturalIncrease + energySubsidy;
       const avgCouponDec = (prev.avgCoupon / 100 * 8 / 9) + (E * 1 / 9);
       const interest = prev.debt * avgCouponDec;
@@ -242,7 +267,7 @@ export function runSimulation(p: SimParams): SimResult[] {
       const baseDisposable = BASE_INCOME * (1 - TAX_SOCIAL_RATIO) - BASE_INCOME * BASE_FOOD_RATIO - BASE_INCOME * BASE_ENERGY_RATIO;
 
       results.push({
-        year, tax, bojPayment, bojNetIncome, bojCumulativeLoss: bojCumulativeLoss,
+        year, tax, bojPayment, bojNetIncome, bojCumulativeLoss,
         totalRevenue, policyExp,
         avgCoupon: avgCouponDec * 100, interest, totalCost, debt,
         fiscalBalance, interestBurden, bojRev, bojCost,
@@ -265,6 +290,9 @@ export function runSimulation(p: SimParams): SimResult[] {
         modelEnergyCostChange: modelEnergyCost - BASE_INCOME * BASE_ENERGY_RATIO,
         modelDisposableChange: modelDisposable - baseDisposable,
         incomeRatio: giniToIncomeRatio(giniIndex),
+        currentAccount, nfa,
+        dynamicRiskPremium: dynamicRiskPremium * 100,
+        effectiveMarketRate: E * 100,
       });
     }
   }

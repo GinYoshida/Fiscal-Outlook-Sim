@@ -34,8 +34,6 @@ function fmt(v: number, decimals = 1): string {
 export function SimulationTab({ params, simData, actualData }: Props) {
   const [tableView, setTableView] = useState<'5year' | 'full' | 'actual' | 'combined'>('combined')
 
-  const warningData = simData.find(d => d.interestBurden > 30)
-
   const interestBurdenData = useMemo(() => {
     const actual = actualData.map(d => ({ year: d.year, 利払負担率: d.interestBurden, type: '実績' }))
     const sim = simData.map(d => ({ year: d.year, 利払負担率: parseFloat(d.interestBurden.toFixed(1)), type: 'シミュレーション' }))
@@ -114,11 +112,10 @@ export function SimulationTab({ params, simData, actualData }: Props) {
 
   const rateData = useMemo(() => {
     const nominalG = params.inflationRate + params.realGrowth
-    const marketRate = nominalG + params.riskPremium
     return simData.map(d => ({
       year: d.year,
       平均クーポン: parseFloat(d.avgCoupon.toFixed(2)),
-      市場金利: parseFloat(marketRate.toFixed(2)),
+      実効市場金利: parseFloat(d.effectiveMarketRate.toFixed(2)),
       名目成長率: parseFloat(nominalG.toFixed(2)),
     }))
   }, [params, simData])
@@ -199,6 +196,44 @@ export function SimulationTab({ params, simData, actualData }: Props) {
     return [...actual, ...sim]
   }, [actualData, simData])
 
+  const nfaData = useMemo(() => {
+    return simData.map(d => ({
+      year: d.year,
+      対外純資産: parseFloat(d.nfa.toFixed(0)),
+      経常収支: parseFloat(d.currentAccount.toFixed(1)),
+      通貨リスク加算: parseFloat(d.dynamicRiskPremium.toFixed(1)),
+    }))
+  }, [simData])
+
+  const summaryWarnings = useMemo(() => {
+    const warnings: { year: number; type: string; detail: string }[] = []
+    simData.forEach(d => {
+      if (d.interest > d.policyExp) {
+        warnings.push({ year: d.year, type: '利払い超過', detail: `利払い費(${fmt(d.interest)}兆円) > 政策経費(${fmt(d.policyExp)}兆円)` })
+      }
+      if (d.currentAccount < 0) {
+        warnings.push({ year: d.year, type: '経常赤字', detail: `経常収支 ${fmt(d.currentAccount)}兆円` })
+      }
+      if (d.bojCumulativeLoss > 12) {
+        warnings.push({ year: d.year, type: '日銀債務超過', detail: `累積損失 ${fmt(d.bojCumulativeLoss)}兆円 > 自己資本バッファ12兆円` })
+      }
+      if (d.dynamicRiskPremium > 0) {
+        warnings.push({ year: d.year, type: '通貨信任危機', detail: `リスクプレミアム+${fmt(d.dynamicRiskPremium)}%発動` })
+      }
+    })
+    return warnings
+  }, [simData])
+
+  const summaryStats = useMemo(() => {
+    const last = simData[simData.length - 1]
+    const first = simData[0]
+    const interestExceedYear = simData.find(d => d.interest > d.policyExp)?.year
+    const currentAccountDeficitYear = simData.find(d => d.currentAccount < 0)?.year
+    const bojInsolvencyYear = simData.find(d => d.bojCumulativeLoss > 12)?.year
+    const currencycrisisYear = simData.find(d => d.dynamicRiskPremium > 0)?.year
+    return { last, first, interestExceedYear, currentAccountDeficitYear, bojInsolvencyYear, currencycrisisYear }
+  }, [simData])
+
   const tableData = useMemo(() => {
     if (tableView === 'actual') {
       return buildActualTable()
@@ -223,8 +258,6 @@ export function SimulationTab({ params, simData, actualData }: Props) {
       { label: '│　├ 法人税', values: data.map(d => fmt(d.taxCorporate)), indent: 2 },
       { label: '│　└ その他税', values: data.map(d => fmt(d.taxOther)), indent: 2 },
       { label: '├ 日銀納付金', values: data.map(d => fmt(d.bojPayment)), indent: 1 },
-      { label: '│  └ 日銀純利益', values: data.map(d => fmt(d.bojNetIncome)), indent: 2 },
-      { label: '│  └ 累積損失', values: data.map(d => fmt(d.bojCumulativeLoss)), indent: 2 },
       { label: '└ その他収入', values: data.map(d => fmt(d.totalRevenue - d.tax - d.bojPayment)), indent: 1 },
       { label: '─', values: years.map(() => '') },
       { label: '支出合計', values: data.map(d => fmt(d.totalCost)) },
@@ -243,13 +276,6 @@ export function SimulationTab({ params, simData, actualData }: Props) {
       { label: '─', values: years.map(() => '') },
       { label: '貧困率 (%)', values: data.map(d => fmt(d.povertyRate)) },
       { label: 'ジニ係数', values: data.map(d => fmt(d.giniIndex, 3)) },
-      { label: '所得格差倍率', values: data.map(d => fmt(d.incomeRatio, 2) + '倍') },
-      { label: '─', values: years.map(() => '') },
-      { label: 'モデル家計 (万円)', values: years.map(() => '') },
-      { label: '├ 名目年収', values: data.map(d => fmt(d.modelIncome, 0)), indent: 1 },
-      { label: '├ 可処分所得', values: data.map(d => fmt(d.modelDisposable, 0)), indent: 1 },
-      { label: '├ 食費', values: data.map(d => fmt(d.modelFoodCost, 0)), indent: 1 },
-      { label: '└ 光熱費', values: data.map(d => fmt(d.modelEnergyCost, 0)), indent: 1 },
     ]
     return { years, rows, actualYearCount: 0 }
   }
@@ -284,6 +310,9 @@ export function SimulationTab({ params, simData, actualData }: Props) {
       { label: '貿易収支 (兆円)', values: [...aData.map(d => fmt(d.tradeBalance)), ...sFiltered.map(d => fmt(d.tradeBalance))] },
       { label: '├ 輸出', values: [...aData.map(d => fmt(d.exportAmount)), ...sFiltered.map(d => fmt(d.exportAmount))], indent: 1 },
       { label: '└ 輸入', values: [...aData.map(d => fmt(d.importAmount)), ...sFiltered.map(d => fmt(d.importAmount))], indent: 1 },
+      { label: '経常収支 (兆円)', values: [...aData.map(() => '―'), ...sFiltered.map(d => fmt(d.currentAccount))] },
+      { label: '対外純資産 (兆円)', values: [...aData.map(() => '―'), ...sFiltered.map(d => fmt(d.nfa, 0))] },
+      { label: '通貨リスク加算 (%)', values: [...aData.map(() => '―'), ...sFiltered.map(d => fmt(d.dynamicRiskPremium))] },
       { label: '─', values: years.map(() => '') },
       { label: '貧困率 (%)', values: [...aData.map(d => fmt(d.povertyRate)), ...sFiltered.map(d => fmt(d.povertyRate))] },
       { label: 'ジニ係数', values: [...aData.map(d => fmt(d.giniIndex, 3)), ...sFiltered.map(d => fmt(d.giniIndex, 3))] },
@@ -332,6 +361,10 @@ export function SimulationTab({ params, simData, actualData }: Props) {
       { label: '貿易収支 (兆円)', values: data.map(d => fmt(d.tradeBalance)) },
       { label: '├ 輸出', values: data.map(d => fmt(d.exportAmount)), indent: 1 },
       { label: '└ 輸入', values: data.map(d => fmt(d.importAmount)), indent: 1 },
+      { label: '経常収支 (兆円)', values: data.map(d => fmt(d.currentAccount)) },
+      { label: '対外純資産 (兆円)', values: data.map(d => fmt(d.nfa, 0)) },
+      { label: '通貨リスク加算 (%)', values: data.map(d => fmt(d.dynamicRiskPremium)) },
+      { label: '実効市場金利 (%)', values: data.map(d => fmt(d.effectiveMarketRate)) },
       { label: '─', values: years.map(() => '') },
       { label: '貧困率 (%)', values: data.map(d => fmt(d.povertyRate)) },
       { label: 'ジニ係数', values: data.map(d => fmt(d.giniIndex, 3)) },
@@ -349,15 +382,62 @@ export function SimulationTab({ params, simData, actualData }: Props) {
 
   return (
     <div>
-      {warningData ? (
-        <div className="warning-box">
-          ⚠️ {warningData.year}年に利払い負担率が {warningData.interestBurden.toFixed(1)}%に達し、30%の警戒ラインを超えます。
+      <div className="summary-panel">
+        <div className="summary-title">30年シミュレーション・サマリー</div>
+        <div className="responsive-grid-4col">
+          <div className="metric-card">
+            <div className="metric-label">2055年 債務残高</div>
+            <div className="metric-value">{summaryStats.last ? `${Math.round(summaryStats.last.debt).toLocaleString()}兆円` : '―'}</div>
+          </div>
+          <div className="metric-card">
+            <div className="metric-label">2055年 利払負担率</div>
+            <div className="metric-value" style={{ color: (summaryStats.last?.interestBurden ?? 0) > 30 ? '#ef4444' : '#22c55e' }}>
+              {summaryStats.last ? `${summaryStats.last.interestBurden.toFixed(1)}%` : '―'}
+            </div>
+          </div>
+          <div className="metric-card">
+            <div className="metric-label">2055年 対外純資産</div>
+            <div className="metric-value" style={{ color: (summaryStats.last?.nfa ?? 0) < params.nfaThreshold ? '#ef4444' : '#22c55e' }}>
+              {summaryStats.last ? `${Math.round(summaryStats.last.nfa).toLocaleString()}兆円` : '―'}
+            </div>
+          </div>
+          <div className="metric-card">
+            <div className="metric-label">2055年 貧困率</div>
+            <div className="metric-value" style={{ color: (summaryStats.last?.povertyRate ?? 0) > 20 ? '#ef4444' : '#f97316' }}>
+              {summaryStats.last ? `${summaryStats.last.povertyRate.toFixed(1)}%` : '―'}
+            </div>
+          </div>
         </div>
-      ) : (
-        <div className="success-box">
-          ✓ シミュレーション期間中、利払い負担率は30%の警戒ラインを超えません。
-        </div>
-      )}
+
+        {(() => {
+          const warningTypes = new Map<string, number>()
+          summaryWarnings.forEach(w => {
+            if (!warningTypes.has(w.type)) warningTypes.set(w.type, w.year)
+          })
+          const alerts = Array.from(warningTypes.entries())
+          if (alerts.length === 0) {
+            return <div className="success-box" style={{ marginTop: 12 }}>✓ シミュレーション期間中、重大な財政リスクイベントは検出されませんでした。</div>
+          }
+          return (
+            <div style={{ marginTop: 12 }}>
+              <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 8, color: '#ef4444' }}>⚠️ 警告イベント</div>
+              <div className="warning-timeline">
+                {alerts.map(([type, firstYear]) => {
+                  const count = summaryWarnings.filter(w => w.type === type).length
+                  const firstDetail = summaryWarnings.find(w => w.type === type)!.detail
+                  return (
+                    <div key={type} className="warning-event">
+                      <span className="warning-year">{firstYear}年〜</span>
+                      <span className="warning-type">{type}</span>
+                      <span className="warning-detail">{firstDetail}（{count}年間）</span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )
+        })()}
+      </div>
 
       <div className="chart-container">
         <div className="chart-title">利払い負担率の推移 （税収に対する利払い費の割合）</div>
@@ -536,6 +616,43 @@ export function SimulationTab({ params, simData, actualData }: Props) {
         </div>
       </Collapsible>
 
+      <Collapsible title="対外純資産・経常収支" defaultOpen={true}>
+        <div className="responsive-grid-2col">
+          <div>
+            <div className="chart-subtitle">対外純資産の推移</div>
+            <ResponsiveContainer width="100%" height={250}>
+              <ComposedChart data={nfaData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis dataKey="year" tick={{ fontSize: 10 }} />
+                <YAxis tick={{ fontSize: 10 }} unit="兆円" />
+                <Tooltip formatter={(v: number) => `${v.toLocaleString()} 兆円`} />
+                <ReferenceLine y={params.nfaThreshold} stroke="#ef4444" strokeDasharray="5 5" label={{ value: `防衛ライン${params.nfaThreshold}兆円`, fill: '#ef4444', fontSize: 10 }} />
+                <Bar dataKey="対外純資産" fill="#3b82f6" opacity={0.7} />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+          <div>
+            <div className="chart-subtitle">経常収支の推移</div>
+            <ResponsiveContainer width="100%" height={250}>
+              <ComposedChart data={nfaData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis dataKey="year" tick={{ fontSize: 10 }} />
+                <YAxis yAxisId="left" tick={{ fontSize: 10 }} unit="兆円" />
+                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10 }} unit="%" />
+                <Tooltip />
+                <Legend />
+                <ReferenceLine yAxisId="left" y={0} stroke="#94a3b8" strokeDasharray="3 3" />
+                <Bar yAxisId="left" dataKey="経常収支" fill="#22c55e" />
+                <Bar yAxisId="right" dataKey="通貨リスク加算" fill="#ef4444" opacity={0.7} />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+        <div className="chart-note">
+          経常収支 = 貿易収支 + 所得収支（NFA×3%）。経常赤字＋NFA防衛ライン割れで通貨リスクプレミアムが金利に自動加算されます。
+        </div>
+      </Collapsible>
+
       <Collapsible title="歳入合計・税収内訳">
         <div className="responsive-grid-2col">
           <div>
@@ -634,7 +751,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
             <Tooltip />
             <Legend />
             <Bar dataKey="平均クーポン" fill="#ef4444" />
-            <Bar dataKey="市場金利" fill="#3b82f6" />
+            <Bar dataKey="実効市場金利" fill="#3b82f6" />
             <Bar dataKey="名目成長率" fill="#22c55e" />
           </BarChart>
         </ResponsiveContainer>

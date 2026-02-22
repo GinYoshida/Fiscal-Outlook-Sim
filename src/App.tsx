@@ -40,6 +40,7 @@ function App() {
         onScenarioChange={handleScenarioChange}
         onParamChange={updateParam}
         isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
       />
       <main className="main-content">
         <h1 className="app-title">🏛️ 統合政府 30年財政シミュレーター</h1>
