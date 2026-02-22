@@ -300,7 +300,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
       year: d.year,
       貧困率: parseFloat(d.povertyRate.toFixed(1)),
       ジニ係数: parseFloat((d.giniIndex * 100).toFixed(1)),
-      実質賃金伸び率: null as number | null,
+      実質賃金伸び率: d.realWageGrowth as number | null,
     }))
     const sim = simData.map(d => ({
       year: d.year,
@@ -517,6 +517,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
       { label: '─', values: years.map(() => '') },
       { label: '貧困率 (%)', values: data.map(d => fmt(d.povertyRate)) },
       { label: 'ジニ係数', values: data.map(d => fmt(d.giniIndex, 3)) },
+      { label: '実質賃金伸び率 (%)', values: data.map(d => fmt(d.realWageGrowth)) },
     ]
     return { years, rows, actualYearCount: 0 }
   }
@@ -558,6 +559,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
       { label: '貧困率 (%)', values: [...aData.map(d => fmt(d.povertyRate)), ...sFiltered.map(d => fmt(d.povertyRate))] },
       { label: 'ジニ係数', values: [...aData.map(d => fmt(d.giniIndex, 3)), ...sFiltered.map(d => fmt(d.giniIndex, 3))] },
       { label: '所得格差倍率', values: [...aData.map(d => fmt(((1+d.giniIndex)/(1-d.giniIndex)), 2) + '倍'), ...sFiltered.map(d => fmt(d.incomeRatio, 2) + '倍')] },
+      { label: '実質賃金伸び率 (%)', values: [...aData.map(d => fmt(d.realWageGrowth)), ...sFiltered.map(d => fmt(d.realWageGrowth))] },
       { label: '─', values: years.map(() => '') },
       { label: 'モデル家計 (万円)', values: years.map(() => '') },
       { label: '├ 名目年収', values: [...aData.map(() => '―'), ...sFiltered.map(d => fmt(d.modelIncome, 0))] },
