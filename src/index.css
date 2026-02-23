@@ -1449,10 +1449,6 @@ body {
 
 .chart-help-tooltip {
   display: none;
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%);
   background: var(--gray-800);
   color: #fff;
   padding: 10px 12px;
@@ -1460,16 +1456,16 @@ body {
   font-size: 12px;
   font-weight: 400;
   width: 280px;
-  z-index: 100;
+  z-index: 10000;
   line-height: 1.5;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
   pointer-events: none;
-}
-
-.chart-help-icon:hover .chart-help-tooltip {
-  display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+.chart-help-tooltip-visible {
+  display: flex;
 }
 
 .chart-help-desc {

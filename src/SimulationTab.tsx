@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef } from 'react'
+import ReactDOM from 'react-dom'
 import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ResponsiveContainer, BarChart, Bar, ReferenceLine,
@@ -308,22 +309,57 @@ const CHART_HELP: Record<string, ChartHelpInfo> = {
   },
 }
 
+function HelpIcon({ help }: { help: ChartHelpInfo }) {
+  const [show, setShow] = useState(false);
+  const [style, setStyle] = useState<React.CSSProperties>({});
+  const iconRef = useRef<HTMLSpanElement>(null);
+
+  const handleEnter = () => {
+    if (iconRef.current) {
+      const rect = iconRef.current.getBoundingClientRect();
+      const tooltipWidth = 280;
+      const tooltipHeight = 120;
+      let left = rect.left + rect.width / 2 - tooltipWidth / 2;
+      if (left < 8) left = 8;
+      if (left + tooltipWidth > window.innerWidth - 8) left = window.innerWidth - tooltipWidth - 8;
+      const showBelow = rect.top < tooltipHeight + 16;
+      const top = showBelow ? rect.bottom + 8 : rect.top - tooltipHeight - 8;
+      setStyle({ position: 'fixed', top, left, transform: 'none' });
+    }
+    setShow(true);
+  };
+
+  return (
+    <>
+      <span
+        ref={iconRef}
+        className="chart-help-icon"
+        onMouseEnter={handleEnter}
+        onMouseLeave={() => setShow(false)}
+      >
+        ?
+      </span>
+      {show && ReactDOM.createPortal(
+        <div className="chart-help-tooltip chart-help-tooltip-visible" style={style}>
+          <span className="chart-help-desc">{help.description}</span>
+          <span className="chart-help-params-label">感度の高いパラメータ:</span>
+          {help.sensitiveParams.map((p, i) => (
+            <span key={i} className="chart-help-param-tag">{p}</span>
+          ))}
+        </div>,
+        document.body
+      )}
+    </>
+  );
+}
+
 function ChartSubtitle({ title }: { title: string }) {
   const help = CHART_HELP[title]
   if (!help) return <div className="chart-subtitle">{title}</div>
   return (
     <div className="chart-subtitle">
       {title}
-      <span className="chart-help-icon">
-        ?
-        <span className="chart-help-tooltip">
-          <span className="chart-help-desc">{help.description}</span>
-          <span className="chart-help-params-label">感度の高いパラメータ:</span>
-          {help.sensitiveParams.map((p, i) => (
-            <span key={i} className="chart-help-param-tag">{p}</span>
-          ))}
-        </span>
-      </span>
+      <HelpIcon help={help} />
     </div>
   )
 }
@@ -334,16 +370,7 @@ function ChartTitleWithHelp({ title }: { title: string }) {
   return (
     <div className="chart-title">
       {title}
-      <span className="chart-help-icon">
-        ?
-        <span className="chart-help-tooltip">
-          <span className="chart-help-desc">{help.description}</span>
-          <span className="chart-help-params-label">感度の高いパラメータ:</span>
-          {help.sensitiveParams.map((p, i) => (
-            <span key={i} className="chart-help-param-tag">{p}</span>
-          ))}
-        </span>
-      </span>
+      <HelpIcon help={help} />
     </div>
   )
 }
