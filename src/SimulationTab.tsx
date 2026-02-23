@@ -263,8 +263,8 @@ const CHART_HELP: Record<string, ChartHelpInfo> = {
     description: '政府債務と企業内部留保のGDP比。内部留保比率が高いと企業が賃金に分配していない状態です。',
     sensitiveParams: ['生産性分配率', '内部留保還元率', '実質成長率'],
   },
-  '税収内訳（兆円）': {
-    description: '消費税・所得税・法人税・その他税の内訳推移。経済成長・インフレ・円安が各税に異なる影響を与えます。',
+  '税収内訳・歳入（兆円）': {
+    description: '消費税・所得税・法人税・その他税の内訳推移。利払い費がマイナスの年は「利息純収入」として歳入に加算されます。',
     sensitiveParams: ['実質成長率', 'インフレ率', '円安進行率'],
   },
   '歳入の財源構成（%）': {
@@ -272,7 +272,7 @@ const CHART_HELP: Record<string, ChartHelpInfo> = {
     sensitiveParams: ['実質成長率', '政策的経費', 'ベースリスクプレミアム'],
   },
   '歳出分野別内訳（兆円）': {
-    description: '社会保障・子育て・地方交付税・防衛・利払い等の分野別歳出。高齢化で社会保障が膨らみます。',
+    description: '社会保障・子育て・地方交付税・防衛・利払い等の分野別歳出。高齢化で社会保障が膨らみます。利払い費がマイナスの場合は歳入側に「利息純収入」として振り替えます。',
     sensitiveParams: ['インフレ率', '社会保障費', '自然増'],
   },
   '日銀純利益（兆円）': {
@@ -415,11 +415,13 @@ export function SimulationTab({ params, simData, actualData, childAge2026, scena
 
   const revenueData = useMemo(() => {
     const actual = actualData.map(d => ({
-      year: d.year, 消費税: d.taxConsumption, 所得税: d.taxIncome, 法人税: d.taxCorporate, その他税: d.taxOther
+      year: d.year, 消費税: d.taxConsumption, 所得税: d.taxIncome, 法人税: d.taxCorporate, その他税: d.taxOther,
+      利息純収入: d.interest < 0 ? parseFloat(Math.abs(d.interest).toFixed(1)) : 0
     }))
     const sim = simData.map(d => ({
       year: d.year, 消費税: parseFloat(d.taxConsumption.toFixed(1)), 所得税: parseFloat(d.taxIncome.toFixed(1)),
-      法人税: parseFloat(d.taxCorporate.toFixed(1)), その他税: parseFloat(d.taxOther.toFixed(1))
+      法人税: parseFloat(d.taxCorporate.toFixed(1)), その他税: parseFloat(d.taxOther.toFixed(1)),
+      利息純収入: d.interest < 0 ? parseFloat(Math.abs(d.interest).toFixed(1)) : 0
     }))
     return fillYearGaps([...actual, ...sim])
   }, [actualData, simData])
@@ -441,21 +443,25 @@ export function SimulationTab({ params, simData, actualData, childAge2026, scena
   }, [actualData, simData])
 
   const expenditureData = useMemo(() => {
-    const actual = actualData.map(d => ({ year: d.year, 政策経費: d.policyExp, 利払い費: d.interest }))
+    const actual = actualData.map(d => ({ year: d.year, 政策経費: d.policyExp, 利払い費: Math.max(d.interest, 0) }))
     const sim = simData.map(d => ({
-      year: d.year, 政策経費: parseFloat(d.policyExp.toFixed(1)), 利払い費: parseFloat(d.interest.toFixed(1))
+      year: d.year, 政策経費: parseFloat(d.policyExp.toFixed(1)), 利払い費: parseFloat(Math.max(d.interest, 0).toFixed(1))
     }))
     return fillYearGaps([...actual, ...sim])
   }, [actualData, simData])
 
   const expenditureRatioData = useMemo(() => {
     const actual = actualData.map(d => {
-      const total = d.policyExp + d.interest
-      return { year: d.year, 政策経費: parseFloat((d.policyExp / total * 100).toFixed(1)), 利払い費: parseFloat((d.interest / total * 100).toFixed(1)) }
+      const effectiveInterest = Math.max(d.interest, 0)
+      const total = d.policyExp + effectiveInterest
+      if (total === 0) return { year: d.year, 政策経費: 0, 利払い費: 0 }
+      return { year: d.year, 政策経費: parseFloat((d.policyExp / total * 100).toFixed(1)), 利払い費: parseFloat((effectiveInterest / total * 100).toFixed(1)) }
     })
     const sim = simData.map(d => {
-      const total = d.policyExp + d.interest
-      return { year: d.year, 政策経費: parseFloat((d.policyExp / total * 100).toFixed(1)), 利払い費: parseFloat((d.interest / total * 100).toFixed(1)) }
+      const effectiveInterest = Math.max(d.interest, 0)
+      const total = d.policyExp + effectiveInterest
+      if (total === 0) return { year: d.year, 政策経費: 0, 利払い費: 0 }
+      return { year: d.year, 政策経費: parseFloat((d.policyExp / total * 100).toFixed(1)), 利払い費: parseFloat((effectiveInterest / total * 100).toFixed(1)) }
     })
     return fillYearGaps([...actual, ...sim])
   }, [actualData, simData])
@@ -469,7 +475,7 @@ export function SimulationTab({ params, simData, actualData, childAge2026, scena
       防衛: parseFloat(d.defense.toFixed(1)),
       その他政策: parseFloat(d.otherPolicyExp.toFixed(1)),
       エネルギー補助金: parseFloat(d.energySubsidy.toFixed(1)),
-      利払い費: parseFloat(d.interest.toFixed(1)),
+      利払い費: parseFloat(Math.max(d.interest, 0).toFixed(1)),
     }))
     return fillYearGaps(sim)
   }, [simData])
@@ -1302,7 +1308,7 @@ export function SimulationTab({ params, simData, actualData, childAge2026, scena
       </Collapsible>
 
       <Collapsible title="歳入合計・税収内訳">
-        <ChartSubtitle title="税収内訳（兆円）" />
+        <ChartSubtitle title="税収内訳・歳入（兆円）" />
         <ResponsiveContainer width="100%" height={280}>
           <BarChart data={revenueData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -1314,8 +1320,12 @@ export function SimulationTab({ params, simData, actualData, childAge2026, scena
             <Bar dataKey="所得税" stackId="a" fill="#22c55e" />
             <Bar dataKey="法人税" stackId="a" fill="#f97316" />
             <Bar dataKey="その他税" stackId="a" fill="#8b5cf6" />
+            <Bar dataKey="利息純収入" stackId="a" fill="#ec4899" />
           </BarChart>
         </ResponsiveContainer>
+        <div className="chart-note">
+          利払い費がマイナス（統合政府として利息収入が支出を上回る）の場合、歳出側から除外し「利息純収入」として歳入に計上しています
+        </div>
         <ChartSubtitle title="税収構成比（%）" />
         <ResponsiveContainer width="100%" height={280}>
           <BarChart data={revenueRatioData}>
