@@ -6,7 +6,7 @@ import {
 } from 'recharts'
 import type { SimResult } from './simulation'
 import type { ActualDataPoint, SimParams } from './data'
-import { ACTUAL_DATA } from './data'
+import { ACTUAL_DATA, SCENARIOS } from './data'
 import { computeWarnings } from './warnings'
 
 interface Props {
@@ -14,6 +14,7 @@ interface Props {
   simData: SimResult[];
   actualData: ActualDataPoint[];
   childAge2026: number;
+  scenarioIndex: number;
 }
 
 const WARNING_DETAILS: Record<string, { impact: string[]; options: string[] }> = {
@@ -212,7 +213,7 @@ function fmt(v: number, decimals = 1): string {
   return v.toFixed(decimals)
 }
 
-export function SimulationTab({ params, simData, actualData, childAge2026 }: Props) {
+export function SimulationTab({ params, simData, actualData, childAge2026, scenarioIndex }: Props) {
   const [tableView, setTableView] = useState<'5year' | 'full' | 'actual' | 'combined'>('combined')
 
   const interestBurdenData = useMemo(() => {
@@ -781,6 +782,31 @@ export function SimulationTab({ params, simData, actualData, childAge2026 }: Pro
         </div>
 
         <WarningAccordion warnings={summaryWarnings} />
+
+        <div className="scenario-analysis-panel">
+          <div className="scenario-analysis-title">📋 シナリオ分析：{SCENARIOS[scenarioIndex].name}</div>
+          <div className="scenario-analysis-desc">{SCENARIOS[scenarioIndex].label}</div>
+          <div className="scenario-analysis-grid">
+            <div className="scenario-analysis-section merits">
+              <div className="scenario-analysis-section-title">✅ メリット</div>
+              <ul>
+                {SCENARIOS[scenarioIndex].merits.map((m, i) => <li key={i}>{m}</li>)}
+              </ul>
+            </div>
+            <div className="scenario-analysis-section demerits">
+              <div className="scenario-analysis-section-title">⚠️ デメリット</div>
+              <ul>
+                {SCENARIOS[scenarioIndex].demerits.map((d, i) => <li key={i}>{d}</li>)}
+              </ul>
+            </div>
+          </div>
+          <div className="scenario-analysis-section policies">
+            <div className="scenario-analysis-section-title">💡 改善に向けた施策</div>
+            <ol>
+              {SCENARIOS[scenarioIndex].policies.map((p, i) => <li key={i}>{p}</li>)}
+            </ol>
+          </div>
+        </div>
 
         {childAlerts && (
           <div className="child-alert-panel">

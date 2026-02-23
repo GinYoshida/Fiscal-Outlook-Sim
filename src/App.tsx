@@ -82,6 +82,7 @@ function App() {
             simData={simData}
             actualData={ACTUAL_DATA}
             childAge2026={childAge2026}
+            scenarioIndex={scenarioIndex}
           />
         )}
       </main>
