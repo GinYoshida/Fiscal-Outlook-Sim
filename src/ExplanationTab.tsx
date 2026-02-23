@@ -96,6 +96,36 @@ export function ExplanationTab({ params, simData, actualData, dataSources }: Pro
 
   return (
     <div>
+      <div className="sidebar-guide">
+        <h3 className="sidebar-guide-title">サイドバーの使い方</h3>
+        <div className="sidebar-guide-content">
+          <div className="sidebar-guide-item">
+            <span className="sidebar-guide-icon">📊</span>
+            <div>
+              <strong>シナリオ選択</strong> — 10種類のプリセットシナリオから選択できます。パラメータが自動で切り替わります。
+            </div>
+          </div>
+          <div className="sidebar-guide-item">
+            <span className="sidebar-guide-icon">🎚️</span>
+            <div>
+              <strong>パラメータ調整</strong> — スライダーまたは数値入力欄で値を変更できます。各パラメータの[?]マークで詳しい説明を確認できます。
+            </div>
+          </div>
+          <div className="sidebar-guide-item">
+            <span className="sidebar-guide-icon">📐</span>
+            <div>
+              <strong>構成</strong> — 上段に調整パラメータ、下段に2026年の初期値、最後に最適化ツールが配置されています。
+            </div>
+          </div>
+          <div className="sidebar-guide-item">
+            <span className="sidebar-guide-icon">🔍</span>
+            <div>
+              <strong>検索</strong> — 検索ボックスでパラメータ名をフィルタリングして素早く見つけられます。
+            </div>
+          </div>
+        </div>
+      </div>
+
       <h2 className="section-title">統合政府の仕組み</h2>
 
       <Expander title="統合政府の資金フロー図（家計・為替影響を含む）" defaultOpen={true}>
