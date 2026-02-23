@@ -12,6 +12,7 @@ interface Props {
   params: SimParams;
   simData: SimResult[];
   actualData: ActualDataPoint[];
+  childAge2026: number;
 }
 
 const WARNING_DETAILS: Record<string, { impact: string[]; options: string[] }> = {
@@ -168,14 +169,18 @@ function fillYearGaps<T extends Record<string, unknown>>(data: T[]): (T & { _noD
   })
 }
 
-function NoDataTooltip({ active, payload, label, unit, decimals }: { active?: boolean; payload?: Array<{ name: string; value: number | null; color: string }>; label?: number; unit?: string; decimals?: number }) {
+function NoDataTooltip({ active, payload, label, unit, decimals, childAge2026 }: { active?: boolean; payload?: Array<{ name: string; value: number | null; color: string }>; label?: number; unit?: string; decimals?: number; childAge2026?: number }) {
   if (!active || !payload || !label) return null
   const isNoData = payload.every(p => p.value === null || p.value === undefined)
   const dec = decimals ?? 1
   const u = unit ?? ''
+  const childAge = childAge2026 !== undefined ? childAge2026 + (label - 2026) : undefined
   return (
     <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 6, padding: '8px 12px', fontSize: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
       <div style={{ fontWeight: 600, marginBottom: 4 }}>{label}年度</div>
+      {childAge !== undefined && childAge >= 0 && (
+        <div style={{ color: '#f59e0b', fontWeight: 600, marginBottom: 4, fontSize: 11 }}>👶 子供の年齢: {childAge}歳</div>
+      )}
       {isNoData ? (
         <div style={{ color: '#94a3b8' }}>実績なし</div>
       ) : (
@@ -206,7 +211,7 @@ function fmt(v: number, decimals = 1): string {
   return v.toFixed(decimals)
 }
 
-export function SimulationTab({ params, simData, actualData }: Props) {
+export function SimulationTab({ params, simData, actualData, childAge2026 }: Props) {
   const [tableView, setTableView] = useState<'5year' | 'full' | 'actual' | 'combined'>('combined')
 
   const interestBurdenData = useMemo(() => {
@@ -412,14 +417,20 @@ export function SimulationTab({ params, simData, actualData }: Props) {
   }, [actualData, simData])
 
   const nfaData = useMemo(() => {
+    const actual = actualData.map(d => ({
+      year: d.year,
+      対外純資産: d.nfa,
+      経常収支: d.currentAccount,
+      通貨リスク加算: null as number | null,
+    }))
     const sim = simData.map(d => ({
       year: d.year,
       対外純資産: parseFloat(d.nfa.toFixed(0)),
       経常収支: parseFloat(d.currentAccount.toFixed(1)),
       通貨リスク加算: parseFloat(d.dynamicRiskPremium.toFixed(1)),
     }))
-    return fillYearGaps(sim)
-  }, [simData])
+    return fillYearGaps([...actual, ...sim])
+  }, [actualData, simData])
 
   const summaryWarnings = useMemo(() => computeWarnings(simData, params), [simData, params])
 
@@ -436,8 +447,64 @@ export function SimulationTab({ params, simData, actualData }: Props) {
       if (d.realWageGrowth < 0) { consecutiveNeg++ } else { consecutiveNeg = 0 }
       if (consecutiveNeg >= 3 && !realWage3YearNegYear) { realWage3YearNegYear = d.year; break }
     }
-    return { last, first, interestBurdenExceedYear, currentAccountDeficitYear, bojInsolvencyYear, currencycrisisYear, realWage3YearNegYear }
+
+    const initCoupon = params.initAvgCoupon
+    const couponDouble = simData.find(d => d.avgCoupon >= initCoupon * 2)?.year
+    const couponTriple = simData.find(d => d.avgCoupon >= initCoupon * 3)?.year
+
+    const nfaDepletionYear = simData.find(d => d.nfa <= 0)?.year
+    const persistentCADeficit = (() => {
+      let count = 0
+      for (const d of simData) {
+        if (d.currentAccount < 0) { count++ } else { count = 0 }
+        if (count >= 3) return d.year
+      }
+      return undefined
+    })()
+
+    let rwConsecutiveNeg = 0
+    const realWageLongStag: { start?: number; end?: number } = {}
+    for (const d of simData) {
+      if (d.realWageGrowth < 0) {
+        if (rwConsecutiveNeg === 0) realWageLongStag.start = d.year
+        rwConsecutiveNeg++
+        realWageLongStag.end = d.year
+      } else {
+        if (rwConsecutiveNeg >= 3) break
+        rwConsecutiveNeg = 0
+      }
+    }
+    if (rwConsecutiveNeg < 3) {
+      realWageLongStag.start = undefined
+      realWageLongStag.end = undefined
+    }
+
+    return {
+      last, first,
+      interestBurdenExceedYear, currentAccountDeficitYear,
+      bojInsolvencyYear, currencycrisisYear, realWage3YearNegYear,
+      couponDouble, couponTriple, nfaDepletionYear, persistentCADeficit,
+      realWageLongStag,
+    }
   }, [simData, params])
+
+  const childAlerts = useMemo(() => {
+    if (!simData.length) return null
+    const first = simData[0]
+    const last = simData[simData.length - 1]
+    const initInterestBurden = first.interestBurden
+    const finalInterestBurden = last.interestBurden
+    const displacementScore = finalInterestBurden - initInterestBurden
+
+    const childAgeAtEnd = childAge2026 + 29
+    const childAt20Year = 2026 + (20 - childAge2026)
+    const childAt30Year = 2026 + (30 - childAge2026)
+
+    const dataAt20 = childAt20Year >= 2026 && childAt20Year <= 2055 ? simData.find(d => d.year === childAt20Year) : undefined
+    const dataAt30 = childAt30Year >= 2026 && childAt30Year <= 2055 ? simData.find(d => d.year === childAt30Year) : undefined
+
+    return { displacementScore, childAgeAtEnd, dataAt20, dataAt30, childAt20Year, childAt30Year, finalInterestBurden, initInterestBurden }
+  }, [simData, childAge2026])
 
   const tableData = useMemo(() => {
     if (tableView === 'actual') {
@@ -478,6 +545,8 @@ export function SimulationTab({ params, simData, actualData }: Props) {
       { label: '貿易収支 (兆円)', values: data.map(d => fmt(d.tradeBalance)) },
       { label: '├ 輸出', values: data.map(d => fmt(d.exportAmount)), indent: 1 },
       { label: '└ 輸入', values: data.map(d => fmt(d.importAmount)), indent: 1 },
+      { label: '経常収支 (兆円)', values: data.map(d => fmt(d.currentAccount)) },
+      { label: '対外純資産 (兆円)', values: data.map(d => fmt(d.nfa, 0)) },
       { label: '─', values: years.map(() => '') },
       { label: '貧困率 (%)', values: data.map(d => fmt(d.povertyRate)) },
       { label: 'ジニ係数', values: data.map(d => fmt(d.giniIndex, 3)) },
@@ -488,7 +557,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
 
   function buildCombinedTable(p: SimParams) {
     const aData = ACTUAL_DATA
-    const sFiltered = simData.filter((_, i) => i % 5 === 0 || i === 29)
+    const sFiltered = simData
     const years = [...aData.map(d => d.year), ...sFiltered.map(d => d.year)]
     const actualCount = aData.length
     const rows: { label: string; values: string[]; indent?: number }[] = [
@@ -528,8 +597,8 @@ export function SimulationTab({ params, simData, actualData }: Props) {
       { label: '貿易収支 (兆円)', values: [...aData.map(d => fmt(d.tradeBalance)), ...sFiltered.map(d => fmt(d.tradeBalance))] },
       { label: '├ 輸出', values: [...aData.map(d => fmt(d.exportAmount)), ...sFiltered.map(d => fmt(d.exportAmount))], indent: 1 },
       { label: '└ 輸入', values: [...aData.map(d => fmt(d.importAmount)), ...sFiltered.map(d => fmt(d.importAmount))], indent: 1 },
-      { label: '経常収支 (兆円)', values: [...aData.map(() => '―'), ...sFiltered.map(d => fmt(d.currentAccount))] },
-      { label: '対外純資産 (兆円)', values: [...aData.map(() => '―'), ...sFiltered.map(d => fmt(d.nfa, 0))] },
+      { label: '経常収支 (兆円)', values: [...aData.map(d => fmt(d.currentAccount)), ...sFiltered.map(d => fmt(d.currentAccount))] },
+      { label: '対外純資産 (兆円)', values: [...aData.map(d => fmt(d.nfa, 0)), ...sFiltered.map(d => fmt(d.nfa, 0))] },
       { label: '通貨リスク加算 (%)', values: [...aData.map(() => '―'), ...sFiltered.map(d => fmt(d.dynamicRiskPremium))] },
       { label: '─', values: years.map(() => '') },
       { label: '貧困率 (%)', values: [...aData.map(d => fmt(d.povertyRate)), ...sFiltered.map(d => fmt(d.povertyRate))] },
@@ -667,6 +736,76 @@ export function SimulationTab({ params, simData, actualData }: Props) {
         </div>
 
         <WarningAccordion warnings={summaryWarnings} />
+
+        {childAlerts && (
+          <div className="child-alert-panel">
+            <div className="child-alert-title">👶 子供の未来レポート（{childAge2026}歳 → {childAlerts.childAgeAtEnd}歳）</div>
+            <div className="child-alert-grid">
+              {childAlerts.dataAt20 && (
+                <div className="child-alert-card">
+                  <div className="child-alert-age">20歳（{childAlerts.childAt20Year}年）</div>
+                  <div className="child-alert-detail">利払負担率: <strong style={{ color: childAlerts.dataAt20.interestBurden > 30 ? '#ef4444' : '#f59e0b' }}>{childAlerts.dataAt20.interestBurden.toFixed(1)}%</strong></div>
+                  <div className="child-alert-detail">実質賃金: <strong style={{ color: childAlerts.dataAt20.realWageGrowth < 0 ? '#ef4444' : '#22c55e' }}>{childAlerts.dataAt20.realWageGrowth >= 0 ? '+' : ''}{childAlerts.dataAt20.realWageGrowth.toFixed(1)}%</strong></div>
+                  <div className="child-alert-detail">貧困率: <strong>{childAlerts.dataAt20.povertyRate.toFixed(1)}%</strong></div>
+                </div>
+              )}
+              {childAlerts.dataAt30 && (
+                <div className="child-alert-card">
+                  <div className="child-alert-age">30歳（{childAlerts.childAt30Year}年）</div>
+                  <div className="child-alert-detail">利払負担率: <strong style={{ color: childAlerts.dataAt30.interestBurden > 30 ? '#ef4444' : '#f59e0b' }}>{childAlerts.dataAt30.interestBurden.toFixed(1)}%</strong></div>
+                  <div className="child-alert-detail">実質賃金: <strong style={{ color: childAlerts.dataAt30.realWageGrowth < 0 ? '#ef4444' : '#22c55e' }}>{childAlerts.dataAt30.realWageGrowth >= 0 ? '+' : ''}{childAlerts.dataAt30.realWageGrowth.toFixed(1)}%</strong></div>
+                  <div className="child-alert-detail">貧困率: <strong>{childAlerts.dataAt30.povertyRate.toFixed(1)}%</strong></div>
+                </div>
+              )}
+              <div className="child-alert-card displacement">
+                <div className="child-alert-age">教育・社会保障の圧迫度</div>
+                <div className="child-alert-detail" style={{ fontSize: 18, fontWeight: 700, color: childAlerts.displacementScore > 10 ? '#ef4444' : '#f59e0b' }}>
+                  +{childAlerts.displacementScore.toFixed(1)}pt
+                </div>
+                <div className="child-alert-detail" style={{ fontSize: 11, color: '#64748b' }}>
+                  利払負担率の増加分（{childAlerts.initInterestBurden.toFixed(1)}% → {childAlerts.finalInterestBurden.toFixed(1)}%）が教育・社会保障を圧迫
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {(summaryStats.couponDouble || summaryStats.nfaDepletionYear || summaryStats.persistentCADeficit || summaryStats.realWageLongStag.start) && (
+          <div className="principle-breach-panel">
+            <div className="principle-breach-title">⚠️ 原則の崩壊（Principle Breach）</div>
+            <div className="principle-breach-list">
+              {summaryStats.couponDouble && (
+                <div className="principle-breach-item">
+                  <span className="breach-icon">📈</span>
+                  <div>
+                    <strong>低金利神話の崩壊</strong>
+                    <p>平均クーポンが初期値（{params.initAvgCoupon.toFixed(1)}%）の2倍に到達: <strong>{summaryStats.couponDouble}年</strong>
+                    {summaryStats.couponTriple && <span>、3倍に到達: <strong>{summaryStats.couponTriple}年</strong></span>}</p>
+                  </div>
+                </div>
+              )}
+              {(summaryStats.nfaDepletionYear || summaryStats.persistentCADeficit) && (
+                <div className="principle-breach-item">
+                  <span className="breach-icon">🛡️</span>
+                  <div>
+                    <strong>対外ポジションの悪化</strong>
+                    <p>{summaryStats.nfaDepletionYear && <span>対外純資産が枯渇: <strong>{summaryStats.nfaDepletionYear}年</strong>。</span>}
+                    {summaryStats.persistentCADeficit && <span>経常赤字が3年以上定着: <strong>{summaryStats.persistentCADeficit}年</strong></span>}</p>
+                  </div>
+                </div>
+              )}
+              {summaryStats.realWageLongStag.start && (
+                <div className="principle-breach-item">
+                  <span className="breach-icon">💰</span>
+                  <div>
+                    <strong>実質賃金の長期低迷</strong>
+                    <p>実質賃金が3年以上連続マイナス: <strong>{summaryStats.realWageLongStag.start}年 〜 {summaryStats.realWageLongStag.end}年</strong></p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="chart-container">
@@ -676,7 +815,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis dataKey="year" tick={{ fontSize: 11 }} />
             <YAxis tick={{ fontSize: 11 }} unit="%" />
-            <Tooltip content={<NoDataTooltip unit="%" />} />
+            <Tooltip content={<NoDataTooltip unit="%" childAge2026={childAge2026} />} />
             <ReferenceLine y={30} stroke="#ef4444" strokeDasharray="5 5" label={{ value: '警戒ライン30%', fill: '#ef4444', fontSize: 11 }} />
             <Bar dataKey="利払負担率" fill="#f97316" />
           </BarChart>
@@ -690,7 +829,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis dataKey="year" tick={{ fontSize: 11 }} />
             <YAxis tick={{ fontSize: 11 }} unit="兆円" />
-            <Tooltip content={<NoDataTooltip unit=" 兆円" />} />
+            <Tooltip content={<NoDataTooltip unit=" 兆円" childAge2026={childAge2026} />} />
             <ReferenceLine y={0} stroke="#94a3b8" />
             <Bar dataKey="財政収支" fill={(entry: Record<string, unknown>) => ((entry as {財政収支: number}).財政収支 >= 0 ? '#22c55e' : '#ef4444')} />
           </BarChart>
@@ -704,7 +843,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis dataKey="year" tick={{ fontSize: 11 }} />
             <YAxis tick={{ fontSize: 11 }} unit="兆円" />
-            <Tooltip content={<NoDataTooltip unit=" 兆円" decimals={0} />} />
+            <Tooltip content={<NoDataTooltip unit=" 兆円" childAge2026={childAge2026} decimals={0} />} />
             <Bar dataKey="債務残高" fill="#3b82f6" />
           </BarChart>
         </ResponsiveContainer>
@@ -717,7 +856,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis dataKey="year" tick={{ fontSize: 10 }} />
             <YAxis tick={{ fontSize: 10 }} unit="%" />
-            <Tooltip content={<NoDataTooltip unit="%" />} />
+            <Tooltip content={<NoDataTooltip unit="%" childAge2026={childAge2026} />} />
             <Bar dataKey="貧困率" fill="#ef4444" opacity={0.7} />
           </BarChart>
         </ResponsiveContainer>
@@ -727,7 +866,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis dataKey="year" tick={{ fontSize: 10 }} />
             <YAxis tick={{ fontSize: 10 }} />
-            <Tooltip content={<NoDataTooltip />} />
+            <Tooltip content={<NoDataTooltip childAge2026={childAge2026} />} />
             <Bar dataKey="ジニ係数" fill="#8b5cf6"  opacity={0.7} />
           </BarChart>
         </ResponsiveContainer>
@@ -737,7 +876,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis dataKey="year" tick={{ fontSize: 10 }} />
             <YAxis tick={{ fontSize: 10 }} unit="%" />
-            <Tooltip content={<NoDataTooltip unit="%" />} />
+            <Tooltip content={<NoDataTooltip unit="%" childAge2026={childAge2026} />} />
             <ReferenceLine y={0} stroke="#94a3b8" strokeDasharray="3 3" />
             <Bar dataKey="実質賃金伸び率" fill="#22c55e" opacity={0.7} />
           </BarChart>
@@ -754,7 +893,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis dataKey="year" tick={{ fontSize: 10 }} />
             <YAxis tick={{ fontSize: 10 }} unit="万円" />
-            <Tooltip content={<NoDataTooltip unit=" 万円" />} />
+            <Tooltip content={<NoDataTooltip unit=" 万円" childAge2026={childAge2026} />} />
             <Legend />
             <ReferenceLine y={0} stroke="#94a3b8" strokeDasharray="3 3" />
             <Bar dataKey="食費増加" fill="#f97316" opacity={0.7} stackId="cost" />
@@ -768,7 +907,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis dataKey="year" tick={{ fontSize: 10 }} />
             <YAxis tick={{ fontSize: 10 }} unit="倍" />
-            <Tooltip content={<NoDataTooltip unit="倍" decimals={2} />} />
+            <Tooltip content={<NoDataTooltip unit="倍" childAge2026={childAge2026} decimals={2} />} />
             <Bar dataKey="所得格差倍率" fill="#8b5cf6" opacity={0.7} />
           </BarChart>
         </ResponsiveContainer>
@@ -809,7 +948,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
               <XAxis dataKey="year" tick={{ fontSize: 10 }} />
               <YAxis tick={{ fontSize: 10 }} unit="万円" />
-              <Tooltip content={<NoDataTooltip unit=" 万円" decimals={0} />} />
+              <Tooltip content={<NoDataTooltip unit=" 万円" childAge2026={childAge2026} decimals={0} />} />
               <Legend />
               <Bar dataKey="名目年収" fill="#3b82f6" />
               <Bar dataKey="可処分所得" fill="#22c55e" />
@@ -827,7 +966,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis dataKey="year" tick={{ fontSize: 10 }} />
             <YAxis tick={{ fontSize: 10 }} unit="兆円" />
-            <Tooltip content={<NoDataTooltip unit=" 兆円" />} />
+            <Tooltip content={<NoDataTooltip unit=" 兆円" childAge2026={childAge2026} />} />
             <Legend />
             <Bar dataKey="輸出" fill="#22c55e" opacity={0.6} />
             <Bar dataKey="輸入" fill="#ef4444" opacity={0.6} />
@@ -840,7 +979,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis dataKey="year" tick={{ fontSize: 10 }} />
             <YAxis tick={{ fontSize: 10 }} unit="円/$" />
-            <Tooltip content={<NoDataTooltip unit=" 円/$" decimals={0} />} />
+            <Tooltip content={<NoDataTooltip unit=" 円/$" childAge2026={childAge2026} decimals={0} />} />
             <Bar dataKey="為替レート" fill="#f97316" />
           </BarChart>
         </ResponsiveContainer>
@@ -853,7 +992,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis dataKey="year" tick={{ fontSize: 10 }} />
             <YAxis tick={{ fontSize: 10 }} unit="兆円" />
-            <Tooltip content={<NoDataTooltip unit=" 兆円" decimals={0} />} />
+            <Tooltip content={<NoDataTooltip unit=" 兆円" childAge2026={childAge2026} decimals={0} />} />
             <ReferenceLine y={params.nfaThreshold} stroke="#ef4444" strokeDasharray="5 5" label={{ value: `防衛ライン${params.nfaThreshold}兆円`, fill: '#ef4444', fontSize: 10 }} />
             <Bar dataKey="対外純資産" fill="#3b82f6" opacity={0.7} />
           </BarChart>
@@ -864,7 +1003,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis dataKey="year" tick={{ fontSize: 10 }} />
             <YAxis tick={{ fontSize: 10 }} unit="兆円" />
-            <Tooltip content={<NoDataTooltip unit=" 兆円" />} />
+            <Tooltip content={<NoDataTooltip unit=" 兆円" childAge2026={childAge2026} />} />
             <ReferenceLine y={0} stroke="#94a3b8" strokeDasharray="3 3" />
             <Bar dataKey="経常収支" fill="#22c55e" />
           </BarChart>
@@ -875,7 +1014,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis dataKey="year" tick={{ fontSize: 10 }} />
             <YAxis tick={{ fontSize: 10 }} unit="%" />
-            <Tooltip content={<NoDataTooltip unit="%" />} />
+            <Tooltip content={<NoDataTooltip unit="%" childAge2026={childAge2026} />} />
             <Bar dataKey="通貨リスク加算" fill="#ef4444" opacity={0.7} />
           </BarChart>
         </ResponsiveContainer>
@@ -891,7 +1030,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis dataKey="year" tick={{ fontSize: 10 }} />
             <YAxis tick={{ fontSize: 10 }} unit="兆円" />
-            <Tooltip content={<NoDataTooltip unit=" 兆円" />} />
+            <Tooltip content={<NoDataTooltip unit=" 兆円" childAge2026={childAge2026} />} />
             <Legend />
             <Bar dataKey="消費税" stackId="a" fill="#3b82f6" />
             <Bar dataKey="所得税" stackId="a" fill="#22c55e" />
@@ -905,7 +1044,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis dataKey="year" tick={{ fontSize: 10 }} />
             <YAxis tick={{ fontSize: 10 }} unit="%" domain={[0, 100]} />
-            <Tooltip content={<NoDataTooltip unit="%" />} />
+            <Tooltip content={<NoDataTooltip unit="%" childAge2026={childAge2026} />} />
             <Legend />
             <Bar dataKey="消費税" stackId="a" fill="#3b82f6" />
             <Bar dataKey="所得税" stackId="a" fill="#22c55e" />
@@ -922,7 +1061,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis dataKey="year" tick={{ fontSize: 10 }} />
             <YAxis tick={{ fontSize: 10 }} unit="%" domain={[0, 100]} />
-            <Tooltip content={<NoDataTooltip unit="%" />} />
+            <Tooltip content={<NoDataTooltip unit="%" childAge2026={childAge2026} />} />
             <Legend />
             <Bar dataKey="税収" stackId="a" fill="#22c55e" />
             <Bar dataKey="公債金" stackId="a" fill="#ef4444" />
@@ -938,7 +1077,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis dataKey="year" tick={{ fontSize: 10 }} />
             <YAxis tick={{ fontSize: 10 }} unit="兆円" />
-            <Tooltip content={<NoDataTooltip unit=" 兆円" />} />
+            <Tooltip content={<NoDataTooltip unit=" 兆円" childAge2026={childAge2026} />} />
             <Legend />
             <Bar dataKey="社会保障" stackId="a" fill="#3b82f6" />
             <Bar dataKey="子育て支援" stackId="a" fill="#a855f7" />
@@ -955,7 +1094,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis dataKey="year" tick={{ fontSize: 10 }} />
             <YAxis tick={{ fontSize: 10 }} unit="%" domain={[0, 100]} />
-            <Tooltip content={<NoDataTooltip unit="%" />} />
+            <Tooltip content={<NoDataTooltip unit="%" childAge2026={childAge2026} />} />
             <Legend />
             <Bar dataKey="政策経費" stackId="a" fill="#3b82f6" />
             <Bar dataKey="利払い費" stackId="a" fill="#ef4444" />
@@ -970,7 +1109,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis dataKey="year" tick={{ fontSize: 10 }} />
             <YAxis tick={{ fontSize: 10 }} unit="兆円" />
-            <Tooltip content={<NoDataTooltip unit=" 兆円" />} />
+            <Tooltip content={<NoDataTooltip unit=" 兆円" childAge2026={childAge2026} />} />
             <ReferenceLine y={0} stroke="#94a3b8" />
             <Bar dataKey="日銀純利益" fill="#94a3b8" opacity={0.7} />
           </BarChart>
@@ -981,7 +1120,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis dataKey="year" tick={{ fontSize: 10 }} />
             <YAxis tick={{ fontSize: 10 }} unit="兆円" />
-            <Tooltip content={<NoDataTooltip unit=" 兆円" />} />
+            <Tooltip content={<NoDataTooltip unit=" 兆円" childAge2026={childAge2026} />} />
             <ReferenceLine y={0} stroke="#94a3b8" />
             <Bar dataKey="統合政府への反映額" fill="#22c55e" />
           </BarChart>
@@ -992,7 +1131,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis dataKey="year" tick={{ fontSize: 10 }} />
             <YAxis tick={{ fontSize: 10 }} unit="兆円" />
-            <Tooltip content={<NoDataTooltip unit=" 兆円" />} />
+            <Tooltip content={<NoDataTooltip unit=" 兆円" childAge2026={childAge2026} />} />
             <ReferenceLine y={-params.bojCapitalBuffer} stroke="#ef4444" strokeDasharray="5 5" label={{ value: `バッファ-${params.bojCapitalBuffer}兆`, fill: '#ef4444', fontSize: 9 }} />
             <Bar dataKey="累積損失" fill="#ef4444" opacity={0.6} />
           </BarChart>
@@ -1006,7 +1145,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis dataKey="year" tick={{ fontSize: 10 }} />
             <YAxis tick={{ fontSize: 10 }} unit="兆円" />
-            <Tooltip content={<NoDataTooltip unit=" 兆円" />} />
+            <Tooltip content={<NoDataTooltip unit=" 兆円" childAge2026={childAge2026} />} />
             <Bar dataKey="保有国債" fill="#3b82f6" opacity={0.7} />
             <Bar dataKey="当座預金" fill="#f59e0b" opacity={0.7} />
           </BarChart>
@@ -1020,7 +1159,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis dataKey="year" tick={{ fontSize: 10 }} />
             <YAxis tick={{ fontSize: 10 }} unit="%" />
-            <Tooltip content={<NoDataTooltip unit="%" />} />
+            <Tooltip content={<NoDataTooltip unit="%" childAge2026={childAge2026} />} />
             <Legend />
             <Bar dataKey="実効市場金利" fill="#3b82f6" />
             <Bar dataKey="平均クーポン" fill="#ef4444" />
@@ -1034,7 +1173,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis dataKey="year" tick={{ fontSize: 10 }} />
             <YAxis tick={{ fontSize: 10 }} unit="%" />
-            <Tooltip content={<NoDataTooltip unit="%" />} />
+            <Tooltip content={<NoDataTooltip unit="%" childAge2026={childAge2026} />} />
             <Bar dataKey="財政リスク加算" fill="#ef4444" opacity={0.7} />
           </BarChart>
         </ResponsiveContainer>

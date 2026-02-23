@@ -11,6 +11,7 @@ function App() {
   const [activeTab, setActiveTab] = useState(0)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [constraints, setConstraints] = useState<Constraints>({ ...DEFAULT_CONSTRAINTS })
+  const [childAge2026, setChildAge2026] = useState(7)
 
   const simData = useMemo(() => runSimulation(params), [params])
 
@@ -45,6 +46,8 @@ function App() {
         onClose={() => setSidebarOpen(false)}
         constraints={constraints}
         onConstraintsChange={setConstraints}
+        childAge2026={childAge2026}
+        onChildAgeChange={setChildAge2026}
       />
       <main className={`main-content ${sidebarOpen ? 'sidebar-is-open' : ''}`}>
         <h1 className="app-title">🏛️ 統合政府 30年財政シミュレーター</h1>
@@ -78,6 +81,7 @@ function App() {
             params={params}
             simData={simData}
             actualData={ACTUAL_DATA}
+            childAge2026={childAge2026}
           />
         )}
       </main>

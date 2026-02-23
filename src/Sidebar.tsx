@@ -11,6 +11,8 @@ interface SidebarProps {
   isOpen: boolean;
   constraints: Constraints;
   onConstraintsChange: (c: Constraints) => void;
+  childAge2026: number;
+  onChildAgeChange: (age: number) => void;
 }
 
 function Slider({ label, value, min, max, step, tooltip, onChange }: {
@@ -66,7 +68,7 @@ function NumberInput({ label, value, step, tooltip, onChange }: {
   )
 }
 
-export function Sidebar({ params, scenarioIndex, onScenarioChange, onParamChange, onParamsReplace, isOpen, onClose, constraints, onConstraintsChange }: SidebarProps & { onClose?: () => void }) {
+export function Sidebar({ params, scenarioIndex, onScenarioChange, onParamChange, onParamsReplace, isOpen, onClose, constraints, onConstraintsChange, childAge2026, onChildAgeChange }: SidebarProps & { onClose?: () => void }) {
   const p = params;
   const taxTotal = p.initTaxConsumption + p.initTaxIncome + p.initTaxCorporate + p.initTaxOther;
 
@@ -142,6 +144,16 @@ export function Sidebar({ params, scenarioIndex, onScenarioChange, onParamChange
         ))}
       </select>
       <p className="scenario-caption">{SCENARIOS[scenarioIndex].label}</p>
+
+      <div className="child-age-section">
+        <h4>👶 子供の年齢トラッカー</h4>
+        <Slider label="2026年時点の年齢" value={childAge2026} min={0} max={20} step={1}
+          tooltip="お子さんの2026年時点の年齢を入力すると、グラフ上で各年度にお子さんが何歳かを確認できます。"
+          onChange={v => onChildAgeChange(v)} />
+        <p style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>
+          → 2055年に{childAge2026 + 29}歳
+        </p>
+      </div>
 
       <h4>マクロ経済</h4>
       <Slider label="インフレ率 (%)" value={p.inflationRate} min={0} max={10} step={0.1}
