@@ -75,38 +75,50 @@ export function ScenariosTab() {
   }, [])
 
   const comparisonCharts = useMemo(() => {
+    const safe = (v: number) => (!isFinite(v) || isNaN(v)) ? 0 : v
     const base = summaries.map((s, i) => ({ name: `${i + 1}`, fullName: s.shortName }))
     return {
-      burden: base.map((b, i) => ({ ...b, '利払負担率': parseFloat(summaries[i].interestBurden2055.toFixed(1)) })),
-      poverty: base.map((b, i) => ({ ...b, '貧困率': parseFloat(summaries[i].povertyRate2055.toFixed(1)), 'ジニ係数': parseFloat((summaries[i].gini2055 * 100).toFixed(1)) })),
-      assets: base.map((b, i) => ({ ...b, '債務残高': Math.round(summaries[i].debt2055), '対外純資産': Math.round(summaries[i].nfa2055) })),
+      burden: base.map((b, i) => ({ ...b, '利払負担率': parseFloat(safe(summaries[i].interestBurden2055).toFixed(1)) })),
+      poverty: base.map((b, i) => ({ ...b, '貧困率': parseFloat(safe(summaries[i].povertyRate2055).toFixed(1)) })),
+      gini: base.map((b, i) => ({ ...b, 'ジニ係数': parseFloat(safe(summaries[i].gini2055).toFixed(3)) })),
+      debt: base.map((b, i) => ({ ...b, '債務残高': Math.round(safe(summaries[i].debt2055)) })),
+      nfa: base.map((b, i) => ({ ...b, '対外純資産': Math.round(safe(summaries[i].nfa2055)) })),
     }
   }, [summaries])
 
   const evalBarData = useMemo(() => {
-    const maxDebt = Math.max(...summaries.map(s => s.debt2055))
-    const minDebt = Math.min(...summaries.map(s => s.debt2055))
-    const maxBurden = Math.max(...summaries.map(s => s.interestBurden2055))
-    const minBurden = Math.min(...summaries.map(s => s.interestBurden2055))
-    const maxPoverty = Math.max(...summaries.map(s => s.povertyRate2055))
-    const minPoverty = Math.min(...summaries.map(s => s.povertyRate2055))
-    const maxGini = Math.max(...summaries.map(s => s.gini2055))
-    const minGini = Math.min(...summaries.map(s => s.gini2055))
-    const maxNFA = Math.max(...summaries.map(s => s.nfa2055))
-    const minNFA = Math.min(...summaries.map(s => s.nfa2055))
+    const safe = (v: number) => (!isFinite(v) || isNaN(v)) ? 0 : v
+    const vals = summaries.map(s => ({
+      debt: safe(s.debt2055),
+      burden: safe(s.interestBurden2055),
+      poverty: safe(s.povertyRate2055),
+      gini: safe(s.gini2055),
+      nfa: safe(s.nfa2055),
+    }))
+    const maxDebt = Math.max(...vals.map(v => v.debt))
+    const minDebt = Math.min(...vals.map(v => v.debt))
+    const maxBurden = Math.max(...vals.map(v => v.burden))
+    const minBurden = Math.min(...vals.map(v => v.burden))
+    const maxPoverty = Math.max(...vals.map(v => v.poverty))
+    const minPoverty = Math.min(...vals.map(v => v.poverty))
+    const maxGini = Math.max(...vals.map(v => v.gini))
+    const minGini = Math.min(...vals.map(v => v.gini))
+    const maxNFA = Math.max(...vals.map(v => v.nfa))
+    const minNFA = Math.min(...vals.map(v => v.nfa))
 
     const normalize = (val: number, min: number, max: number, invert: boolean) => {
+      if (!isFinite(val) || isNaN(val)) return 0
       if (max === min) return 50
       const ratio = (val - min) / (max - min)
       return Math.round((invert ? 1 - ratio : ratio) * 100)
     }
 
     const metrics: { key: string; label: string; color: string; calc: (s: ScenarioSummary) => number }[] = [
-      { key: 'fiscal', label: '財政健全性', color: '#6366f1', calc: s => normalize(s.debt2055, minDebt, maxDebt, true) },
-      { key: 'burden', label: '利払負担', color: '#f97316', calc: s => normalize(s.interestBurden2055, minBurden, maxBurden, true) },
-      { key: 'household', label: '家計安定', color: '#22c55e', calc: s => normalize(s.povertyRate2055, minPoverty, maxPoverty, true) },
-      { key: 'gini', label: '格差抑制', color: '#ec4899', calc: s => normalize(s.gini2055, minGini, maxGini, true) },
-      { key: 'nfa', label: '対外資産', color: '#3b82f6', calc: s => normalize(s.nfa2055, minNFA, maxNFA, false) },
+      { key: 'fiscal', label: '財政健全性', color: '#6366f1', calc: s => normalize(safe(s.debt2055), minDebt, maxDebt, true) },
+      { key: 'burden', label: '利払負担', color: '#f97316', calc: s => normalize(safe(s.interestBurden2055), minBurden, maxBurden, true) },
+      { key: 'household', label: '家計安定', color: '#22c55e', calc: s => normalize(safe(s.povertyRate2055), minPoverty, maxPoverty, true) },
+      { key: 'gini', label: '格差抑制', color: '#ec4899', calc: s => normalize(safe(s.gini2055), minGini, maxGini, true) },
+      { key: 'nfa', label: '対外資産', color: '#3b82f6', calc: s => normalize(safe(s.nfa2055), minNFA, maxNFA, false) },
     ]
 
     return { metrics, data: summaries.map((s, i) => {
@@ -168,37 +180,65 @@ export function ScenariosTab() {
       </div>
 
       <div className="scenarios-comparison-chart">
-        <h3>2055年時点：貧困率・ジニ係数</h3>
-        <ResponsiveContainer width="100%" height={220}>
+        <h3>2055年時点：貧困率</h3>
+        <ResponsiveContainer width="100%" height={200}>
           <BarChart data={comparisonCharts.poverty} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
             <XAxis dataKey="name" tick={{ fontSize: 11 }} />
             <YAxis tick={{ fontSize: 11 }} label={{ value: '%', angle: -90, position: 'insideLeft', fontSize: 11 }} />
-            <Tooltip formatter={(value: number, name: string) => [`${value}%`, name]} labelFormatter={(label) => {
+            <Tooltip formatter={(value: number) => [`${value}%`]} labelFormatter={(label) => {
               const item = comparisonCharts.poverty.find(d => d.name === label)
               return item ? `${label}. ${item.fullName}` : label
             }} />
-            <Legend wrapperStyle={{ fontSize: 11 }} />
             <Bar dataKey="貧困率" fill="#ef4444" />
-            <Bar dataKey="ジニ係数" fill="#ec4899" />
-            <ReferenceLine y={20} stroke="#ef4444" strokeDasharray="3 3" label={{ value: '貧困率20%', fontSize: 10, fill: '#ef4444' }} />
+            <ReferenceLine y={20} stroke="#ef4444" strokeDasharray="3 3" label={{ value: '警告20%', fontSize: 10, fill: '#ef4444' }} />
           </BarChart>
         </ResponsiveContainer>
       </div>
 
       <div className="scenarios-comparison-chart">
-        <h3>2055年時点：債務残高・対外純資産</h3>
-        <ResponsiveContainer width="100%" height={220}>
-          <BarChart data={comparisonCharts.assets} margin={{ top: 10, right: 20, left: 10, bottom: 5 }}>
+        <h3>2055年時点：ジニ係数</h3>
+        <ResponsiveContainer width="100%" height={200}>
+          <BarChart data={comparisonCharts.gini} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+            <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+            <YAxis tick={{ fontSize: 11 }} domain={[0, 'auto']} />
+            <Tooltip formatter={(value: number) => [`${value}`]} labelFormatter={(label) => {
+              const item = comparisonCharts.gini.find(d => d.name === label)
+              return item ? `${label}. ${item.fullName}` : label
+            }} />
+            <Bar dataKey="ジニ係数" fill="#ec4899" />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+
+      <div className="scenarios-comparison-chart">
+        <h3>2055年時点：債務残高</h3>
+        <ResponsiveContainer width="100%" height={200}>
+          <BarChart data={comparisonCharts.debt} margin={{ top: 10, right: 20, left: 10, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
             <XAxis dataKey="name" tick={{ fontSize: 11 }} />
             <YAxis tick={{ fontSize: 11 }} label={{ value: '兆円', angle: -90, position: 'insideLeft', fontSize: 11 }} />
             <Tooltip formatter={(value: number) => [`${value.toLocaleString()}兆円`]} labelFormatter={(label) => {
-              const item = comparisonCharts.assets.find(d => d.name === label)
+              const item = comparisonCharts.debt.find(d => d.name === label)
               return item ? `${label}. ${item.fullName}` : label
             }} />
-            <Legend wrapperStyle={{ fontSize: 11 }} />
             <Bar dataKey="債務残高" fill="#8b5cf6" />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+
+      <div className="scenarios-comparison-chart">
+        <h3>2055年時点：対外純資産</h3>
+        <ResponsiveContainer width="100%" height={200}>
+          <BarChart data={comparisonCharts.nfa} margin={{ top: 10, right: 20, left: 10, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+            <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+            <YAxis tick={{ fontSize: 11 }} label={{ value: '兆円', angle: -90, position: 'insideLeft', fontSize: 11 }} />
+            <Tooltip formatter={(value: number) => [`${value.toLocaleString()}兆円`]} labelFormatter={(label) => {
+              const item = comparisonCharts.nfa.find(d => d.name === label)
+              return item ? `${label}. ${item.fullName}` : label
+            }} />
             <Bar dataKey="対外純資産" fill="#3b82f6" />
           </BarChart>
         </ResponsiveContainer>
