@@ -94,6 +94,8 @@ export function runSimulation(p: SimParams): SimResult[] {
   const prodShare = p.productivityShareRate;
   const wagePassThrough = p.wagePassThroughRate;
 
+  const baseEnergyAmount = p.inflationRate * 10;
+
   const results: SimResult[] = [];
   let bojCumulativeLoss = 0;
   let retainedEarnings = p.initRetainedEarnings;
@@ -140,14 +142,6 @@ export function runSimulation(p: SimParams): SimResult[] {
       const bojPayment = bojCumulativeLoss > p.bojCapitalBuffer
         ? bojNetIncome
         : Math.max(bojNetIncome, 0);
-      let taxConsumption = p.initTaxConsumption;
-      if (changeYear !== null && year >= changeYear) {
-        taxConsumption = taxConsumption * (p.taxRateNew / 10.0);
-      }
-      const taxIncome = p.initTaxIncome;
-      const taxCorporate = p.initTaxCorporate;
-      const taxOther = p.initTaxOther;
-      const tax = taxConsumption + taxIncome + taxCorporate + taxOther;
 
       const exchangeRate = p.initExchangeRate * (1 + yenDep);
       const yenFactor = (exchangeRate / p.initExchangeRate - 1);
@@ -168,11 +162,21 @@ export function runSimulation(p: SimParams): SimResult[] {
       const endogenousWage = C * prodShare + B * wagePassThrough;
       const nomWageG = Math.max(endogenousWage, baseNomWageG);
 
+      // Fix 3: 初年度も成長率を適用
+      let taxConsumption = p.initTaxConsumption * (1 + B * 1.0);
+      if (changeYear !== null && year >= changeYear) {
+        taxConsumption = taxConsumption * (p.taxRateNew / 10.0);
+      }
+      // Fix 5: 所得税に内生賃金を反映（初年度はnomWageGベース）
+      const taxIncome = p.initTaxIncome * (1 + (D * 0.5 + nomWageG * 0.5) * 1.4);
+
       const exportProfit = Math.max(yenFactor, 0) * 0.3;
       const importCost = Math.max(yenFactor, 0) * 0.2;
-      const taxCorporateAdj = taxCorporate * (1 + exportProfit - importCost);
+      const taxCorporate = p.initTaxCorporate * (1 + C * 2.0 + B * 0.5) * (1 + exportProfit - importCost);
+      const taxOther = p.initTaxOther * (1 + D * 0.8);
+      const tax = taxConsumption + taxIncome + taxCorporate + taxOther;
 
-      const corporateProfit = taxCorporateAdj / p.effectiveCorporateTaxRate;
+      const corporateProfit = taxCorporate / p.effectiveCorporateTaxRate;
       const laborCostPressure = nominalGDP * prodShare * nomWageG;
       const netCorporateIncome = corporateProfit - laborCostPressure;
       const returnToWorkers = retainedEarnings * p.retainedEarningsReturnRate;
@@ -183,7 +187,11 @@ export function runSimulation(p: SimParams): SimResult[] {
       const returnBoostToWage = nominalGDP > 0 ? (returnToWorkers / nominalGDP) : 0;
 
       const yenCostPush = Math.max(yenFactor, 0) * 0.3;
-      const cpiIncrease = B + yenCostPush;
+      // Fix 1: 消費税率変更→CPI反映（変更年度のみ一時的CPI上昇）
+      const consumptionTaxCpiEffect = (changeYear !== null && year === changeYear)
+        ? (p.taxRateNew - 10) / (100 + 10) * 0.4
+        : 0;
+      const cpiIncrease = B + yenCostPush + consumptionTaxCpiEffect;
       const energySubsidyEffect = cpiIncrease * p.energySubsidyRate * 0.5;
       const effectiveCpi = cpiIncrease - energySubsidyEffect;
       const wageIncrease = nomWageG + returnBoostToWage;
@@ -197,7 +205,9 @@ export function runSimulation(p: SimParams): SimResult[] {
       const assetGrowth = yenFactor * 0.5 + C;
       const giniIndex = p.initGini + (assetGrowth - realWageGrowth) * 0.01;
 
-      const energySubsidy = p.inflationRate * p.energySubsidyRate * 10;
+      // Fix 2: エネルギー補助金の動的化（プランB）
+      const energyCostIndex = (1 + cpiIncrease) * (1 + Math.max(yenFactor, 0) * 0.5);
+      const energySubsidy = baseEnergyAmount * p.energySubsidyRate * energyCostIndex;
 
       const otherRevWithFx = p.otherRevenue + Math.max(fxValuationGain * 0.1, 0);
 
@@ -212,7 +222,7 @@ export function runSimulation(p: SimParams): SimResult[] {
       const otherPolicyExp = Math.max(p.initPolicyExp - knownExp + energySubsidy, 0);
       const policyExp = socialSecurity + childcare + localGovTransfer + defense + otherPolicyExp + energySubsidy;
 
-      const taxTotal = taxConsumption + taxIncome + taxCorporateAdj + taxOther;
+      const taxTotal = taxConsumption + taxIncome + taxCorporate + taxOther;
       const totalRevenue = taxTotal + bojPayment + otherRevWithFx;
       const totalCost = policyExp + interest;
       const fiscalBalance = totalRevenue - totalCost;
@@ -232,7 +242,12 @@ export function runSimulation(p: SimParams): SimResult[] {
       const modelFoodCost = BASE_INCOME * BASE_FOOD_RATIO * (1 + cpiIncrease);
       const modelEnergyCostGross = BASE_INCOME * BASE_ENERGY_RATIO * (1 + cpiIncrease) * (1 + Math.max(yenFactor, 0) * 0.5);
       const modelEnergyCost = modelEnergyCostGross * (1 - p.energySubsidyRate * 0.5);
-      const modelDisposable = modelIncome * (1 - TAX_SOCIAL_RATIO) - modelFoodCost - modelEnergyCost;
+      let modelDisposable = modelIncome * (1 - TAX_SOCIAL_RATIO) - modelFoodCost - modelEnergyCost;
+      // Fix 6: 消費税率変更→家計の残りの消費にも負担増
+      if (changeYear !== null && year >= changeYear) {
+        const consumptionTaxBurden = Math.max(modelDisposable, 0) * (p.taxRateNew - 10) / (100 + p.taxRateNew);
+        modelDisposable -= consumptionTaxBurden;
+      }
       const baseDisposable = BASE_INCOME * (1 - TAX_SOCIAL_RATIO) - BASE_INCOME * BASE_FOOD_RATIO - BASE_INCOME * BASE_ENERGY_RATIO;
 
       results.push({
@@ -241,7 +256,7 @@ export function runSimulation(p: SimParams): SimResult[] {
         avgCoupon: avgCoupon * 100, interest, totalCost, debt,
         fiscalBalance, interestBurden, bojRev, bojCost,
         policyRate: policyRate * 100,
-        taxConsumption, taxIncome, taxCorporate: taxCorporateAdj, taxOther,
+        taxConsumption, taxIncome, taxCorporate, taxOther,
         bondIssuance,
         otherRevStamp: otherRevWithFx * 0.30,
         otherRevGov: otherRevWithFx * 0.20,
@@ -292,11 +307,15 @@ export function runSimulation(p: SimParams): SimResult[] {
       const endogenousWage = C * prodShare + B * wagePassThrough;
       const nomWageG = Math.max(endogenousWage, baseNomWageG);
 
+      // Fix 5: 所得税に前年の内生賃金を反映（賃金成長50% + 名目成長50%のブレンド）
+      const prevWageDriver = prev.wageIncrease / 100;
+      const taxIncomeGrowth = (D * 0.5 + prevWageDriver * 0.5) * 1.4;
+
       let taxConsumption = prev.taxConsumption * (1 + B * 1.0);
       if (changeYear !== null && year === changeYear) {
         taxConsumption = prev.taxConsumption * (1 + B * 1.0) * (p.taxRateNew / 10.0);
       }
-      const taxIncome = prev.taxIncome * (1 + D * 1.4);
+      const taxIncome = prev.taxIncome * (1 + taxIncomeGrowth);
 
       const exportProfit = Math.max(yenDep, 0) * 0.3;
       const importCost = Math.max(yenDep, 0) * 0.2;
@@ -314,7 +333,11 @@ export function runSimulation(p: SimParams): SimResult[] {
       const returnBoostToWage = nominalGDP > 0 ? (returnToWorkers / nominalGDP) : 0;
 
       const yenCostPush = Math.max(yenDep, 0) * 0.3;
-      const cpiIncrease = B + yenCostPush;
+      // Fix 1: 消費税率変更→CPI反映（変更年度のみ一時的CPI上昇）
+      const consumptionTaxCpiEffect = (changeYear !== null && year === changeYear)
+        ? (p.taxRateNew - 10) / (100 + 10) * 0.4
+        : 0;
+      const cpiIncrease = B + yenCostPush + consumptionTaxCpiEffect;
       const energySubsidyEffect = cpiIncrease * p.energySubsidyRate * 0.5;
       const effectiveCpi = cpiIncrease - energySubsidyEffect;
       const wageIncrease = nomWageG + returnBoostToWage;
@@ -344,7 +367,9 @@ export function runSimulation(p: SimParams): SimResult[] {
       const otherRevWithFx = p.otherRevenue + Math.max(fxValuationGain * 0.1, 0);
       const totalRevenue = tax + bojPayment + otherRevWithFx;
 
-      const energySubsidy = p.inflationRate * p.energySubsidyRate * 10;
+      // Fix 2: エネルギー補助金の動的化（プランB：CPI＋円安連動）
+      const energyCostIndex = (1 + cpiIncrease) * (1 + Math.max(yenDep, 0) * 0.5);
+      const energySubsidy = baseEnergyAmount * p.energySubsidyRate * energyCostIndex;
 
       const socialSecurity = prev.socialSecurity * (1 + B) + p.naturalIncrease * 0.7;
       const childcare = prev.childcare * (1 + p.childcareGrowth / 100);
@@ -354,7 +379,11 @@ export function runSimulation(p: SimParams): SimResult[] {
       const otherPolicyExp = prevOtherBase * (1 + B);
       const policyExp = socialSecurity + childcare + localGovTransfer + defense + otherPolicyExp + energySubsidy;
 
-      const avgCouponDec = (prev.avgCoupon / 100 * 8 / 9) + (E * 1 / 9);
+      // Fix 4: 新規国債発行の平均クーポン反映（借換1/9 + 新発債分）
+      const prevBondShare = prev.debt > 0 ? prev.bondIssuance / prev.debt : 0;
+      const totalNewShare = Math.min(1 / 9 + prevBondShare, 0.3);
+      const avgCouponDec = (prev.avgCoupon / 100 * (1 - totalNewShare)) + (E * totalNewShare);
+
       const interest = prev.debt * avgCouponDec;
       const totalCost = policyExp + interest;
       const fiscalBalance = totalRevenue - totalCost;
@@ -380,7 +409,12 @@ export function runSimulation(p: SimParams): SimResult[] {
       const modelFoodCost = BASE_INCOME * BASE_FOOD_RATIO * cumulativeCpi;
       const modelEnergyCostGross = BASE_INCOME * BASE_ENERGY_RATIO * cumulativeCpi * (1 + Math.max(cumulativeYenDep, 0) * 0.5);
       const modelEnergyCost = modelEnergyCostGross * (1 - p.energySubsidyRate * 0.5);
-      const modelDisposable = modelIncome * (1 - TAX_SOCIAL_RATIO) - modelFoodCost - modelEnergyCost;
+      let modelDisposable = modelIncome * (1 - TAX_SOCIAL_RATIO) - modelFoodCost - modelEnergyCost;
+      // Fix 6: 消費税率変更→家計の食費・光熱費以外の消費にも負担増
+      if (changeYear !== null && year >= changeYear) {
+        const consumptionTaxBurden = Math.max(modelDisposable, 0) * (p.taxRateNew - 10) / (100 + p.taxRateNew);
+        modelDisposable -= consumptionTaxBurden;
+      }
       const baseDisposable = BASE_INCOME * (1 - TAX_SOCIAL_RATIO) - BASE_INCOME * BASE_FOOD_RATIO - BASE_INCOME * BASE_ENERGY_RATIO;
 
       results.push({
