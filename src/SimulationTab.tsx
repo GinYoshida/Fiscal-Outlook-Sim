@@ -305,7 +305,7 @@ export function SimulationTab({ params, simData, actualData, childAge2026 }: Pro
   }, [simData])
 
   const bojData = useMemo(() => {
-    const actual = actualData.map(d => ({ year: d.year, '日銀純利益': d.bojPayment as number | null, '統合政府への反映額': d.bojPayment as number | null, '累積損失': null as number | null }))
+    const actual = actualData.map(d => ({ year: d.year, '日銀純利益': (d.bojNetIncome !== undefined ? d.bojNetIncome : d.bojPayment) as number | null, '統合政府への反映額': d.bojPayment as number | null, '累積損失': null as number | null }))
     const sim = simData.map(d => ({
       year: d.year,
       '日銀純利益': parseFloat(d.bojNetIncome.toFixed(1)),
@@ -316,14 +316,20 @@ export function SimulationTab({ params, simData, actualData, childAge2026 }: Pro
   }, [actualData, simData])
 
   const bojBSData = useMemo(() => {
+    const actual = actualData.filter(d => d.bojJGB !== undefined).map(d => ({
+      year: d.year,
+      '保有国債': d.bojJGB!,
+      '当座預金': d.bojCA!,
+      '保有利回り': d.bojYield!,
+    }))
     const sim = simData.map(d => ({
       year: d.year,
       '保有国債': parseFloat(d.bojJGB.toFixed(0)),
       '当座預金': parseFloat(d.bojCAActual.toFixed(0)),
       '保有利回り': parseFloat(d.bojYieldActual.toFixed(2)),
     }))
-    return fillYearGaps(sim)
-  }, [simData])
+    return fillYearGaps([...actual, ...sim])
+  }, [actualData, simData])
 
   const rateData = useMemo(() => {
     const nominalG = params.inflationRate + params.realGrowth
@@ -547,13 +553,23 @@ export function SimulationTab({ params, simData, actualData, childAge2026 }: Pro
       { label: '│　├ 法人税', values: data.map(d => fmt(d.taxCorporate)), indent: 2 },
       { label: '│　└ その他税', values: data.map(d => fmt(d.taxOther)), indent: 2 },
       { label: '├ 日銀納付金', values: data.map(d => fmt(d.bojPayment)), indent: 1 },
-      { label: '└ その他収入', values: data.map(d => fmt(d.totalRevenue - d.tax - d.bojPayment)), indent: 1 },
+      { label: '│  └ 日銀純利益', values: data.map(d => d.bojNetIncome !== undefined ? fmt(d.bojNetIncome) : '―'), indent: 2 },
+      { label: '│  └ 保有国債', values: data.map(d => d.bojJGB !== undefined ? fmt(d.bojJGB, 0) : '―'), indent: 2 },
+      { label: '│  └ 当座預金', values: data.map(d => d.bojCA !== undefined ? fmt(d.bojCA, 0) : '―'), indent: 2 },
+      { label: '│  └ 保有利回り', values: data.map(d => d.bojYield !== undefined ? fmt(d.bojYield, 2) + '%' : '―'), indent: 2 },
+      { label: '└ その他収入', values: data.map(d => d.otherRevenue !== undefined ? fmt(d.otherRevenue) : fmt(d.totalRevenue - d.tax - d.bojPayment)), indent: 1 },
       { label: '─', values: years.map(() => '') },
       { label: '支出合計', values: data.map(d => fmt(d.totalCost)) },
       { label: '├ 政策経費', values: data.map(d => fmt(d.policyExp)), indent: 1 },
+      { label: '│　├ 社会保障', values: data.map(d => d.socialSecurity !== undefined ? fmt(d.socialSecurity) : '―'), indent: 2 },
+      { label: '│　├ 子育て支援', values: data.map(d => d.childcare !== undefined ? fmt(d.childcare) : '―'), indent: 2 },
+      { label: '│　├ 地方交付税', values: data.map(d => d.localGovTransfer !== undefined ? fmt(d.localGovTransfer) : '―'), indent: 2 },
+      { label: '│　├ 防衛', values: data.map(d => d.defense !== undefined ? fmt(d.defense) : '―'), indent: 2 },
+      { label: '│　└ その他政策', values: data.map(d => d.otherPolicyExp !== undefined ? fmt(d.otherPolicyExp) : '―'), indent: 2 },
       { label: '└ 利払い費', values: data.map(d => fmt(d.interest)), indent: 1 },
       { label: '─', values: years.map(() => '') },
       { label: '財政収支', values: data.map(d => fmt(d.fiscalBalance)) },
+      { label: '国債発行額', values: data.map(d => d.bondIssuance !== undefined ? fmt(d.bondIssuance) : '―') },
       { label: '債務残高', values: data.map(d => fmt(d.debt, 0)) },
       { label: '利払負担率 (%)', values: data.map(d => fmt(d.interestBurden)) },
       { label: '平均クーポン (%)', values: data.map(d => fmt(d.avgCoupon)) },
@@ -585,25 +601,25 @@ export function SimulationTab({ params, simData, actualData, childAge2026 }: Pro
       { label: '│　├ 法人税', values: [...aData.map(d => fmt(d.taxCorporate)), ...sFiltered.map(d => fmt(d.taxCorporate))], indent: 2 },
       { label: '│　└ その他税', values: [...aData.map(d => fmt(d.taxOther)), ...sFiltered.map(d => fmt(d.taxOther))], indent: 2 },
       { label: '├ 日銀納付金', values: [...aData.map(d => fmt(d.bojPayment)), ...sFiltered.map(d => fmt(d.bojPayment))], indent: 1 },
-      { label: '│  └ 日銀純利益', values: [...aData.map(() => '―'), ...sFiltered.map(d => fmt(d.bojNetIncome))], indent: 2 },
+      { label: '│  └ 日銀純利益', values: [...aData.map(d => d.bojNetIncome !== undefined ? fmt(d.bojNetIncome) : '―'), ...sFiltered.map(d => fmt(d.bojNetIncome))], indent: 2 },
       { label: '│  └ 累積損失', values: [...aData.map(() => '―'), ...sFiltered.map(d => fmt(d.bojCumulativeLoss))], indent: 2 },
-      { label: '│  └ 保有国債', values: [...aData.map(() => '―'), ...sFiltered.map(d => fmt(d.bojJGB, 0))], indent: 2 },
-      { label: '│  └ 当座預金', values: [...aData.map(() => '―'), ...sFiltered.map(d => fmt(d.bojCAActual, 0))], indent: 2 },
-      { label: '│  └ 保有利回り', values: [...aData.map(() => '―'), ...sFiltered.map(d => fmt(d.bojYieldActual, 2) + '%')], indent: 2 },
-      { label: '└ その他収入', values: [...aData.map(d => fmt(d.totalRevenue - d.tax - d.bojPayment)), ...sFiltered.map(d => fmt(d.otherRevStamp + d.otherRevGov + d.otherRevAsset + d.otherRevMisc))], indent: 1 },
+      { label: '│  └ 保有国債', values: [...aData.map(d => d.bojJGB !== undefined ? fmt(d.bojJGB, 0) : '―'), ...sFiltered.map(d => fmt(d.bojJGB, 0))], indent: 2 },
+      { label: '│  └ 当座預金', values: [...aData.map(d => d.bojCA !== undefined ? fmt(d.bojCA, 0) : '―'), ...sFiltered.map(d => fmt(d.bojCAActual, 0))], indent: 2 },
+      { label: '│  └ 保有利回り', values: [...aData.map(d => d.bojYield !== undefined ? fmt(d.bojYield, 2) + '%' : '―'), ...sFiltered.map(d => fmt(d.bojYieldActual, 2) + '%')], indent: 2 },
+      { label: '└ その他収入', values: [...aData.map(d => d.otherRevenue !== undefined ? fmt(d.otherRevenue) : fmt(d.totalRevenue - d.tax - d.bojPayment)), ...sFiltered.map(d => fmt(d.otherRevStamp + d.otherRevGov + d.otherRevAsset + d.otherRevMisc))], indent: 1 },
       { label: '─', values: years.map(() => '') },
       { label: '支出合計', values: [...aData.map(d => fmt(d.totalCost)), ...sFiltered.map(d => fmt(d.totalCost))] },
       { label: '├ 政策経費', values: [...aData.map(d => fmt(d.policyExp)), ...sFiltered.map(d => fmt(d.policyExp))], indent: 1 },
-      { label: '│　├ 社会保障', values: [...aData.map(() => '―'), ...sFiltered.map(d => fmt(d.socialSecurity))], indent: 2 },
-      { label: '│　├ 子育て支援', values: [...aData.map(() => '―'), ...sFiltered.map(d => fmt(d.childcare))], indent: 2 },
-      { label: '│　├ 地方交付税', values: [...aData.map(() => '―'), ...sFiltered.map(d => fmt(d.localGovTransfer))], indent: 2 },
-      { label: '│　├ 防衛', values: [...aData.map(() => '―'), ...sFiltered.map(d => fmt(d.defense))], indent: 2 },
-      { label: '│　├ その他政策', values: [...aData.map(() => '―'), ...sFiltered.map(d => fmt(d.otherPolicyExp))], indent: 2 },
+      { label: '│　├ 社会保障', values: [...aData.map(d => d.socialSecurity !== undefined ? fmt(d.socialSecurity) : '―'), ...sFiltered.map(d => fmt(d.socialSecurity))], indent: 2 },
+      { label: '│　├ 子育て支援', values: [...aData.map(d => d.childcare !== undefined ? fmt(d.childcare) : '―'), ...sFiltered.map(d => fmt(d.childcare))], indent: 2 },
+      { label: '│　├ 地方交付税', values: [...aData.map(d => d.localGovTransfer !== undefined ? fmt(d.localGovTransfer) : '―'), ...sFiltered.map(d => fmt(d.localGovTransfer))], indent: 2 },
+      { label: '│　├ 防衛', values: [...aData.map(d => d.defense !== undefined ? fmt(d.defense) : '―'), ...sFiltered.map(d => fmt(d.defense))], indent: 2 },
+      { label: '│　├ その他政策', values: [...aData.map(d => d.otherPolicyExp !== undefined ? fmt(d.otherPolicyExp) : '―'), ...sFiltered.map(d => fmt(d.otherPolicyExp))], indent: 2 },
       { label: '│　└ エネルギー補助金', values: [...aData.map(() => '―'), ...sFiltered.map(d => fmt(d.energySubsidy))], indent: 2 },
       { label: '└ 利払い費', values: [...aData.map(d => fmt(d.interest)), ...sFiltered.map(d => fmt(d.interest))], indent: 1 },
       { label: '─', values: years.map(() => '') },
       { label: '財政収支', values: [...aData.map(d => fmt(d.fiscalBalance)), ...sFiltered.map(d => fmt(d.fiscalBalance))] },
-      { label: '国債発行額（公債金）', values: [...aData.map(() => '―'), ...sFiltered.map(d => fmt(d.bondIssuance))] },
+      { label: '国債発行額（公債金）', values: [...aData.map(d => d.bondIssuance !== undefined ? fmt(d.bondIssuance) : '―'), ...sFiltered.map(d => fmt(d.bondIssuance))] },
       { label: '公債金依存度 (%)', values: [...aData.map(() => '―'), ...sFiltered.map(d => fmt(d.revenueBondRatio))] },
       { label: '債務残高', values: [...aData.map(d => fmt(d.debt, 0)), ...sFiltered.map(d => fmt(d.debt, 0))] },
       { label: '利払負担率 (%)', values: [...aData.map(d => fmt(d.interestBurden)), ...sFiltered.map(d => fmt(d.interestBurden))] },
