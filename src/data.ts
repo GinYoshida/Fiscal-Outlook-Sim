@@ -64,6 +64,11 @@ export interface SimParams {
   initNFA: number;
   nfaThreshold: number;
   currencyRiskPremium: number;
+  initBojJGB: number;
+  bojQTRate: number;
+  bojCAFloor: number;
+  fiscalRiskSensitivity: number;
+  interestBurdenThreshold: number;
 }
 
 export interface Scenario {
@@ -149,6 +154,11 @@ const baseParams: SimParams = {
   initNFA: 420,
   nfaThreshold: 200,
   currencyRiskPremium: 2.0,
+  initBojJGB: 590,
+  bojQTRate: 30,
+  bojCAFloor: 100,
+  fiscalRiskSensitivity: 0.1,
+  interestBurdenThreshold: 20,
 };
 
 export const SCENARIOS: Scenario[] = [

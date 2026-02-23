@@ -13,12 +13,14 @@ export interface OptimizableParam {
 export const OPTIMIZABLE_PARAMS: OptimizableParam[] = [
   { key: 'inflationRate', label: 'インフレ率', min: 0, max: 10, step: 0.1 },
   { key: 'realGrowth', label: '実質成長率', min: -2, max: 5, step: 0.1 },
-  { key: 'riskPremium', label: 'リスクプレミアム', min: 0, max: 3, step: 0.1 },
+  { key: 'riskPremium', label: 'ベースリスクプレミアム', min: 0, max: 3, step: 0.1 },
   { key: 'yenDepreciation', label: '円安進行率', min: -3, max: 10, step: 0.5 },
   { key: 'nominalWageGrowth', label: '名目賃金上昇率', min: 0, max: 5, step: 0.1 },
   { key: 'globalGrowth', label: '世界経済成長率', min: 0, max: 5, step: 0.1 },
   { key: 'naturalIncrease', label: '自然増', min: 0, max: 2, step: 0.1 },
   { key: 'energySubsidyRate', label: 'エネルギー補助金率', min: 0, max: 1, step: 0.1 },
+  { key: 'bojQTRate', label: 'QT縮小額', min: 0, max: 80, step: 5 },
+  { key: 'fiscalRiskSensitivity', label: '財政リスク感応度', min: 0, max: 0.5, step: 0.01 },
 ]
 
 export function countWarnings(params: SimParams): number {

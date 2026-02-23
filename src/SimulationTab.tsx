@@ -285,6 +285,16 @@ export function SimulationTab({ params, simData, actualData }: Props) {
     return fillYearGaps([...actual, ...sim])
   }, [actualData, simData])
 
+  const bojBSData = useMemo(() => {
+    const sim = simData.map(d => ({
+      year: d.year,
+      '保有国債': parseFloat(d.bojJGB.toFixed(0)),
+      '当座預金': parseFloat(d.bojCAActual.toFixed(0)),
+      '保有利回り': parseFloat(d.bojYieldActual.toFixed(2)),
+    }))
+    return fillYearGaps(sim)
+  }, [simData])
+
   const rateData = useMemo(() => {
     const nominalG = params.inflationRate + params.realGrowth
     const sim = simData.map(d => ({
@@ -292,6 +302,8 @@ export function SimulationTab({ params, simData, actualData }: Props) {
       平均クーポン: parseFloat(d.avgCoupon.toFixed(2)),
       実効市場金利: parseFloat(d.effectiveMarketRate.toFixed(2)),
       名目成長率: parseFloat(nominalG.toFixed(2)),
+      財政リスク加算: parseFloat(d.fiscalRiskPremium.toFixed(2)),
+      日銀保有利回り: parseFloat(d.bojYieldActual.toFixed(2)),
     }))
     return fillYearGaps(sim)
   }, [params, simData])
@@ -465,6 +477,9 @@ export function SimulationTab({ params, simData, actualData }: Props) {
       { label: '├ 日銀納付金', values: [...aData.map(d => fmt(d.bojPayment)), ...sFiltered.map(d => fmt(d.bojPayment))], indent: 1 },
       { label: '│  └ 日銀純利益', values: [...aData.map(() => '―'), ...sFiltered.map(d => fmt(d.bojNetIncome))], indent: 2 },
       { label: '│  └ 累積損失', values: [...aData.map(() => '―'), ...sFiltered.map(d => fmt(d.bojCumulativeLoss))], indent: 2 },
+      { label: '│  └ 保有国債', values: [...aData.map(() => '―'), ...sFiltered.map(d => fmt(d.bojJGB, 0))], indent: 2 },
+      { label: '│  └ 当座預金', values: [...aData.map(() => '―'), ...sFiltered.map(d => fmt(d.bojCAActual, 0))], indent: 2 },
+      { label: '│  └ 保有利回り', values: [...aData.map(() => '―'), ...sFiltered.map(d => fmt(d.bojYieldActual, 2) + '%')], indent: 2 },
       { label: '└ その他収入', values: [...aData.map(d => fmt(d.totalRevenue - d.tax - d.bojPayment)), ...sFiltered.map(d => fmt(d.otherRevStamp + d.otherRevGov + d.otherRevAsset + d.otherRevMisc))], indent: 1 },
       { label: '─', values: years.map(() => '') },
       { label: '支出合計', values: [...aData.map(d => fmt(d.totalCost)), ...sFiltered.map(d => fmt(d.totalCost))] },
@@ -475,6 +490,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
       { label: '国債発行額', values: [...aData.map(() => '―'), ...sFiltered.map(d => fmt(d.bondIssuance))] },
       { label: '債務残高', values: [...aData.map(d => fmt(d.debt, 0)), ...sFiltered.map(d => fmt(d.debt, 0))] },
       { label: '利払負担率 (%)', values: [...aData.map(d => fmt(d.interestBurden)), ...sFiltered.map(d => fmt(d.interestBurden))] },
+      { label: '財政リスク加算 (%)', values: [...aData.map(() => '―'), ...sFiltered.map(d => fmt(d.fiscalRiskPremium))] },
       { label: '─', values: years.map(() => '') },
       { label: '為替レート (円/$)', values: [...aData.map(d => fmt(d.exchangeRate, 0)), ...sFiltered.map(d => fmt(d.exchangeRate, 0))] },
       { label: '貿易収支 (兆円)', values: [...aData.map(d => fmt(d.tradeBalance)), ...sFiltered.map(d => fmt(d.tradeBalance))] },
@@ -510,6 +526,9 @@ export function SimulationTab({ params, simData, actualData }: Props) {
       { label: '├ 日銀納付金', values: data.map(d => fmt(d.bojPayment)), indent: 1 },
       { label: '│  └ 日銀純利益', values: data.map(d => fmt(d.bojNetIncome)), indent: 2 },
       { label: '│  └ 累積損失', values: data.map(d => fmt(d.bojCumulativeLoss)), indent: 2 },
+      { label: '│  └ 保有国債', values: data.map(d => fmt(d.bojJGB, 0)), indent: 2 },
+      { label: '│  └ 当座預金', values: data.map(d => fmt(d.bojCAActual, 0)), indent: 2 },
+      { label: '│  └ 保有利回り', values: data.map(d => fmt(d.bojYieldActual, 2) + '%'), indent: 2 },
       { label: '└ その他収入', values: data.map(d => fmt(d.otherRevStamp + d.otherRevGov + d.otherRevAsset + d.otherRevMisc)), indent: 1 },
       { label: '　　├ 印紙収入', values: data.map(d => fmt(d.otherRevStamp)), indent: 2 },
       { label: '　　├ 官業収入', values: data.map(d => fmt(d.otherRevGov)), indent: 2 },
@@ -527,6 +546,7 @@ export function SimulationTab({ params, simData, actualData }: Props) {
       { label: '国債発行額', values: data.map(d => fmt(d.bondIssuance)) },
       { label: '債務残高', values: data.map(d => fmt(d.debt, 0)) },
       { label: '利払負担率 (%)', values: data.map(d => fmt(d.interestBurden)) },
+      { label: '財政リスク加算 (%)', values: data.map(d => fmt(d.fiscalRiskPremium)) },
       { label: '─', values: years.map(() => '') },
       { label: '為替レート (円/$)', values: data.map(d => fmt(d.exchangeRate, 0)) },
       { label: '貿易収支 (兆円)', values: data.map(d => fmt(d.tradeBalance)) },
@@ -920,37 +940,42 @@ export function SimulationTab({ params, simData, actualData }: Props) {
         <div className="chart-note">
           逆ザヤ時（純利益マイナス）の累積損失が自己資本バッファ（{params.bojCapitalBuffer}兆円）を超えると、マイナスが歳入を直接減少させます
         </div>
+        <div className="chart-subtitle" style={{ marginTop: 16 }}>日銀バランスシート（兆円）</div>
+        <ResponsiveContainer width="100%" height={280}>
+          <BarChart data={bojBSData}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+            <XAxis dataKey="year" tick={{ fontSize: 10 }} />
+            <YAxis tick={{ fontSize: 10 }} unit="兆円" />
+            <Tooltip content={<NoDataTooltip unit=" 兆円" />} />
+            <Bar dataKey="保有国債" fill="#3b82f6" opacity={0.7} />
+            <Bar dataKey="当座預金" fill="#f59e0b" opacity={0.7} />
+          </BarChart>
+        </ResponsiveContainer>
       </Collapsible>
 
       <Collapsible title="金利・成長率・リスクプレミアム">
-        <div className="chart-subtitle">平均クーポン（%）</div>
+        <div className="chart-subtitle">金利比較（%）</div>
         <ResponsiveContainer width="100%" height={280}>
           <BarChart data={rateData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis dataKey="year" tick={{ fontSize: 10 }} />
             <YAxis tick={{ fontSize: 10 }} unit="%" />
             <Tooltip content={<NoDataTooltip unit="%" />} />
-            <Bar dataKey="平均クーポン" fill="#ef4444" />
-          </BarChart>
-        </ResponsiveContainer>
-        <div className="chart-subtitle" style={{ marginTop: 16 }}>実効市場金利（%）</div>
-        <ResponsiveContainer width="100%" height={280}>
-          <BarChart data={rateData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-            <XAxis dataKey="year" tick={{ fontSize: 10 }} />
-            <YAxis tick={{ fontSize: 10 }} unit="%" />
-            <Tooltip content={<NoDataTooltip unit="%" />} />
+            <Legend />
             <Bar dataKey="実効市場金利" fill="#3b82f6" />
+            <Bar dataKey="平均クーポン" fill="#ef4444" />
+            <Bar dataKey="日銀保有利回り" fill="#f59e0b" />
+            <Bar dataKey="名目成長率" fill="#22c55e" />
           </BarChart>
         </ResponsiveContainer>
-        <div className="chart-subtitle" style={{ marginTop: 16 }}>名目成長率（%）</div>
+        <div className="chart-subtitle" style={{ marginTop: 16 }}>財政リスクプレミアム加算（%）</div>
         <ResponsiveContainer width="100%" height={280}>
           <BarChart data={rateData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis dataKey="year" tick={{ fontSize: 10 }} />
             <YAxis tick={{ fontSize: 10 }} unit="%" />
             <Tooltip content={<NoDataTooltip unit="%" />} />
-            <Bar dataKey="名目成長率" fill="#22c55e" />
+            <Bar dataKey="財政リスク加算" fill="#ef4444" opacity={0.7} />
           </BarChart>
         </ResponsiveContainer>
       </Collapsible>

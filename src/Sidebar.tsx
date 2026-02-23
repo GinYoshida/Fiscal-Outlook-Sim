@@ -136,8 +136,8 @@ export function Sidebar({ params, scenarioIndex, onScenarioChange, onParamChange
       <Slider label="実質成長率 (%)" value={p.realGrowth} min={-2} max={5} step={0.1}
         tooltip="物価変動を除いた実質GDPの成長率。インフレ率と合算して名目成長率となり、税収の伸びに直結します。"
         onChange={v => onParamChange('realGrowth', v)} />
-      <Slider label="リスクプレミアム (%)" value={p.riskPremium} min={0} max={3} step={0.1}
-        tooltip="国債の信用リスクに対する上乗せ金利。財政悪化や市場の不安が高まると上昇し、市場金利＝名目成長率＋リスクプレミアムとなります。"
+      <Slider label="ベースリスクプレミアム (%)" value={p.riskPremium} min={0} max={3} step={0.1}
+        tooltip="外生的な最低リスクプレミアム（グローバル金利環境）。これに加え、利払負担率が閾値を超えると財政リスクプレミアムが自動加算されます。"
         onChange={v => onParamChange('riskPremium', v)} />
 
       <h4>外部環境・家計</h4>
@@ -198,15 +198,32 @@ export function Sidebar({ params, scenarioIndex, onScenarioChange, onParamChange
         onChange={v => onParamChange('initAvgCoupon', v)} />
 
       <h4>日銀パラメータ</h4>
+      <NumberInput label="保有国債 (兆円)" value={p.initBojJGB} step={10}
+        tooltip="日銀が保有する国債の残高（約590兆円）。QT（量的引き締め）で毎年減少します。この残高×利回りが日銀の収入源です。"
+        onChange={v => onParamChange('initBojJGB', v)} />
       <NumberInput label="当座預金 (兆円)" value={p.bojCA} step={50}
-        tooltip="金融機関が日銀に預けている預金の残高。金利上昇時、この預金に付利するコストが日銀の負担になります。量的緩和で約550兆円まで膨張しています。"
+        tooltip="金融機関が日銀に預けている預金の残高（約550兆円）。QTで保有国債と連動して減少します。金利上昇時、この預金に付利するコストが日銀の負担になります。"
         onChange={v => onParamChange('bojCA', v)} />
       <Slider label="保有国債利回り (%)" value={p.bojYield} min={0} max={2} step={0.05}
-        tooltip="日銀が保有する国債の平均利回り。低金利時代に大量購入したため現在は非常に低い水準です。この利回りから得る利息が日銀の主な収入源です。"
+        tooltip="日銀保有国債の初期平均利回り。毎年1/9ずつ市場金利に追随します（9年借換ロジック）。金利上昇局面では徐々に収入が改善されます。"
         onChange={v => onParamChange('bojYield', v)} />
       <NumberInput label="日銀自己資本バッファ (兆円)" value={p.bojCapitalBuffer} step={1}
         tooltip="日銀の引当金・準備金（約12兆円）。逆ザヤの累積損失がこのバッファを超えると、マイナスの日銀純利益が統合政府の歳入を直接減少させます。"
         onChange={v => onParamChange('bojCapitalBuffer', v)} />
+      <NumberInput label="QT縮小額 (兆円/年)" value={p.bojQTRate} step={5}
+        tooltip="日銀の年間バランスシート縮小額。保有国債と当座預金が毎年この金額ずつ減少します。2024年から段階的に縮小開始しています。"
+        onChange={v => onParamChange('bojQTRate', v)} />
+      <NumberInput label="当座預金下限 (兆円)" value={p.bojCAFloor} step={10}
+        tooltip="QTによる当座預金の縮小下限。金融システム安定のために最低限必要な水準です。"
+        onChange={v => onParamChange('bojCAFloor', v)} />
+
+      <h4>金利の内生化</h4>
+      <Slider label="財政リスク感応度" value={p.fiscalRiskSensitivity} min={0} max={0.5} step={0.01}
+        tooltip="利払負担率が閾値を超えた場合のリスクプレミアム加算の感応度。値×（利払負担率−閾値）%が市場金利に上乗せされます。例：感応度0.1、利払負担率25%（閾値20%超過5pt）→+0.5%加算。"
+        onChange={v => onParamChange('fiscalRiskSensitivity', v)} />
+      <Slider label="利払負担率閾値 (%)" value={p.interestBurdenThreshold} min={10} max={40} step={1}
+        tooltip="利払負担率がこの水準を超えると、超過分に比例して財政リスクプレミアムが市場金利に自動加算されます。市場が財政リスクを意識し始める閾値です。"
+        onChange={v => onParamChange('interestBurdenThreshold', v)} />
 
       <h4>貿易・為替初期値</h4>
       <NumberInput label="為替レート (円/ドル)" value={p.initExchangeRate} step={5}

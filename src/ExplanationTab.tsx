@@ -55,7 +55,7 @@ export function ExplanationTab({ params, simData, actualData, dataSources }: Pro
   const marketRate = nominalG + p.riskPremium
   const policyRate = Math.max(marketRate / 100 - p.policyRateSpread / 100, 0) * 100
 
-  const bojRevVal = p.initDebt * (p.bojYield / 100)
+  const bojRevVal = p.initBojJGB * (p.bojYield / 100)
   const bojCostVal = p.bojCA * (policyRate / 100)
   const bojNetIncome = bojRevVal - bojCostVal
   const bojProfit = bojNetIncome
@@ -83,7 +83,7 @@ export function ExplanationTab({ params, simData, actualData, dataSources }: Pro
     const rates = [0.0, 0.5, 1.0, 1.5, 2.0, 3.0, 4.0, 5.0]
     return rates.map(rate => {
       const pr = Math.max(rate / 100 - p.policyRateSpread / 100, 0)
-      const bojP = p.initDebt * (p.bojYield / 100) - p.bojCA * pr
+      const bojP = p.initBojJGB * (p.bojYield / 100) - p.bojCA * pr
       const intC = p.initDebt * rate / 100
       return {
         市場金利: rate,
@@ -123,8 +123,8 @@ export function ExplanationTab({ params, simData, actualData, dataSources }: Pro
             <div className="boj-calc">
               <p><strong>利息収入（国債保有から）</strong></p>
               <div className="boj-calc-row">
-                <span>保有国債（＝債務残高）</span>
-                <span>{p.initDebt.toFixed(0)} 兆円</span>
+                <span>保有国債</span>
+                <span>{p.initBojJGB.toFixed(0)} 兆円</span>
               </div>
               <div className="boj-calc-row">
                 <span>保有国債利回り</span>
@@ -248,7 +248,9 @@ export function ExplanationTab({ params, simData, actualData, dataSources }: Pro
 │   └── その他税 = 前年その他税 × (1 + 名目成長率 × 0.8)
 │
 ├── 日銀納付金（統合政府への反映額）
-│   ├── 日銀純利益 = 国債利息収入 − 当座預金付利コスト
+│   ├── 日銀純利益 = 保有国債×保有利回り − 当座預金×政策金利
+│   ├── 保有利回り = (前年×8/9) + (市場金利×1/9)  ← 9年借換ロジック
+│   ├── QT: 保有国債・当座預金が毎年QT縮小額ずつ減少（下限あり）
 │   ├── 累積損失 > 自己資本バッファ → マイナスが歳入を直接減少
 │   └── 累積損失 ≤ バッファ → max(純利益, 0)で損失を吸収
 │
@@ -273,8 +275,10 @@ export function ExplanationTab({ params, simData, actualData, dataSources }: Pro
           <li><strong>その他税</strong>：相続税・酒税・たばこ税・関税等。名目GDPに緩やかに連動（弾性値0.8）。</li>
         </ul>
         <hr style={{ margin: '16px 0', borderColor: '#e2e8f0' }} />
-        <p><strong>日銀納付金（逆ザヤ対応）</strong></p>
-        <p>日銀純利益 = 保有国債 × 利回り − 当座預金 × 政策金利</p>
+        <p><strong>日銀納付金（QT・利回り追随対応）</strong></p>
+        <p>日銀純利益 = 保有国債 × 保有利回り − 当座預金 × 政策金利</p>
+        <p><strong>保有利回りの追随</strong>：日銀保有国債の利回りは政府債務と同様に9年借換ロジックで市場金利に追随します（毎年1/9ずつ新金利に置換）。金利上昇局面では徐々に収入が改善されます。</p>
+        <p><strong>量的引き締め（QT）</strong>：保有国債と当座預金が毎年{p.bojQTRate}兆円ずつ減少します（当座預金下限: {p.bojCAFloor}兆円）。QTにより逆ザヤのスケールが縮小し、日銀損失リスクが軽減されます。</p>
         <p>純利益がマイナス（逆ザヤ）の場合、損失は累積されます。累積損失が自己資本バッファ（引当金・準備金 約{p.bojCapitalBuffer}兆円）を超えると、マイナスの納付金が統合政府の歳入を直接減少させます。バッファ内であれば損失は吸収され、納付金はゼロで下げ止まります。</p>
         <hr style={{ margin: '16px 0', borderColor: '#e2e8f0' }} />
         <p><strong>その他収入：基本その他収入 + 外貨準備評価益×0.1</strong></p>
@@ -297,10 +301,19 @@ export function ExplanationTab({ params, simData, actualData, dataSources }: Pro
         <p>国が発行している国債の元本（債務残高）に対して、加重平均の利率（平均クーポン）を掛けた金額が年間の利息支払い額です。</p>
       </TreeSection>
 
-      <TreeSection title="C：収支・残高" tree={`├── 財政収支 = 歳入合計 − 支出合計
+      <TreeSection title="C：収支・残高・内生金利" tree={`├── 実効市場金利 = 名目成長率 + ベースリスクP + 財政リスクP + 通貨リスクP
+│   ├── 財政リスクP = max(0, (利払負担率 − 閾値) × 感応度 / 100)
+│   │   └── 前年の利払負担率を使用（循環依存回避）
+│   └── 通貨リスクP = 経常赤字・NFA悪化時に自動加算
+├── 平均クーポン = (前年×8/9) + (市場金利×1/9) ← 9年借換ロジック
+├── 利払い費 = 債務残高 × 平均クーポン
+├── 財政収支 = 歳入合計 − 支出合計
 ├── 債務残高 = 前年債務残高 + (支出合計 − 歳入合計)
 ├── 国債発行額 = max(支出合計 − 歳入合計, 0)
 └── 利払負担率 = (利払い費 ÷ 税収合計) × 100`}>
+        <p><strong>内生的金利メカニズム</strong></p>
+        <p>市場金利は外生パラメータ（ベースリスクプレミアム）に加え、前年の財政状態に応じて自動加算される「財政リスクプレミアム」を含みます。利払負担率が閾値（{p.interestBurdenThreshold}%）を超えると、超過分に感応度（{p.fiscalRiskSensitivity}）を乗じたプレミアムが金利に上乗せされます。前年の値を使用することで循環依存を回避しています。</p>
+        <hr style={{ margin: '16px 0', borderColor: '#e2e8f0' }} />
         <p><strong>利払負担率：(利払い費 / 税収) × 100</strong></p>
         <p>税収に対する利払い費の比率を見ることで、「稼ぎのうちどれだけが借金の利息に消えるか」を示します。30%を警戒ラインとしているのは、過去に財政危機に陥った国々（ギリシャ、イタリア等）がこの水準前後で市場の信認を失った事例があるためです。</p>
         <hr style={{ margin: '16px 0', borderColor: '#e2e8f0' }} />

@@ -49,6 +49,10 @@ export interface SimResult {
   nfa: number;
   dynamicRiskPremium: number;
   effectiveMarketRate: number;
+  bojJGB: number;
+  bojCAActual: number;
+  bojYieldActual: number;
+  fiscalRiskPremium: number;
 }
 
 function giniToIncomeRatio(gini: number): number {
@@ -65,7 +69,6 @@ export function runSimulation(p: SimParams): SimResult[] {
   const B = p.inflationRate / 100;
   const C = p.realGrowth / 100;
   const D = B + C;
-  const baseMarketRate = D + p.riskPremium / 100;
   const changeYear = p.taxRateChangeYear !== "なし" ? parseInt(p.taxRateChangeYear) : null;
 
   const yenDep = p.yenDepreciation / 100;
@@ -74,24 +77,40 @@ export function runSimulation(p: SimParams): SimResult[] {
 
   const results: SimResult[] = [];
   let bojCumulativeLoss = 0;
+  let bojJGB = p.initBojJGB;
+  let bojCAActual = p.bojCA;
+  let bojYieldActual = p.bojYield / 100;
 
   for (let i = 0; i < 30; i++) {
     const year = 2026 + i;
 
     const prevNFA = i === 0 ? p.initNFA : results[i - 1].nfa;
     const prevCurrentAccount = i === 0 ? 0 : results[i - 1].currentAccount;
+    const prevInterestBurden = i === 0 ? 12.8 : results[i - 1].interestBurden;
 
     let dynamicRiskPremium = 0;
     if (i > 0 && prevCurrentAccount < 0 && prevNFA < p.nfaThreshold) {
       dynamicRiskPremium = p.currencyRiskPremium / 100;
     }
 
-    const E = baseMarketRate + dynamicRiskPremium;
+    let fiscalRiskPremium = 0;
+    if (prevInterestBurden > p.interestBurdenThreshold) {
+      fiscalRiskPremium = (prevInterestBurden - p.interestBurdenThreshold) * p.fiscalRiskSensitivity / 100;
+    }
+
+    const baseMarketRate = D + p.riskPremium / 100;
+    const E = baseMarketRate + dynamicRiskPremium + fiscalRiskPremium;
+
+    if (i > 0) {
+      bojCAActual = Math.max(bojCAActual - p.bojQTRate, p.bojCAFloor);
+      bojJGB = Math.max(bojJGB - p.bojQTRate, p.bojCAFloor);
+      bojYieldActual = (bojYieldActual * 8 / 9) + (E * 1 / 9);
+    }
 
     if (i === 0) {
       const policyRate = Math.max(E - p.policyRateSpread / 100, 0);
-      const bojRev = p.initDebt * (p.bojYield / 100);
-      const bojCost = p.bojCA * policyRate;
+      const bojRev = bojJGB * bojYieldActual;
+      const bojCost = bojCAActual * policyRate;
       const bojNetIncome = bojRev - bojCost;
       if (bojNetIncome < 0) {
         bojCumulativeLoss += Math.abs(bojNetIncome);
@@ -191,6 +210,8 @@ export function runSimulation(p: SimParams): SimResult[] {
         currentAccount, nfa,
         dynamicRiskPremium: dynamicRiskPremium * 100,
         effectiveMarketRate: E * 100,
+        bojJGB, bojCAActual, bojYieldActual: bojYieldActual * 100,
+        fiscalRiskPremium: fiscalRiskPremium * 100,
       });
     } else {
       const prev = results[i - 1];
@@ -236,8 +257,8 @@ export function runSimulation(p: SimParams): SimResult[] {
       const tax = taxConsumption + taxIncome + taxCorporate + taxOther;
 
       const policyRate = Math.max(E - p.policyRateSpread / 100, 0);
-      const bojRev = prev.debt * (p.bojYield / 100);
-      const bojCost = p.bojCA * policyRate;
+      const bojRev = bojJGB * bojYieldActual;
+      const bojCost = bojCAActual * policyRate;
       const bojNetIncome = bojRev - bojCost;
       if (bojNetIncome < 0) {
         bojCumulativeLoss += Math.abs(bojNetIncome);
@@ -299,6 +320,8 @@ export function runSimulation(p: SimParams): SimResult[] {
         currentAccount, nfa,
         dynamicRiskPremium: dynamicRiskPremium * 100,
         effectiveMarketRate: E * 100,
+        bojJGB, bojCAActual, bojYieldActual: bojYieldActual * 100,
+        fiscalRiskPremium: fiscalRiskPremium * 100,
       });
     }
   }
