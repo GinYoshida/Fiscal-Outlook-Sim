@@ -1148,6 +1148,12 @@ body {
   padding: 12px 0 6px 0;
   margin-top: 8px;
   border-top: 2px solid var(--gray-200);
+  cursor: pointer;
+  user-select: none;
+}
+
+.sidebar-divider-label:hover {
+  color: var(--blue);
 }
 
 .sidebar-section {

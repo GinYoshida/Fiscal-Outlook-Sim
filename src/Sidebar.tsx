@@ -113,6 +113,10 @@ export function Sidebar({ params, scenarioIndex, onScenarioChange, onParamChange
     return !matchesSearch(label, tooltip)
   }, [searchQuery, matchesSearch])
 
+  const [sectionParamsOpen, setSectionParamsOpen] = useState(true)
+  const [sectionInitOpen, setSectionInitOpen] = useState(true)
+  const [sectionOptOpen, setSectionOptOpen] = useState(true)
+
   const [selectedOptKeys, setSelectedOptKeys] = useState<Set<string>>(
     () => new Set(OPTIMIZABLE_PARAMS.slice(0, 5).map(p => p.key))
   )
@@ -200,9 +204,11 @@ export function Sidebar({ params, scenarioIndex, onScenarioChange, onParamChange
         )}
       </div>
 
-      <div className="sidebar-divider-label">▼ パラメータ（調整値）</div>
+      <div className="sidebar-divider-label" onClick={() => setSectionParamsOpen(v => !v)}>
+        {sectionParamsOpen ? '▼' : '▶'} パラメータ（調整値）
+      </div>
 
-      <div className="child-age-section">
+      {sectionParamsOpen && <><div className="child-age-section">
         <h4>👶 子供の年齢トラッカー</h4>
         <Slider label="2026年時点の年齢" value={childAge2026} min={0} max={20} step={1}
           tooltip="お子さんの2026年時点の年齢を入力すると、グラフ上で各年度にお子さんが何歳かを確認できます。"
@@ -288,11 +294,13 @@ export function Sidebar({ params, scenarioIndex, onScenarioChange, onParamChange
         <Slider label="防衛費 増加率 (%/年)" value={p.defenseGrowth} min={0} max={5} step={0.5}
           tooltip="防衛費の年間増加率。安全保障環境の変化に応じた防衛力強化の度合いです。"
           onChange={v => onParamChange('defenseGrowth', v)} searchHidden={sh("防衛費 増加率 (%/年)", "防衛費の年間増加率")} />
-      </SidebarSection>
+      </SidebarSection></>}
 
-      <div className="sidebar-divider-label">▼ 初期値（2026年）</div>
+      <div className="sidebar-divider-label" onClick={() => setSectionInitOpen(v => !v)}>
+        {sectionInitOpen ? '▼' : '▶'} 初期値（2026年）
+      </div>
 
-      <SidebarSection title="財政初期値">
+      {sectionInitOpen && <><SidebarSection title="財政初期値">
         <NumberInput label="債務残高 (兆円)" value={p.initDebt} step={50}
           tooltip="2026年度のスタート時点での国の借金総額。2024年度末で約1,100兆円です。"
           onChange={v => onParamChange('initDebt', v)} searchHidden={sh("債務残高 (兆円)", "2026年度のスタート時点での国の借金総額")} />
@@ -396,11 +404,13 @@ export function Sidebar({ params, scenarioIndex, onScenarioChange, onParamChange
         <NumberInput label="ジニ係数" value={p.initGini} step={0.001}
           tooltip="所得格差を示す指標（0=完全平等、1=完全不平等）。日本は約0.334（2021年）。"
           onChange={v => onParamChange('initGini', v)} searchHidden={sh("ジニ係数", "所得格差を示す指標")} />
-      </SidebarSection>
+      </SidebarSection></>}
 
-      <div className="sidebar-divider-label">▼ 最適化</div>
+      <div className="sidebar-divider-label" onClick={() => setSectionOptOpen(v => !v)}>
+        {sectionOptOpen ? '▼' : '▶'} 最適化
+      </div>
 
-      <div className="constraints-section">
+      {sectionOptOpen && <><div className="constraints-section">
         <h3>制約条件（レッドライン）</h3>
         <p className="optimizer-desc">
           最適化探索時に「起きてはいけない状態」を制約条件として設定します。
@@ -521,7 +531,7 @@ export function Sidebar({ params, scenarioIndex, onScenarioChange, onParamChange
             )}
           </div>
         )}
-      </div>
+      </div></>}
     </aside>
   )
 }
