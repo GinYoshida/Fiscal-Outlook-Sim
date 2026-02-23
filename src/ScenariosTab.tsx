@@ -162,6 +162,109 @@ export function ScenariosTab() {
         <p>10のシナリオを横並びで比較し、それぞれの特徴・リスク・改善策を一覧できます</p>
       </div>
 
+      <div className="scenarios-summary-table">
+        <h3>シナリオ別 2055年指標サマリー</h3>
+        <div className="table-scroll">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>シナリオ</th>
+                <th>評価</th>
+                <th>債務残高</th>
+                <th>利払負担率</th>
+                <th>貧困率</th>
+                <th>ジニ係数</th>
+                <th>対外純資産</th>
+                <th>平均実質賃金</th>
+              </tr>
+            </thead>
+            <tbody>
+              {summaries.map((s, i) => (
+                <tr key={i} style={{ cursor: 'pointer', background: expandedIndex === i ? '#f0f9ff' : undefined }} onClick={() => setExpandedIndex(expandedIndex === i ? null : i)}>
+                  <td style={{ fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap' }}>{s.name}</td>
+                  <td>
+                    <span className="rating-badge" style={{ background: getRatingColor(s.warningCount), color: '#fff' }}>
+                      {getRatingLabel(s.warningCount)}
+                    </span>
+                  </td>
+                  <td style={{ color: s.debt2055 > 2000 ? '#ef4444' : undefined }}>{Math.round(s.debt2055).toLocaleString()}兆</td>
+                  <td style={{ color: s.interestBurden2055 > 30 ? '#ef4444' : undefined }}>{s.interestBurden2055.toFixed(1)}%</td>
+                  <td style={{ color: s.povertyRate2055 > 20 ? '#ef4444' : undefined }}>{s.povertyRate2055.toFixed(1)}%</td>
+                  <td style={{ color: s.gini2055 > 0.4 ? '#ef4444' : undefined }}>{s.gini2055.toFixed(3)}</td>
+                  <td style={{ color: s.nfa2055 < 200 ? '#ef4444' : undefined }}>{Math.round(s.nfa2055).toLocaleString()}兆</td>
+                  <td style={{ color: s.realWageAvg < 0 ? '#ef4444' : '#22c55e' }}>{s.realWageAvg >= 0 ? '+' : ''}{s.realWageAvg.toFixed(2)}%</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="scenarios-cards">
+        <h3>各シナリオ詳細分析</h3>
+        {summaries.map((s, i) => (
+          <div key={i} className={`scenario-card ${expandedIndex === i ? 'expanded' : ''}`}>
+            <div className="scenario-card-header" onClick={() => setExpandedIndex(expandedIndex === i ? null : i)}>
+              <div className="scenario-card-title-row">
+                <span className="scenario-card-number" style={{ background: SCENARIO_COLORS[i] }}>{i + 1}</span>
+                <div>
+                  <div className="scenario-card-name">{s.name}</div>
+                  <div className="scenario-card-label">{s.label}</div>
+                </div>
+              </div>
+              <div className="scenario-card-badges">
+                <span className="rating-badge" style={{ background: getRatingColor(s.warningCount), color: '#fff' }}>
+                  {getRatingLabel(s.warningCount)}
+                </span>
+                <span className="scenario-card-expand">{expandedIndex === i ? '▲' : '▼'}</span>
+              </div>
+            </div>
+            {expandedIndex === i && (
+              <div className="scenario-card-body">
+                <div className="scenario-card-metrics">
+                  <div className="scenario-metric">
+                    <span className="scenario-metric-label">債務残高</span>
+                    <span className="scenario-metric-value">{Math.round(s.debt2055).toLocaleString()}兆円</span>
+                  </div>
+                  <div className="scenario-metric">
+                    <span className="scenario-metric-label">利払負担率</span>
+                    <span className="scenario-metric-value" style={{ color: s.interestBurden2055 > 30 ? '#ef4444' : '#22c55e' }}>{s.interestBurden2055.toFixed(1)}%</span>
+                  </div>
+                  <div className="scenario-metric">
+                    <span className="scenario-metric-label">貧困率</span>
+                    <span className="scenario-metric-value" style={{ color: s.povertyRate2055 > 20 ? '#ef4444' : '#f59e0b' }}>{s.povertyRate2055.toFixed(1)}%</span>
+                  </div>
+                  <div className="scenario-metric">
+                    <span className="scenario-metric-label">対外純資産</span>
+                    <span className="scenario-metric-value" style={{ color: s.nfa2055 < 200 ? '#ef4444' : '#22c55e' }}>{Math.round(s.nfa2055).toLocaleString()}兆円</span>
+                  </div>
+                </div>
+                <div className="scenario-analysis-grid">
+                  <div className="scenario-analysis-section merits">
+                    <div className="scenario-analysis-section-title">✅ メリット</div>
+                    <ul>
+                      {s.merits.map((m, j) => <li key={j}>{m}</li>)}
+                    </ul>
+                  </div>
+                  <div className="scenario-analysis-section demerits">
+                    <div className="scenario-analysis-section-title">⚠️ デメリット</div>
+                    <ul>
+                      {s.demerits.map((d, j) => <li key={j}>{d}</li>)}
+                    </ul>
+                  </div>
+                </div>
+                <div className="scenario-analysis-section policies">
+                  <div className="scenario-analysis-section-title">💡 改善に向けた施策</div>
+                  <ol>
+                    {s.policies.map((p, j) => <li key={j}>{p}</li>)}
+                  </ol>
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
       <div className="scenarios-comparison-chart">
         <h3>2055年時点：利払負担率</h3>
         <ResponsiveContainer width="100%" height={220}>
@@ -288,108 +391,6 @@ export function ScenariosTab() {
         </ResponsiveContainer>
       </div>
 
-      <div className="scenarios-summary-table">
-        <h3>シナリオ別 2055年指標サマリー</h3>
-        <div className="table-scroll">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>シナリオ</th>
-                <th>評価</th>
-                <th>債務残高</th>
-                <th>利払負担率</th>
-                <th>貧困率</th>
-                <th>ジニ係数</th>
-                <th>対外純資産</th>
-                <th>平均実質賃金</th>
-              </tr>
-            </thead>
-            <tbody>
-              {summaries.map((s, i) => (
-                <tr key={i} style={{ cursor: 'pointer', background: expandedIndex === i ? '#f0f9ff' : undefined }} onClick={() => setExpandedIndex(expandedIndex === i ? null : i)}>
-                  <td style={{ fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap' }}>{s.name}</td>
-                  <td>
-                    <span className="rating-badge" style={{ background: getRatingColor(s.warningCount), color: '#fff' }}>
-                      {getRatingLabel(s.warningCount)}
-                    </span>
-                  </td>
-                  <td style={{ color: s.debt2055 > 2000 ? '#ef4444' : undefined }}>{Math.round(s.debt2055).toLocaleString()}兆</td>
-                  <td style={{ color: s.interestBurden2055 > 30 ? '#ef4444' : undefined }}>{s.interestBurden2055.toFixed(1)}%</td>
-                  <td style={{ color: s.povertyRate2055 > 20 ? '#ef4444' : undefined }}>{s.povertyRate2055.toFixed(1)}%</td>
-                  <td style={{ color: s.gini2055 > 0.4 ? '#ef4444' : undefined }}>{s.gini2055.toFixed(3)}</td>
-                  <td style={{ color: s.nfa2055 < 200 ? '#ef4444' : undefined }}>{Math.round(s.nfa2055).toLocaleString()}兆</td>
-                  <td style={{ color: s.realWageAvg < 0 ? '#ef4444' : '#22c55e' }}>{s.realWageAvg >= 0 ? '+' : ''}{s.realWageAvg.toFixed(2)}%</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div className="scenarios-cards">
-        <h3>各シナリオ詳細分析</h3>
-        {summaries.map((s, i) => (
-          <div key={i} className={`scenario-card ${expandedIndex === i ? 'expanded' : ''}`}>
-            <div className="scenario-card-header" onClick={() => setExpandedIndex(expandedIndex === i ? null : i)}>
-              <div className="scenario-card-title-row">
-                <span className="scenario-card-number" style={{ background: SCENARIO_COLORS[i] }}>{i + 1}</span>
-                <div>
-                  <div className="scenario-card-name">{s.name}</div>
-                  <div className="scenario-card-label">{s.label}</div>
-                </div>
-              </div>
-              <div className="scenario-card-badges">
-                <span className="rating-badge" style={{ background: getRatingColor(s.warningCount), color: '#fff' }}>
-                  {getRatingLabel(s.warningCount)}
-                </span>
-                <span className="scenario-card-expand">{expandedIndex === i ? '▲' : '▼'}</span>
-              </div>
-            </div>
-            {expandedIndex === i && (
-              <div className="scenario-card-body">
-                <div className="scenario-card-metrics">
-                  <div className="scenario-metric">
-                    <span className="scenario-metric-label">債務残高</span>
-                    <span className="scenario-metric-value">{Math.round(s.debt2055).toLocaleString()}兆円</span>
-                  </div>
-                  <div className="scenario-metric">
-                    <span className="scenario-metric-label">利払負担率</span>
-                    <span className="scenario-metric-value" style={{ color: s.interestBurden2055 > 30 ? '#ef4444' : '#22c55e' }}>{s.interestBurden2055.toFixed(1)}%</span>
-                  </div>
-                  <div className="scenario-metric">
-                    <span className="scenario-metric-label">貧困率</span>
-                    <span className="scenario-metric-value" style={{ color: s.povertyRate2055 > 20 ? '#ef4444' : '#f59e0b' }}>{s.povertyRate2055.toFixed(1)}%</span>
-                  </div>
-                  <div className="scenario-metric">
-                    <span className="scenario-metric-label">対外純資産</span>
-                    <span className="scenario-metric-value" style={{ color: s.nfa2055 < 200 ? '#ef4444' : '#22c55e' }}>{Math.round(s.nfa2055).toLocaleString()}兆円</span>
-                  </div>
-                </div>
-                <div className="scenario-analysis-grid">
-                  <div className="scenario-analysis-section merits">
-                    <div className="scenario-analysis-section-title">✅ メリット</div>
-                    <ul>
-                      {s.merits.map((m, j) => <li key={j}>{m}</li>)}
-                    </ul>
-                  </div>
-                  <div className="scenario-analysis-section demerits">
-                    <div className="scenario-analysis-section-title">⚠️ デメリット</div>
-                    <ul>
-                      {s.demerits.map((d, j) => <li key={j}>{d}</li>)}
-                    </ul>
-                  </div>
-                </div>
-                <div className="scenario-analysis-section policies">
-                  <div className="scenario-analysis-section-title">💡 改善に向けた施策</div>
-                  <ol>
-                    {s.policies.map((p, j) => <li key={j}>{p}</li>)}
-                  </ol>
-                </div>
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
     </div>
   )
 }
