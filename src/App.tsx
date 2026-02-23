@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react'
-import { SCENARIOS, ACTUAL_DATA, DATA_SOURCES, type SimParams } from './data'
+import { SCENARIOS, ACTUAL_DATA, DATA_SOURCES, DEFAULT_CONSTRAINTS, type SimParams, type Constraints } from './data'
 import { runSimulation } from './simulation'
 import { Sidebar } from './Sidebar'
 import { SimulationTab } from './SimulationTab'
@@ -10,6 +10,7 @@ function App() {
   const [scenarioIndex, setScenarioIndex] = useState(0)
   const [activeTab, setActiveTab] = useState(0)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [constraints, setConstraints] = useState<Constraints>({ ...DEFAULT_CONSTRAINTS })
 
   const simData = useMemo(() => runSimulation(params), [params])
 
@@ -42,6 +43,8 @@ function App() {
         onParamsReplace={(newParams: SimParams) => setParams(newParams)}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
+        constraints={constraints}
+        onConstraintsChange={setConstraints}
       />
       <main className={`main-content ${sidebarOpen ? 'sidebar-is-open' : ''}`}>
         <h1 className="app-title">🏛️ 統合政府 30年財政シミュレーター</h1>

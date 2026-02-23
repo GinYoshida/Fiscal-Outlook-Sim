@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useMemo } from 'react'
-import { SCENARIOS, type SimParams } from './data'
+import { SCENARIOS, type SimParams, type Constraints, type Constraint } from './data'
 import { OPTIMIZABLE_PARAMS, runOptimizer, countWarnings, type OptimizerProgress } from './optimizer'
 
 interface SidebarProps {
@@ -9,6 +9,8 @@ interface SidebarProps {
   onParamChange: <K extends keyof SimParams>(key: K, value: SimParams[K]) => void;
   onParamsReplace: (params: SimParams) => void;
   isOpen: boolean;
+  constraints: Constraints;
+  onConstraintsChange: (c: Constraints) => void;
 }
 
 function Slider({ label, value, min, max, step, tooltip, onChange }: {
@@ -64,7 +66,7 @@ function NumberInput({ label, value, step, tooltip, onChange }: {
   )
 }
 
-export function Sidebar({ params, scenarioIndex, onScenarioChange, onParamChange, onParamsReplace, isOpen, onClose }: SidebarProps & { onClose?: () => void }) {
+export function Sidebar({ params, scenarioIndex, onScenarioChange, onParamChange, onParamsReplace, isOpen, onClose, constraints, onConstraintsChange }: SidebarProps & { onClose?: () => void }) {
   const p = params;
   const taxTotal = p.initTaxConsumption + p.initTaxIncome + p.initTaxCorporate + p.initTaxOther;
 
@@ -85,6 +87,16 @@ export function Sidebar({ params, scenarioIndex, onScenarioChange, onParamChange
     })
   }, [])
 
+  const updateConstraint = useCallback((key: keyof Constraints, field: keyof Constraint, value: boolean | number) => {
+    onConstraintsChange({
+      ...constraints,
+      [key]: { ...constraints[key], [field]: value },
+    })
+  }, [constraints, onConstraintsChange])
+
+  const hasActiveConstraints = useMemo(() =>
+    Object.values(constraints).some(c => c.enabled), [constraints])
+
   const startOptimizer = useCallback(() => {
     if (isOptimizing) {
       cancelRef.current?.()
@@ -95,15 +107,16 @@ export function Sidebar({ params, scenarioIndex, onScenarioChange, onParamChange
     if (keys.length === 0) return
     setIsOptimizing(true)
     setOptimizerProgress(null)
-    setBaselineWarnings(countWarnings(params))
+    const activeConstraints = hasActiveConstraints ? constraints : undefined
+    setBaselineWarnings(countWarnings(params, activeConstraints))
     const { cancel } = runOptimizer(params, keys, (progress) => {
       setOptimizerProgress(progress)
       if (progress.done) {
         setIsOptimizing(false)
       }
-    })
+    }, activeConstraints)
     cancelRef.current = cancel
-  }, [params, selectedOptKeys, isOptimizing])
+  }, [params, selectedOptKeys, isOptimizing, constraints, hasActiveConstraints])
 
   const applyOptResult = useCallback(() => {
     if (optimizerProgress?.bestParams) {
@@ -111,7 +124,8 @@ export function Sidebar({ params, scenarioIndex, onScenarioChange, onParamChange
     }
   }, [optimizerProgress, onParamsReplace])
 
-  const currentWarnings = useMemo(() => countWarnings(params), [params])
+  const activeConstraints = useMemo(() => hasActiveConstraints ? constraints : undefined, [constraints, hasActiveConstraints])
+  const currentWarnings = useMemo(() => countWarnings(params, activeConstraints), [params, activeConstraints])
 
   return (
     <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
@@ -289,6 +303,50 @@ export function Sidebar({ params, scenarioIndex, onScenarioChange, onParamChange
       <Slider label="政策金利スプレッド (%)" value={p.policyRateSpread} min={0} max={3} step={0.1}
         tooltip="市場金利と日銀の政策金利の差。政策金利＝市場金利−スプレッド（下限0%）。通常1%程度で、日銀は市場金利より低い政策金利を維持します。"
         onChange={v => onParamChange('policyRateSpread', v)} />
+
+      <div className="constraints-section">
+        <h3>制約条件（レッドライン）</h3>
+        <p className="optimizer-desc">
+          最適化探索時に「起きてはいけない状態」を制約条件として設定します。
+        </p>
+        <label className="constraint-row">
+          <input type="checkbox" checked={constraints.povertyRate.enabled}
+            onChange={e => updateConstraint('povertyRate', 'enabled', e.target.checked)} />
+          <span>貧困率 ≤</span>
+          <input type="number" className="constraint-threshold" value={constraints.povertyRate.threshold}
+            step={1} min={10} max={40}
+            onChange={e => updateConstraint('povertyRate', 'threshold', parseFloat(e.target.value) || 20)} />
+          <span>%</span>
+        </label>
+        <label className="constraint-row">
+          <input type="checkbox" checked={constraints.giniIndex.enabled}
+            onChange={e => updateConstraint('giniIndex', 'enabled', e.target.checked)} />
+          <span>ジニ係数 ≤</span>
+          <input type="number" className="constraint-threshold" value={constraints.giniIndex.threshold}
+            step={0.01} min={0.3} max={0.6}
+            onChange={e => updateConstraint('giniIndex', 'threshold', parseFloat(e.target.value) || 0.45)} />
+        </label>
+        <label className="constraint-row">
+          <input type="checkbox" checked={constraints.interestBurden.enabled}
+            onChange={e => updateConstraint('interestBurden', 'enabled', e.target.checked)} />
+          <span>利払負担率 ≤</span>
+          <input type="number" className="constraint-threshold" value={constraints.interestBurden.threshold}
+            step={1} min={10} max={60}
+            onChange={e => updateConstraint('interestBurden', 'threshold', parseFloat(e.target.value) || 30)} />
+          <span>%</span>
+        </label>
+        <label className="constraint-row">
+          <input type="checkbox" checked={constraints.realPolicyExpIndex.enabled}
+            onChange={e => updateConstraint('realPolicyExpIndex', 'enabled', e.target.checked)} />
+          <span>実質政策経費指数 ≥</span>
+          <input type="number" className="constraint-threshold" value={constraints.realPolicyExpIndex.threshold}
+            step={5} min={30} max={100}
+            onChange={e => updateConstraint('realPolicyExpIndex', 'threshold', parseFloat(e.target.value) || 70)} />
+        </label>
+        <p className="constraint-note">
+          実質政策経費指数：初年度=100。インフレ調整後の政策的経費（利払除く）が初年度から何%の水準か
+        </p>
+      </div>
 
       <div className="optimizer-section">
         <h3>警告ゼロ探索</h3>

@@ -77,6 +77,25 @@ export interface SimParams {
   defenseGrowth: number;
 }
 
+export interface Constraint {
+  enabled: boolean;
+  threshold: number;
+}
+
+export interface Constraints {
+  povertyRate: Constraint;
+  giniIndex: Constraint;
+  interestBurden: Constraint;
+  realPolicyExpIndex: Constraint;
+}
+
+export const DEFAULT_CONSTRAINTS: Constraints = {
+  povertyRate: { enabled: true, threshold: 20 },
+  giniIndex: { enabled: true, threshold: 0.45 },
+  interestBurden: { enabled: true, threshold: 30 },
+  realPolicyExpIndex: { enabled: true, threshold: 70 },
+};
+
 export interface Scenario {
   name: string;
   label: string;

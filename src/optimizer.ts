@@ -1,5 +1,5 @@
-import type { SimParams } from './data'
-import { runSimulation } from './simulation'
+import type { SimParams, Constraints } from './data'
+import { runSimulation, type SimResult } from './simulation'
 import { computeWarnings } from './warnings'
 
 export interface OptimizableParam {
@@ -23,9 +23,24 @@ export const OPTIMIZABLE_PARAMS: OptimizableParam[] = [
   { key: 'fiscalRiskSensitivity', label: '財政リスク感応度', min: 0, max: 0.5, step: 0.01 },
 ]
 
-export function countWarnings(params: SimParams): number {
+export function computeConstraintViolations(simData: SimResult[], constraints: Constraints): number {
+  let violations = 0
+  for (const d of simData) {
+    if (constraints.povertyRate.enabled && d.povertyRate > constraints.povertyRate.threshold) violations++
+    if (constraints.giniIndex.enabled && d.giniIndex > constraints.giniIndex.threshold) violations++
+    if (constraints.interestBurden.enabled && d.interestBurden > constraints.interestBurden.threshold) violations++
+    if (constraints.realPolicyExpIndex.enabled && d.realPolicyExpIndex < constraints.realPolicyExpIndex.threshold) violations++
+  }
+  return violations
+}
+
+export function countWarnings(params: SimParams, constraints?: Constraints): number {
   const simData = runSimulation(params)
-  return computeWarnings(simData, params).length
+  const warnings = computeWarnings(simData, params).length
+  if (constraints) {
+    return warnings + computeConstraintViolations(simData, constraints)
+  }
+  return warnings
 }
 
 export interface OptimizerProgress {
@@ -41,6 +56,7 @@ export function runOptimizer(
   baseParams: SimParams,
   selectedKeys: (keyof SimParams)[],
   onProgress: (progress: OptimizerProgress) => void,
+  constraints?: Constraints,
 ): { cancel: () => void } {
   let cancelled = false
 
@@ -48,8 +64,8 @@ export function runOptimizer(
   if (paramDefs.length === 0) {
     onProgress({
       iteration: 0, maxIterations: 0,
-      currentWarnings: countWarnings(baseParams),
-      bestWarnings: countWarnings(baseParams),
+      currentWarnings: countWarnings(baseParams, constraints),
+      bestWarnings: countWarnings(baseParams, constraints),
       done: true, bestParams: { ...baseParams },
     })
     return { cancel: () => {} }
@@ -60,7 +76,7 @@ export function runOptimizer(
   const epsilon = 1e-4
 
   let current = { ...baseParams }
-  let currentCount = countWarnings(current)
+  let currentCount = countWarnings(current, constraints)
   let bestWarnings = currentCount
   let bestParams = { ...current }
   let noImproveCount = 0
@@ -91,7 +107,7 @@ export function runOptimizer(
         const h = Math.max(def.step * 0.5, epsilon)
         const pPlus = { ...current, [k]: Math.min(originalVal + h, def.max) }
         const pMinus = { ...current, [k]: Math.max(originalVal - h, def.min) }
-        gradient[k] = (countWarnings(pPlus) - countWarnings(pMinus)) / (2 * h)
+        gradient[k] = (countWarnings(pPlus, constraints) - countWarnings(pMinus, constraints)) / (2 * h)
       }
 
       let moved = false
@@ -112,7 +128,7 @@ export function runOptimizer(
       }
 
       if (moved) {
-        const nextCount = countWarnings(next)
+        const nextCount = countWarnings(next, constraints)
         if (nextCount <= currentCount) {
           current = next
           currentCount = nextCount
@@ -135,7 +151,7 @@ export function runOptimizer(
             newVal = Math.round(newVal / def.step) * def.step
             newVal = Math.max(def.min, Math.min(def.max, newVal))
             ;(testParams as Record<string, unknown>)[k] = newVal
-            const testCount = countWarnings(testParams)
+            const testCount = countWarnings(testParams, constraints)
             if (testCount < currentCount) {
               current = testParams
               currentCount = testCount

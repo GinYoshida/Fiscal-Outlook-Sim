@@ -541,6 +541,40 @@ export function ExplanationTab({ params, simData, actualData, dataSources }: Pro
         </div>
       </TreeSection>
 
+      <TreeSection title="H：制約条件と実質政策的経費指数" tree={`├── 制約条件（レッドライン）
+│　├── 貧困率 ≤ 閾値（デフォルト20%）
+│　├── ジニ係数 ≤ 閾値（デフォルト0.45）
+│　├── 利払負担率 ≤ 閾値（デフォルト30%）
+│　└── 実質政策経費指数 ≥ 閾値（デフォルト70）
+└── 実質政策経費指数
+　　├── = 当年政策経費 ÷ 累積インフレ ÷ 初年度政策経費 × 100
+　　└── 初年度=100、低下＝実質的な行政サービス削減`}>
+        <p><strong>制約条件（レッドライン）</strong></p>
+        <p>「起きてはいけない状態」を定義し、最適化探索時にペナルティとして組み込みます。30年のシミュレーション期間中、いずれかの年度で制約を違反するとペナルティが加算されます。</p>
+        <table style={{ marginTop: 8 }}>
+          <thead>
+            <tr><th>制約</th><th>デフォルト閾値</th><th>意味</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>貧困率</td><td>≤ 20%</td><td>社会的危機水準を超えない</td></tr>
+            <tr><td>ジニ係数</td><td>≤ 0.45</td><td>OECD基準「高度格差社会」に達しない</td></tr>
+            <tr><td>利払負担率</td><td>≤ 30%</td><td>税収の3割以上が利払いに消えない</td></tr>
+            <tr><td>実質政策経費指数</td><td>≥ 70</td><td>実質的に使える予算が初年度から3割以上減らない</td></tr>
+          </tbody>
+        </table>
+        <hr style={{ margin: '16px 0', borderColor: '#e2e8f0' }} />
+        <p><strong>実質政策的経費指数の計算式</strong></p>
+        <p>利払い費を除いた「実際に政策に使える予算」がインフレ調整後にどれだけ維持されているかを示す指標です。</p>
+        <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: '12px 16px', marginTop: 8 }}>
+          <p style={{ fontSize: 13 }}>
+            <strong>実質政策経費指数</strong> = 当年の政策的経費 ÷ (1+インフレ率)<sup>年数</sup> ÷ 初年度の政策的経費 × 100
+          </p>
+          <p style={{ fontSize: 12, marginTop: 6, color: '#64748b' }}>
+            初年度（2026年）= 100。例えば指数70は「インフレを考慮すると、実質的に使える予算が初年度の7割に減った」ことを意味します。
+          </p>
+        </div>
+      </TreeSection>
+
       <h2 className="section-title" style={{ marginTop: 24 }}>ウォーターフォール分析</h2>
 
       <div className="year-slider-container">

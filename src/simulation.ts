@@ -63,6 +63,7 @@ export interface SimResult {
   revenueTaxRatio: number;
   revenueBondRatio: number;
   revenueOtherRatio: number;
+  realPolicyExpIndex: number;
 }
 
 function giniToIncomeRatio(gini: number): number {
@@ -200,6 +201,8 @@ export function runSimulation(p: SimParams): SimResult[] {
       const revenueBondRatio = revenueTotal > 0 ? (bondRevenue / revenueTotal) * 100 : 0;
       const revenueOtherRatio = revenueTotal > 0 ? ((bojPayment + otherRevWithFx) / revenueTotal) * 100 : 0;
 
+      const realPolicyExpIndex = 100;
+
       const modelIncome = BASE_INCOME * (1 + nomWageG);
       const modelFoodCost = BASE_INCOME * BASE_FOOD_RATIO * (1 + cpiIncrease);
       const modelEnergyCostGross = BASE_INCOME * BASE_ENERGY_RATIO * (1 + cpiIncrease) * (1 + Math.max(yenFactor, 0) * 0.5);
@@ -238,6 +241,7 @@ export function runSimulation(p: SimParams): SimResult[] {
         fiscalRiskPremium: fiscalRiskPremium * 100,
         socialSecurity, childcare, localGovTransfer, defense, otherPolicyExp,
         bondRevenue, revenueTotal, revenueTaxRatio, revenueBondRatio, revenueOtherRatio,
+        realPolicyExpIndex,
       });
     } else {
       const prev = results[i - 1];
@@ -322,6 +326,10 @@ export function runSimulation(p: SimParams): SimResult[] {
       const revenueBondRatio = revenueTotal > 0 ? (bondRevenue / revenueTotal) * 100 : 0;
       const revenueOtherRatio = revenueTotal > 0 ? ((bojPayment + otherRevWithFx) / revenueTotal) * 100 : 0;
 
+      const cumulativeInflation = Math.pow(1 + B, i);
+      const basePolicyExp = results[0].policyExp;
+      const realPolicyExpIndex = basePolicyExp > 0 ? (policyExp / cumulativeInflation / basePolicyExp) * 100 : 100;
+
       const cumulativeCpi = results.reduce((acc, r) => acc * (1 + r.cpiIncrease / 100), 1) * (1 + cpiIncrease);
       const cumulativeWage = results.reduce((acc, r) => acc * (1 + r.wageIncrease / 100), 1) * (1 + wageIncrease);
       const cumulativeYenDep = exchangeRate / p.initExchangeRate - 1;
@@ -363,6 +371,7 @@ export function runSimulation(p: SimParams): SimResult[] {
         fiscalRiskPremium: fiscalRiskPremium * 100,
         socialSecurity, childcare, localGovTransfer, defense, otherPolicyExp,
         bondRevenue, revenueTotal, revenueTaxRatio, revenueBondRatio, revenueOtherRatio,
+        realPolicyExpIndex,
       });
     }
   }
