@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ResponsiveContainer, BarChart, Bar, ReferenceLine,
+  LineChart, Line,
 } from 'recharts'
 import type { SimResult } from './simulation'
 import type { ActualDataPoint, SimParams } from './data'
@@ -432,6 +433,22 @@ export function SimulationTab({ params, simData, actualData, childAge2026 }: Pro
     return fillYearGaps([...actual, ...sim])
   }, [actualData, simData])
 
+  const gdpData = useMemo(() => {
+    const actual = actualData.filter(d => d.nominalGDP !== undefined).map(d => ({
+      year: d.year,
+      名目GDP: parseFloat((d.nominalGDP! / 1).toFixed(0)),
+      債務GDP比: null as number | null,
+      内部留保GDP比: null as number | null,
+    }))
+    const sim = simData.map(d => ({
+      year: d.year,
+      名目GDP: parseFloat(d.nominalGDP.toFixed(0)),
+      債務GDP比: parseFloat(d.debtToGDP.toFixed(1)),
+      内部留保GDP比: parseFloat(d.retainedToGDP.toFixed(1)),
+    }))
+    return fillYearGaps([...actual, ...sim])
+  }, [actualData, simData])
+
   const summaryWarnings = useMemo(() => computeWarnings(simData, params), [simData, params])
 
   const summaryStats = useMemo(() => {
@@ -593,6 +610,11 @@ export function SimulationTab({ params, simData, actualData, childAge2026 }: Pro
       { label: '実質政策経費指数', values: [...aData.map(() => '―'), ...sFiltered.map(d => fmt(d.realPolicyExpIndex))] },
       { label: '財政リスク加算 (%)', values: [...aData.map(() => '―'), ...sFiltered.map(d => fmt(d.fiscalRiskPremium))] },
       { label: '─', values: years.map(() => '') },
+      { label: '名目GDP (兆円)', values: [...aData.map(d => d.nominalGDP !== undefined ? fmt(d.nominalGDP, 0) : '―'), ...sFiltered.map(d => fmt(d.nominalGDP, 0))] },
+      { label: '債務GDP比 (%)', values: [...aData.map(() => '―'), ...sFiltered.map(d => fmt(d.debtToGDP))] },
+      { label: '内生賃金上昇率 (%)', values: [...aData.map(() => '―'), ...sFiltered.map(d => fmt(d.endogenousWage))] },
+      { label: '内部留保GDP比 (%)', values: [...aData.map(() => '―'), ...sFiltered.map(d => fmt(d.retainedToGDP))] },
+      { label: '─', values: years.map(() => '') },
       { label: '為替レート (円/$)', values: [...aData.map(d => fmt(d.exchangeRate, 0)), ...sFiltered.map(d => fmt(d.exchangeRate, 0))] },
       { label: '貿易収支 (兆円)', values: [...aData.map(d => fmt(d.tradeBalance)), ...sFiltered.map(d => fmt(d.tradeBalance))] },
       { label: '├ 輸出', values: [...aData.map(d => fmt(d.exportAmount)), ...sFiltered.map(d => fmt(d.exportAmount))], indent: 1 },
@@ -655,6 +677,13 @@ export function SimulationTab({ params, simData, actualData, childAge2026 }: Pro
       { label: '利払負担率 (%)', values: data.map(d => fmt(d.interestBurden)) },
       { label: '実質政策経費指数', values: data.map(d => fmt(d.realPolicyExpIndex)) },
       { label: '財政リスク加算 (%)', values: data.map(d => fmt(d.fiscalRiskPremium)) },
+      { label: '─', values: years.map(() => '') },
+      { label: '名目GDP (兆円)', values: data.map(d => fmt(d.nominalGDP, 0)) },
+      { label: '債務GDP比 (%)', values: data.map(d => fmt(d.debtToGDP)) },
+      { label: '内生賃金上昇率 (%)', values: data.map(d => fmt(d.endogenousWage)) },
+      { label: '企業利益 (兆円)', values: data.map(d => fmt(d.corporateProfit)) },
+      { label: '内部留保累計 (兆円)', values: data.map(d => fmt(d.retainedEarnings, 0)) },
+      { label: '内部留保GDP比 (%)', values: data.map(d => fmt(d.retainedToGDP)) },
       { label: '─', values: years.map(() => '') },
       { label: '為替レート (円/$)', values: data.map(d => fmt(d.exchangeRate, 0)) },
       { label: '貿易収支 (兆円)', values: data.map(d => fmt(d.tradeBalance)) },
@@ -1020,6 +1049,34 @@ export function SimulationTab({ params, simData, actualData, childAge2026 }: Pro
         </ResponsiveContainer>
         <div className="chart-note">
           経常収支 = 貿易収支 + 所得収支（NFA×3%）。経常赤字＋NFA防衛ライン割れで通貨リスクプレミアムが金利に自動加算されます。
+        </div>
+      </Collapsible>
+
+      <Collapsible title="GDP・企業セクター">
+        <div className="chart-subtitle">名目GDP（兆円）</div>
+        <ResponsiveContainer width="100%" height={280}>
+          <BarChart data={gdpData}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+            <XAxis dataKey="year" tick={{ fontSize: 10 }} />
+            <YAxis tick={{ fontSize: 10 }} unit="兆円" />
+            <Tooltip content={<NoDataTooltip unit=" 兆円" childAge2026={childAge2026} />} />
+            <Bar dataKey="名目GDP" fill="#3b82f6" />
+          </BarChart>
+        </ResponsiveContainer>
+        <div className="chart-subtitle" style={{ marginTop: 12 }}>債務残高GDP比・内部留保GDP比（%）</div>
+        <ResponsiveContainer width="100%" height={280}>
+          <LineChart data={gdpData}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+            <XAxis dataKey="year" tick={{ fontSize: 10 }} />
+            <YAxis tick={{ fontSize: 10 }} unit="%" />
+            <Tooltip content={<NoDataTooltip unit="%" childAge2026={childAge2026} />} />
+            <Legend />
+            <Line type="monotone" dataKey="債務GDP比" stroke="#ef4444" dot={false} strokeWidth={2} connectNulls />
+            <Line type="monotone" dataKey="内部留保GDP比" stroke="#f59e0b" dot={false} strokeWidth={2} connectNulls />
+          </LineChart>
+        </ResponsiveContainer>
+        <div className="chart-note">
+          債務GDP比は政府債務の対GDP比率。内部留保GDP比は企業の累積内部留保の対GDP比率。内部留保が大きいほど企業が賃金に分配していないことを示します。
         </div>
       </Collapsible>
 

@@ -64,6 +64,12 @@ export interface SimResult {
   revenueBondRatio: number;
   revenueOtherRatio: number;
   realPolicyExpIndex: number;
+  nominalGDP: number;
+  debtToGDP: number;
+  corporateProfit: number;
+  retainedEarnings: number;
+  retainedToGDP: number;
+  endogenousWage: number;
 }
 
 function giniToIncomeRatio(gini: number): number {
@@ -83,11 +89,14 @@ export function runSimulation(p: SimParams): SimResult[] {
   const changeYear = p.taxRateChangeYear !== "なし" ? parseInt(p.taxRateChangeYear) : null;
 
   const yenDep = p.yenDepreciation / 100;
-  const nomWageG = p.nominalWageGrowth / 100;
+  const baseNomWageG = p.nominalWageGrowth / 100;
   const globalG = p.globalGrowth / 100;
+  const prodShare = p.productivityShareRate;
+  const wagePassThrough = p.wagePassThroughRate;
 
   const results: SimResult[] = [];
   let bojCumulativeLoss = 0;
+  let retainedEarnings = p.initRetainedEarnings;
   let bojJGB = p.initBojJGB;
   let bojCAActual = p.bojCA;
   let bojYieldActual = p.bojYield / 100;
@@ -155,6 +164,10 @@ export function runSimulation(p: SimParams): SimResult[] {
 
       const fxValuationGain = p.fxReserves * yenFactor;
 
+      const nominalGDP = p.initNominalGDP * (1 + D);
+      const endogenousWage = C * prodShare + B * wagePassThrough;
+      const nomWageG = Math.max(endogenousWage, baseNomWageG);
+
       const yenCostPush = Math.max(yenFactor, 0) * 0.3;
       const cpiIncrease = B + yenCostPush;
       const energySubsidyEffect = cpiIncrease * p.energySubsidyRate * 0.5;
@@ -172,6 +185,13 @@ export function runSimulation(p: SimParams): SimResult[] {
       const exportProfit = Math.max(yenFactor, 0) * 0.3;
       const importCost = Math.max(yenFactor, 0) * 0.2;
       const taxCorporateAdj = taxCorporate * (1 + exportProfit - importCost);
+
+      const corporateProfit = taxCorporateAdj / p.effectiveCorporateTaxRate;
+      const wageGrowthCost = nominalGDP * prodShare * nomWageG;
+      const retainedDelta = corporateProfit - wageGrowthCost * 0.3;
+      retainedEarnings = retainedEarnings + retainedDelta;
+      const retainedToGDP = (retainedEarnings / nominalGDP) * 100;
+      const debtToGDP = (p.initDebt / nominalGDP) * 100;
 
       const energySubsidy = p.inflationRate * p.energySubsidyRate * 10;
 
@@ -243,6 +263,8 @@ export function runSimulation(p: SimParams): SimResult[] {
         socialSecurity, childcare, localGovTransfer, defense, otherPolicyExp,
         bondRevenue, revenueTotal, revenueTaxRatio, revenueBondRatio, revenueOtherRatio,
         realPolicyExpIndex,
+        nominalGDP, debtToGDP, corporateProfit, retainedEarnings, retainedToGDP,
+        endogenousWage: endogenousWage * 100,
       });
     } else {
       const prev = results[i - 1];
@@ -261,6 +283,10 @@ export function runSimulation(p: SimParams): SimResult[] {
       const nfa = prevNFA + currentAccount;
 
       const fxValuationGain = p.fxReserves * yenDep;
+
+      const nominalGDP = prev.nominalGDP * (1 + D);
+      const endogenousWage = C * prodShare + B * wagePassThrough;
+      const nomWageG = Math.max(endogenousWage, baseNomWageG);
 
       const yenCostPush = Math.max(yenDep, 0) * 0.3;
       const cpiIncrease = B + yenCostPush;
@@ -287,6 +313,12 @@ export function runSimulation(p: SimParams): SimResult[] {
       const taxCorporate = prev.taxCorporate * (1 + C * 2.0 + B * 0.5) * (1 + exportProfit - importCost);
       const taxOther = prev.taxOther * (1 + D * 0.8);
       const tax = taxConsumption + taxIncome + taxCorporate + taxOther;
+
+      const corporateProfit = taxCorporate / p.effectiveCorporateTaxRate;
+      const wageGrowthCost = nominalGDP * prodShare * nomWageG;
+      const retainedDelta = corporateProfit - wageGrowthCost * 0.3;
+      retainedEarnings = retainedEarnings + retainedDelta;
+      const retainedToGDP = (retainedEarnings / nominalGDP) * 100;
 
       const policyRate = Math.max(E - p.policyRateSpread / 100, 0);
       const bojRev = bojJGB * bojYieldActual;
@@ -319,6 +351,7 @@ export function runSimulation(p: SimParams): SimResult[] {
       const totalCost = policyExp + interest;
       const fiscalBalance = totalRevenue - totalCost;
       const debt = prev.debt + (totalCost - totalRevenue);
+      const debtToGDP = (debt / nominalGDP) * 100;
       const interestBurden = tax !== 0 ? (interest / tax) * 100 : 0;
       const bondIssuance = Math.max(totalCost - totalRevenue, 0);
 
@@ -374,6 +407,8 @@ export function runSimulation(p: SimParams): SimResult[] {
         socialSecurity, childcare, localGovTransfer, defense, otherPolicyExp,
         bondRevenue, revenueTotal, revenueTaxRatio, revenueBondRatio, revenueOtherRatio,
         realPolicyExpIndex,
+        nominalGDP, debtToGDP, corporateProfit, retainedEarnings, retainedToGDP,
+        endogenousWage: endogenousWage * 100,
       });
     }
   }

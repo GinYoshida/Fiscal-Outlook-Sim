@@ -578,6 +578,44 @@ export function ExplanationTab({ params, simData, actualData, dataSources }: Pro
         </div>
       </TreeSection>
 
+      <TreeSection title="I：内生賃金モデルと企業セクター" tree={`├── 名目GDP
+│　└── 当年GDP = 前年GDP × (1 + 名目成長率)
+├── 内生的賃金モデル
+│　├── 内生賃金 = 実質成長率 × 生産性分配率 + インフレ率 × 転嫁率
+│　├── 名目賃金上昇率 = max(内生賃金, 下限値)
+│　└── 実質賃金 = 名目賃金上昇率 − 実効CPI上昇率
+├── 企業セクター
+│　├── 企業利益 = 法人税収 ÷ 実効税率(23%)
+│　├── 内部留保増分 = 企業利益 − 賃金配分コスト
+│　└── 内部留保累計（GDP比で追跡）
+└── 債務GDP比
+　　└── = 政府債務残高 ÷ 名目GDP × 100`}>
+        <p><strong>内生的賃金決定メカニズム</strong></p>
+        <p>従来の固定パラメータ方式を改め、賃金上昇率を経済成長とインフレの関数として内生的に決定します。</p>
+        <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: '12px 16px', marginTop: 8 }}>
+          <p style={{ fontSize: 13 }}>
+            <strong>内生賃金</strong> = 実質成長率 × 生産性分配率 + インフレ率 × 転嫁率
+          </p>
+          <p style={{ fontSize: 12, marginTop: 6, color: '#64748b' }}>
+            生産性分配率（デフォルト0.5）：GDP成長の何%が労働者に分配されるか。日本は先進国最低水準（0.3〜0.5）。<br/>
+            インフレ転嫁率（デフォルト0.3）：物価上昇の何%が春闘等で賃金に反映されるか。完全転嫁=1.0。
+          </p>
+        </div>
+        <hr style={{ margin: '16px 0', borderColor: '#e2e8f0' }} />
+        <p><strong>企業セクターの追跡</strong></p>
+        <p>法人税収から逆算した企業利益と、賃金に分配されなかった部分が内部留保として蓄積される過程を追跡します。</p>
+        <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 8, padding: '12px 16px', marginTop: 8 }}>
+          <p style={{ fontSize: 13 }}>
+            <strong>企業利益</strong> = 法人税収 ÷ 実効法人税率（23%）<br/>
+            <strong>内部留保増分</strong> = 企業利益 − GDP × 生産性分配率 × 名目賃金上昇率 × 30%<br/>
+            <strong>内部留保GDP比</strong> = 累積内部留保 ÷ 名目GDP × 100
+          </p>
+          <p style={{ fontSize: 12, marginTop: 6, color: '#64748b' }}>
+            初期値：550兆円（2024年推計）。内部留保GDP比が上昇し続ける場合、企業が利益を賃金に還元していないことを示し、家計へのトリクルダウンが機能していない状態です。
+          </p>
+        </div>
+      </TreeSection>
+
       <h2 className="section-title" style={{ marginTop: 24 }}>ウォーターフォール分析</h2>
 
       <div className="year-slider-container">

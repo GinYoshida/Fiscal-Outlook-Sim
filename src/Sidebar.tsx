@@ -170,9 +170,18 @@ export function Sidebar({ params, scenarioIndex, onScenarioChange, onParamChange
       <Slider label="円安進行率 (%/年)" value={p.yenDepreciation} min={-3} max={10} step={0.5}
         tooltip="為替レートの年間変化率。プラスで円安、マイナスで円高。円安は輸入物価を押し上げ家計を圧迫する一方、輸出企業の利益を増やします。"
         onChange={v => onParamChange('yenDepreciation', v)} />
-      <Slider label="名目賃金上昇率 (%/年)" value={p.nominalWageGrowth} min={0} max={5} step={0.1}
-        tooltip="労働者の名目賃金の年間上昇率。インフレ率を下回ると実質賃金が低下し、貧困率の上昇・消費の停滞を招きます。"
+      <Slider label="名目賃金上昇率 下限 (%/年)" value={p.nominalWageGrowth} min={0} max={5} step={0.1}
+        tooltip="賃金モデルの下限値。内生的に計算される名目賃金上昇率がこの値を下回る場合、この値が適用されます。"
         onChange={v => onParamChange('nominalWageGrowth', v)} />
+      <Slider label="生産性分配率" value={p.productivityShareRate} min={0.1} max={1.0} step={0.05}
+        tooltip="実質GDP成長の何%が賃金に分配されるか。日本は0.3〜0.5（先進国最低水準）。高いほど成長の果実が労働者に回ります。"
+        onChange={v => onParamChange('productivityShareRate', v)} />
+      <Slider label="インフレ転嫁率" value={p.wagePassThroughRate} min={0.0} max={1.0} step={0.05}
+        tooltip="物価上昇の何%が賃金に転嫁されるか。日本は0.2〜0.4（春闘の交渉力に依存）。1.0なら完全にインフレに追随。"
+        onChange={v => onParamChange('wagePassThroughRate', v)} />
+      <p style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>
+        内生賃金 = 実質成長率×分配率 + インフレ率×転嫁率
+      </p>
       <Slider label="世界経済成長率 (%)" value={p.globalGrowth} min={0} max={5} step={0.1}
         tooltip="世界経済全体の成長率。日本の輸出額に直接影響します。先進国中心に2〜3%が一般的です。"
         onChange={v => onParamChange('globalGrowth', v)} />
