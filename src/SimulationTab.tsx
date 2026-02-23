@@ -196,6 +196,158 @@ function NoDataTooltip({ active, payload, label, unit, decimals, childAge2026 }:
   )
 }
 
+interface ChartHelpInfo {
+  description: string;
+  sensitiveParams: string[];
+}
+
+const CHART_HELP: Record<string, ChartHelpInfo> = {
+  '利払い負担率の推移 （税収に対する利払い費の割合）': {
+    description: '税収のうち何%が借金の利息返済に消えるかを示します。30%を超えると教育・医療などの予算が圧迫されます。',
+    sensitiveParams: ['ベースリスクプレミアム', '平均クーポン', 'インフレ率'],
+  },
+  '財政収支の推移 （歳入 − 歳出）': {
+    description: '政府の収入と支出の差額です。マイナスなら赤字で国債発行が必要に、プラスなら黒字です。',
+    sensitiveParams: ['実質成長率', 'インフレ率', '政策的経費'],
+  },
+  '債務残高の推移': {
+    description: '国の借金（国債残高）の推移です。財政赤字が続くと増加し、金利上昇で利払いが膨らむ悪循環に陥ります。',
+    sensitiveParams: ['実質成長率', 'ベースリスクプレミアム', '政策的経費'],
+  },
+  '貧困率の推移（%）': {
+    description: '相対的貧困率の推移。実質賃金が低下する（物価上昇＞賃金上昇）と悪化します。',
+    sensitiveParams: ['生産性分配率', 'インフレ転嫁率', '貧困率感応度'],
+  },
+  'ジニ係数の推移（x100）': {
+    description: '所得格差の大きさ。資産価格上昇が実質賃金を上回ると格差が拡大します。',
+    sensitiveParams: ['生産性分配率', '内部留保還元率', '円安進行率'],
+  },
+  '実質賃金伸び率（%）': {
+    description: 'インフレ調整後の賃金の伸び。マイナスなら実質的な賃金カットで生活水準が低下します。',
+    sensitiveParams: ['生産性分配率', 'インフレ転嫁率', 'インフレ率'],
+  },
+  '可処分所得と生活費の変化（万円/年）': {
+    description: '年収400万円世帯の可処分所得変化と食費・光熱費増加の推移。家計への直接的なインパクトです。',
+    sensitiveParams: ['インフレ率', '円安進行率', 'エネルギー補助金率'],
+  },
+  '所得格差倍率（上位20%÷下位20%）': {
+    description: '上位20%の所得が下位20%の何倍かを示す五分位倍率。ジニ係数から変換しています。',
+    sensitiveParams: ['生産性分配率', '内部留保還元率', '実質成長率'],
+  },
+  '貿易収支の推移': {
+    description: '輸出と輸入の差額。円安は輸出に有利ですが輸入コストも増加します。',
+    sensitiveParams: ['円安進行率', '世界経済成長率', '実質成長率'],
+  },
+  '為替レートの推移': {
+    description: '円/ドルの為替レート推移。円安が進むと輸入物価が上昇し家計を圧迫します。',
+    sensitiveParams: ['円安進行率', 'ベースリスクプレミアム', '通貨リスクプレミアム'],
+  },
+  '対外純資産の推移': {
+    description: '日本が海外に持つ資産から負債を引いた純額。経常赤字が続くと減少します。',
+    sensitiveParams: ['円安進行率', '世界経済成長率', '実質成長率'],
+  },
+  '経常収支の推移（兆円）': {
+    description: '貿易収支＋所得収支。赤字転落すると通貨リスクプレミアムが発動し金利上昇につながります。',
+    sensitiveParams: ['円安進行率', '世界経済成長率', 'NFA防衛ライン'],
+  },
+  '通貨リスクプレミアム加算（%）': {
+    description: '経常赤字＋NFA低下時に市場金利に自動加算されるペナルティ。通貨の信認低下を表します。',
+    sensitiveParams: ['通貨リスクプレミアム', 'NFA防衛ライン', '円安進行率'],
+  },
+  '名目GDP（兆円）': {
+    description: '日本の名目GDP推移。インフレ率＋実質成長率で毎年成長します。',
+    sensitiveParams: ['実質成長率', 'インフレ率', '円安進行率'],
+  },
+  '債務残高GDP比・内部留保GDP比（%）': {
+    description: '政府債務と企業内部留保のGDP比。内部留保比率が高いと企業が賃金に分配していない状態です。',
+    sensitiveParams: ['生産性分配率', '内部留保還元率', '実質成長率'],
+  },
+  '税収内訳（兆円）': {
+    description: '消費税・所得税・法人税・その他税の内訳推移。経済成長・インフレ・円安が各税に異なる影響を与えます。',
+    sensitiveParams: ['実質成長率', 'インフレ率', '円安進行率'],
+  },
+  '歳入の財源構成（%）': {
+    description: '歳入全体に占める税収・公債金・その他の比率。公債金依存度が高いほど財政リスクが大きいです。',
+    sensitiveParams: ['実質成長率', '政策的経費', 'ベースリスクプレミアム'],
+  },
+  '歳出分野別内訳（兆円）': {
+    description: '社会保障・子育て・地方交付税・防衛・利払い等の分野別歳出。高齢化で社会保障が膨らみます。',
+    sensitiveParams: ['インフレ率', '社会保障費', '自然増'],
+  },
+  '日銀純利益（兆円）': {
+    description: '日銀の収入（保有国債利息）と支出（当座預金の付利）の差額。金利上昇で逆ザヤのリスクがあります。',
+    sensitiveParams: ['ベースリスクプレミアム', '保有国債利回り', 'QT縮小額'],
+  },
+  '統合政府への反映額（兆円）': {
+    description: '日銀利益のうち国庫に納付される金額。逆ザヤが累積するとマイナスになり歳入を減少させます。',
+    sensitiveParams: ['ベースリスクプレミアム', '日銀自己資本バッファ', 'QT縮小額'],
+  },
+  '累積損失（兆円）': {
+    description: '日銀の逆ザヤ（金利コスト＞国債利息）の累積。自己資本バッファを超過すると歳入に直接影響します。',
+    sensitiveParams: ['ベースリスクプレミアム', '日銀自己資本バッファ', '政策金利スプレッド'],
+  },
+  '日銀バランスシート（兆円）': {
+    description: '日銀の保有国債と当座預金の残高推移。QT（量的引き締め）で両方が縮小していきます。',
+    sensitiveParams: ['QT縮小額', '当座預金下限', '保有国債'],
+  },
+  '金利比較（%）': {
+    description: '実効市場金利・平均クーポン・日銀保有利回り・名目成長率の比較。金利＞成長率だと債務が発散しやすいです。',
+    sensitiveParams: ['ベースリスクプレミアム', '財政リスク感応度', 'インフレ率'],
+  },
+  '財政リスクプレミアム加算（%）': {
+    description: '利払負担率が閾値を超えた場合に市場金利に加算されるペナルティ。市場の財政不信を表します。',
+    sensitiveParams: ['財政リスク感応度', '利払負担率閾値', 'ベースリスクプレミアム'],
+  },
+  '税収構成比（%）': {
+    description: '消費税・所得税・法人税・その他税が税収全体に占める割合。構造変化を可視化します。',
+    sensitiveParams: ['実質成長率', 'インフレ率', '消費税率'],
+  },
+  '支出構成比（%）': {
+    description: '歳出に占める政策経費と利払い費の割合。利払い比率が増えると政策の自由度が低下します。',
+    sensitiveParams: ['ベースリスクプレミアム', '政策的経費', 'インフレ率'],
+  },
+}
+
+function ChartSubtitle({ title }: { title: string }) {
+  const help = CHART_HELP[title]
+  if (!help) return <div className="chart-subtitle">{title}</div>
+  return (
+    <div className="chart-subtitle">
+      {title}
+      <span className="chart-help-icon">
+        ?
+        <span className="chart-help-tooltip">
+          <span className="chart-help-desc">{help.description}</span>
+          <span className="chart-help-params-label">感度の高いパラメータ:</span>
+          {help.sensitiveParams.map((p, i) => (
+            <span key={i} className="chart-help-param-tag">{p}</span>
+          ))}
+        </span>
+      </span>
+    </div>
+  )
+}
+
+function ChartTitleWithHelp({ title }: { title: string }) {
+  const help = CHART_HELP[title]
+  if (!help) return <div className="chart-title">{title}</div>
+  return (
+    <div className="chart-title">
+      {title}
+      <span className="chart-help-icon">
+        ?
+        <span className="chart-help-tooltip">
+          <span className="chart-help-desc">{help.description}</span>
+          <span className="chart-help-params-label">感度の高いパラメータ:</span>
+          {help.sensitiveParams.map((p, i) => (
+            <span key={i} className="chart-help-param-tag">{p}</span>
+          ))}
+        </span>
+      </span>
+    </div>
+  )
+}
+
 function Collapsible({ title, children, defaultOpen = false }: { title: string; children: React.ReactNode; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen)
   return (
@@ -880,7 +1032,7 @@ export function SimulationTab({ params, simData, actualData, childAge2026, scena
       </div>
 
       <div className="chart-container">
-        <div className="chart-title">利払い負担率の推移 （税収に対する利払い費の割合）</div>
+        <ChartTitleWithHelp title="利払い負担率の推移 （税収に対する利払い費の割合）" />
         <ResponsiveContainer width="100%" height={300}>
           <BarChart data={interestBurdenData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -894,7 +1046,7 @@ export function SimulationTab({ params, simData, actualData, childAge2026, scena
       </div>
 
       <div className="chart-container">
-        <div className="chart-title">財政収支の推移 （歳入 − 歳出）</div>
+        <ChartTitleWithHelp title="財政収支の推移 （歳入 − 歳出）" />
         <ResponsiveContainer width="100%" height={300}>
           <BarChart data={fiscalBalanceData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -908,7 +1060,7 @@ export function SimulationTab({ params, simData, actualData, childAge2026, scena
       </div>
 
       <div className="chart-container">
-        <div className="chart-title">債務残高の推移</div>
+        <ChartTitleWithHelp title="債務残高の推移" />
         <ResponsiveContainer width="100%" height={300}>
           <BarChart data={debtData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -921,7 +1073,7 @@ export function SimulationTab({ params, simData, actualData, childAge2026, scena
       </div>
 
       <Collapsible title="家計への影響（貧困率・ジニ係数・実質賃金）" defaultOpen={true}>
-        <div className="chart-subtitle">貧困率の推移（%）</div>
+        <ChartSubtitle title="貧困率の推移（%）" />
         <ResponsiveContainer width="100%" height={280}>
           <BarChart data={householdData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -931,7 +1083,7 @@ export function SimulationTab({ params, simData, actualData, childAge2026, scena
             <Bar dataKey="貧困率" fill="#ef4444" opacity={0.7} />
           </BarChart>
         </ResponsiveContainer>
-        <div className="chart-subtitle" style={{ marginTop: 16 }}>ジニ係数の推移（x100）</div>
+        <ChartSubtitle title="ジニ係数の推移（x100）" />
         <ResponsiveContainer width="100%" height={280}>
           <BarChart data={householdData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -941,7 +1093,7 @@ export function SimulationTab({ params, simData, actualData, childAge2026, scena
             <Bar dataKey="ジニ係数" fill="#8b5cf6"  opacity={0.7} />
           </BarChart>
         </ResponsiveContainer>
-        <div className="chart-subtitle" style={{ marginTop: 16 }}>実質賃金伸び率（%）</div>
+        <ChartSubtitle title="実質賃金伸び率（%）" />
         <ResponsiveContainer width="100%" height={280}>
           <BarChart data={householdData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -958,7 +1110,7 @@ export function SimulationTab({ params, simData, actualData, childAge2026, scena
         <div className="chart-note" style={{ marginBottom: 8, textAlign: 'left', fontSize: 12, color: '#64748b' }}>
           年収400万円（中央値）の家計を想定。税・社会保険料30%、食費25.5%（エンゲル係数）、光熱費7.3%で計算。2026年との差額を表示。
         </div>
-        <div className="chart-subtitle">可処分所得と生活費の変化（万円/年）</div>
+        <ChartSubtitle title="可処分所得と生活費の変化（万円/年）" />
         <ResponsiveContainer width="100%" height={280}>
           <BarChart data={modelHouseholdData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -972,7 +1124,7 @@ export function SimulationTab({ params, simData, actualData, childAge2026, scena
             <Bar dataKey="可処分所得変化" fill="#3b82f6" />
           </BarChart>
         </ResponsiveContainer>
-        <div className="chart-subtitle" style={{ marginTop: 16 }}>所得格差倍率（上位20%÷下位20%）</div>
+        <ChartSubtitle title="所得格差倍率（上位20%÷下位20%）" />
         <ResponsiveContainer width="100%" height={280}>
           <BarChart data={incomeRatioData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -1031,7 +1183,7 @@ export function SimulationTab({ params, simData, actualData, childAge2026, scena
       </Collapsible>
 
       <Collapsible title="貿易収支・為替レート" defaultOpen={true}>
-        <div className="chart-subtitle">貿易収支の推移</div>
+        <ChartSubtitle title="貿易収支の推移" />
         <ResponsiveContainer width="100%" height={280}>
           <BarChart data={tradeData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -1044,7 +1196,7 @@ export function SimulationTab({ params, simData, actualData, childAge2026, scena
             <Bar dataKey="貿易収支" fill="#3b82f6" />
           </BarChart>
         </ResponsiveContainer>
-        <div className="chart-subtitle" style={{ marginTop: 16 }}>為替レートの推移</div>
+        <ChartSubtitle title="為替レートの推移" />
         <ResponsiveContainer width="100%" height={280}>
           <BarChart data={fxData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -1057,7 +1209,7 @@ export function SimulationTab({ params, simData, actualData, childAge2026, scena
       </Collapsible>
 
       <Collapsible title="対外純資産・経常収支" defaultOpen={true}>
-        <div className="chart-subtitle">対外純資産の推移</div>
+        <ChartSubtitle title="対外純資産の推移" />
         <ResponsiveContainer width="100%" height={280}>
           <BarChart data={nfaData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -1068,7 +1220,7 @@ export function SimulationTab({ params, simData, actualData, childAge2026, scena
             <Bar dataKey="対外純資産" fill="#3b82f6" opacity={0.7} />
           </BarChart>
         </ResponsiveContainer>
-        <div className="chart-subtitle" style={{ marginTop: 16 }}>経常収支の推移（兆円）</div>
+        <ChartSubtitle title="経常収支の推移（兆円）" />
         <ResponsiveContainer width="100%" height={280}>
           <BarChart data={nfaData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -1079,7 +1231,7 @@ export function SimulationTab({ params, simData, actualData, childAge2026, scena
             <Bar dataKey="経常収支" fill="#22c55e" />
           </BarChart>
         </ResponsiveContainer>
-        <div className="chart-subtitle" style={{ marginTop: 12 }}>通貨リスクプレミアム加算（%）</div>
+        <ChartSubtitle title="通貨リスクプレミアム加算（%）" />
         <ResponsiveContainer width="100%" height={200}>
           <BarChart data={nfaData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -1095,7 +1247,7 @@ export function SimulationTab({ params, simData, actualData, childAge2026, scena
       </Collapsible>
 
       <Collapsible title="GDP・企業セクター">
-        <div className="chart-subtitle">名目GDP（兆円）</div>
+        <ChartSubtitle title="名目GDP（兆円）" />
         <ResponsiveContainer width="100%" height={280}>
           <BarChart data={gdpData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -1105,7 +1257,7 @@ export function SimulationTab({ params, simData, actualData, childAge2026, scena
             <Bar dataKey="名目GDP" fill="#3b82f6" />
           </BarChart>
         </ResponsiveContainer>
-        <div className="chart-subtitle" style={{ marginTop: 12 }}>債務残高GDP比・内部留保GDP比（%）</div>
+        <ChartSubtitle title="債務残高GDP比・内部留保GDP比（%）" />
         <ResponsiveContainer width="100%" height={280}>
           <LineChart data={gdpData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -1123,7 +1275,7 @@ export function SimulationTab({ params, simData, actualData, childAge2026, scena
       </Collapsible>
 
       <Collapsible title="歳入合計・税収内訳">
-        <div className="chart-subtitle">税収内訳（兆円）</div>
+        <ChartSubtitle title="税収内訳（兆円）" />
         <ResponsiveContainer width="100%" height={280}>
           <BarChart data={revenueData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -1137,7 +1289,7 @@ export function SimulationTab({ params, simData, actualData, childAge2026, scena
             <Bar dataKey="その他税" stackId="a" fill="#8b5cf6" />
           </BarChart>
         </ResponsiveContainer>
-        <div className="chart-subtitle" style={{ marginTop: 16 }}>税収構成比（%）</div>
+        <ChartSubtitle title="税収構成比（%）" />
         <ResponsiveContainer width="100%" height={280}>
           <BarChart data={revenueRatioData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -1154,7 +1306,7 @@ export function SimulationTab({ params, simData, actualData, childAge2026, scena
       </Collapsible>
 
       <Collapsible title="予算構成・歳出内訳">
-        <div className="chart-subtitle">歳入の財源構成（%）</div>
+        <ChartSubtitle title="歳入の財源構成（%）" />
         <ResponsiveContainer width="100%" height={280}>
           <BarChart data={budgetCompositionData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -1170,7 +1322,7 @@ export function SimulationTab({ params, simData, actualData, childAge2026, scena
         <div className="chart-note">
           歳入全体（税収＋公債金＋その他収入）に占める割合。公債金（国債発行）依存度が高いほど財政の持続可能性リスクが高まります
         </div>
-        <div className="chart-subtitle" style={{ marginTop: 16 }}>歳出分野別内訳（兆円）</div>
+        <ChartSubtitle title="歳出分野別内訳（兆円）" />
         <ResponsiveContainer width="100%" height={320}>
           <BarChart data={expBreakdownData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -1187,7 +1339,7 @@ export function SimulationTab({ params, simData, actualData, childAge2026, scena
             <Bar dataKey="利払い費" stackId="a" fill="#ef4444" />
           </BarChart>
         </ResponsiveContainer>
-        <div className="chart-subtitle" style={{ marginTop: 16 }}>支出構成比（%）</div>
+        <ChartSubtitle title="支出構成比（%）" />
         <ResponsiveContainer width="100%" height={280}>
           <BarChart data={expenditureRatioData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -1202,7 +1354,7 @@ export function SimulationTab({ params, simData, actualData, childAge2026, scena
       </Collapsible>
 
       <Collapsible title="日銀収支（統合政府への影響）">
-        <div className="chart-subtitle">日銀純利益（兆円）</div>
+        <ChartSubtitle title="日銀純利益（兆円）" />
         <ResponsiveContainer width="100%" height={280}>
           <BarChart data={bojData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -1213,7 +1365,7 @@ export function SimulationTab({ params, simData, actualData, childAge2026, scena
             <Bar dataKey="日銀純利益" fill="#94a3b8" opacity={0.7} />
           </BarChart>
         </ResponsiveContainer>
-        <div className="chart-subtitle" style={{ marginTop: 16 }}>統合政府への反映額（兆円）</div>
+        <ChartSubtitle title="統合政府への反映額（兆円）" />
         <ResponsiveContainer width="100%" height={280}>
           <BarChart data={bojData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -1224,7 +1376,7 @@ export function SimulationTab({ params, simData, actualData, childAge2026, scena
             <Bar dataKey="統合政府への反映額" fill="#22c55e" />
           </BarChart>
         </ResponsiveContainer>
-        <div className="chart-subtitle" style={{ marginTop: 16 }}>累積損失（兆円）</div>
+        <ChartSubtitle title="累積損失（兆円）" />
         <ResponsiveContainer width="100%" height={280}>
           <BarChart data={bojData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -1238,7 +1390,7 @@ export function SimulationTab({ params, simData, actualData, childAge2026, scena
         <div className="chart-note">
           逆ザヤ時（純利益マイナス）の累積損失が自己資本バッファ（{params.bojCapitalBuffer}兆円）を超えると、マイナスが歳入を直接減少させます
         </div>
-        <div className="chart-subtitle" style={{ marginTop: 16 }}>日銀バランスシート（兆円）</div>
+        <ChartSubtitle title="日銀バランスシート（兆円）" />
         <ResponsiveContainer width="100%" height={280}>
           <BarChart data={bojBSData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -1252,7 +1404,7 @@ export function SimulationTab({ params, simData, actualData, childAge2026, scena
       </Collapsible>
 
       <Collapsible title="金利・成長率・リスクプレミアム">
-        <div className="chart-subtitle">金利比較（%）</div>
+        <ChartSubtitle title="金利比較（%）" />
         <ResponsiveContainer width="100%" height={280}>
           <BarChart data={rateData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -1266,7 +1418,7 @@ export function SimulationTab({ params, simData, actualData, childAge2026, scena
             <Bar dataKey="名目成長率" fill="#22c55e" />
           </BarChart>
         </ResponsiveContainer>
-        <div className="chart-subtitle" style={{ marginTop: 16 }}>財政リスクプレミアム加算（%）</div>
+        <ChartSubtitle title="財政リスクプレミアム加算（%）" />
         <ResponsiveContainer width="100%" height={280}>
           <BarChart data={rateData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />

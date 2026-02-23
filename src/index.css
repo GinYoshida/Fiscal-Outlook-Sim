@@ -1423,3 +1423,108 @@ body {
   font-weight: 700;
   color: var(--gray-800);
 }
+
+.chart-help-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--gray-200);
+  color: var(--gray-500);
+  font-size: 10px;
+  font-weight: 700;
+  margin-left: 6px;
+  cursor: help;
+  position: relative;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+.chart-help-icon:hover {
+  background: var(--amber);
+  color: #fff;
+}
+
+.chart-help-tooltip {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--gray-800);
+  color: #fff;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 400;
+  width: 280px;
+  z-index: 100;
+  line-height: 1.5;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  pointer-events: none;
+}
+
+.chart-help-icon:hover .chart-help-tooltip {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.chart-help-desc {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.chart-help-params-label {
+  display: block;
+  font-size: 10px;
+  color: var(--amber);
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.chart-help-param-tag {
+  display: inline-block;
+  background: rgba(255,255,255,0.15);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  margin-right: 4px;
+  margin-bottom: 2px;
+}
+
+.param-search-box {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid var(--gray-200);
+  border-radius: 6px;
+  font-size: 12px;
+  margin-bottom: 12px;
+  background: #fff;
+  outline: none;
+}
+
+.param-search-box:focus {
+  border-color: var(--amber);
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.15);
+}
+
+.slider-value-input {
+  width: 60px;
+  padding: 1px 4px;
+  border: 1px solid var(--gray-200);
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--blue);
+  text-align: right;
+  outline: none;
+  background: #fff;
+}
+
+.slider-value-input:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+}
