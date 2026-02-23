@@ -179,6 +179,9 @@ export function Sidebar({ params, scenarioIndex, onScenarioChange, onParamChange
       <Slider label="インフレ転嫁率" value={p.wagePassThroughRate} min={0.0} max={1.0} step={0.05}
         tooltip="物価上昇の何%が賃金に転嫁されるか。日本は0.2〜0.4（春闘の交渉力に依存）。1.0なら完全にインフレに追随。"
         onChange={v => onParamChange('wagePassThroughRate', v)} />
+      <Slider label="内部留保還元率 (%/年)" value={p.retainedEarningsReturnRate} min={0.0} max={0.10} step={0.005}
+        tooltip="企業の内部留保のうち毎年何%が賃金・設備投資として還元されるか。高いほど内部留保GDP比が低下し、労働者への分配が増えます。0%=完全蓄積、5%=積極還元。"
+        onChange={v => onParamChange('retainedEarningsReturnRate', v)} />
       <p style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>
         内生賃金 = 実質成長率×分配率 + インフレ率×転嫁率
       </p>

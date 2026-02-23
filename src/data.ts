@@ -94,6 +94,7 @@ export interface SimParams {
   initNominalGDP: number;
   initRetainedEarnings: number;
   effectiveCorporateTaxRate: number;
+  retainedEarningsReturnRate: number;
 }
 
 export interface Constraint {
@@ -217,6 +218,7 @@ const baseParams: SimParams = {
   initNominalGDP: 615,
   initRetainedEarnings: 550,
   effectiveCorporateTaxRate: 0.23,
+  retainedEarningsReturnRate: 0.02,
 };
 
 export const SCENARIOS: Scenario[] = [
@@ -244,7 +246,7 @@ export const SCENARIOS: Scenario[] = [
   {
     name: "② 高成長シナリオ",
     label: "構造改革が奏功し、実質成長率が高まるケース",
-    params: { ...baseParams, realGrowth: 2.0, riskPremium: 0.3, otherRevenue: 16, nominalWageGrowth: 3.0, productivityShareRate: 0.7, wagePassThroughRate: 0.5, globalGrowth: 3.0, yenDepreciation: 0.5 },
+    params: { ...baseParams, realGrowth: 2.0, riskPremium: 0.3, otherRevenue: 16, nominalWageGrowth: 3.0, productivityShareRate: 0.7, wagePassThroughRate: 0.5, globalGrowth: 3.0, yenDepreciation: 0.5, retainedEarningsReturnRate: 0.05 },
     merits: [
       "税収の自然増で財政赤字が大幅に改善",
       "実質賃金が上昇し、国民生活が向上",
@@ -266,7 +268,7 @@ export const SCENARIOS: Scenario[] = [
   {
     name: "③ スタグフレーション",
     label: "高インフレ＋低成長が長期化するケース",
-    params: { ...baseParams, inflationRate: 4.0, realGrowth: 0.0, riskPremium: 1.0, naturalIncrease: 1.0, policyRateSpread: 0.5, yenDepreciation: 5.0, nominalWageGrowth: 1.0, productivityShareRate: 0.3, wagePassThroughRate: 0.2, povertySensitivity: 0.8, energySubsidyRate: 0.5 },
+    params: { ...baseParams, inflationRate: 4.0, realGrowth: 0.0, riskPremium: 1.0, naturalIncrease: 1.0, policyRateSpread: 0.5, yenDepreciation: 5.0, nominalWageGrowth: 1.0, productivityShareRate: 0.3, wagePassThroughRate: 0.2, povertySensitivity: 0.8, energySubsidyRate: 0.5, retainedEarningsReturnRate: 0.01 },
     merits: [
       "インフレにより名目債務の実質価値が目減りする（インフレ税効果）",
       "名目税収が増加し、見かけ上の財政指標が改善",
@@ -310,7 +312,7 @@ export const SCENARIOS: Scenario[] = [
   {
     name: "⑤ 財政再建シナリオ",
     label: "歳出削減と増税で財政健全化を目指すケース",
-    params: { ...baseParams, inflationRate: 1.5, realGrowth: 1.0, riskPremium: 0.3, initTaxConsumption: 26, initTaxIncome: 24, initTaxCorporate: 18, initPolicyExp: 75, otherRevenue: 17, naturalIncrease: 0.3, yenDepreciation: 1.0, nominalWageGrowth: 2.0, productivityShareRate: 0.6, wagePassThroughRate: 0.4 },
+    params: { ...baseParams, inflationRate: 1.5, realGrowth: 1.0, riskPremium: 0.3, initTaxConsumption: 26, initTaxIncome: 24, initTaxCorporate: 18, initPolicyExp: 75, otherRevenue: 17, naturalIncrease: 0.3, yenDepreciation: 1.0, nominalWageGrowth: 2.0, productivityShareRate: 0.6, wagePassThroughRate: 0.4, retainedEarningsReturnRate: 0.03 },
     merits: [
       "債務残高の対GDP比が安定化・低下し、財政の持続可能性が確保",
       "金利リスクプレミアムが低下し、民間の借入コストも改善",
@@ -376,7 +378,7 @@ export const SCENARIOS: Scenario[] = [
   {
     name: "⑧ テクノロジー革命シナリオ",
     label: "AI・自動化で生産性が飛躍的に向上するが、格差拡大も伴うケース",
-    params: { ...baseParams, realGrowth: 2.5, inflationRate: 1.5, riskPremium: 0.2, nominalWageGrowth: 2.0, productivityShareRate: 0.3, wagePassThroughRate: 0.4, globalGrowth: 3.5, initTaxCorporate: 19, effectiveCorporateTaxRate: 0.25, yenDepreciation: 0.5 },
+    params: { ...baseParams, realGrowth: 2.5, inflationRate: 1.5, riskPremium: 0.2, nominalWageGrowth: 2.0, productivityShareRate: 0.3, wagePassThroughRate: 0.4, globalGrowth: 3.5, initTaxCorporate: 19, effectiveCorporateTaxRate: 0.25, yenDepreciation: 0.5, retainedEarningsReturnRate: 0.01 },
     merits: [
       "生産性向上で経済成長率が大幅に改善、税収が増加",
       "行政のデジタル化で公共サービスの効率が向上",

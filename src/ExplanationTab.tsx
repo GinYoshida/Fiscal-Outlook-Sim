@@ -586,8 +586,10 @@ export function ExplanationTab({ params, simData, actualData, dataSources }: Pro
 │　└── 実質賃金 = 名目賃金上昇率 − 実効CPI上昇率
 ├── 企業セクター
 │　├── 企業利益 = 法人税収 ÷ 実効税率(23%)
-│　├── 内部留保増分 = 企業利益 − 賃金配分コスト
-│　└── 内部留保累計（GDP比で追跡）
+│　├── 労働コスト圧力 = GDP × 生産性分配率 × 名目賃金上昇率
+│　├── 純企業所得 = 企業利益 − 労働コスト圧力
+│　├── 還元額 = 内部留保残高 × 還元率
+│　└── 内部留保累計 = 前年 + 純企業所得 − 還元額
 └── 債務GDP比
 　　└── = 政府債務残高 ÷ 名目GDP × 100`}>
         <p><strong>内生的賃金決定メカニズム</strong></p>
@@ -607,11 +609,14 @@ export function ExplanationTab({ params, simData, actualData, dataSources }: Pro
         <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 8, padding: '12px 16px', marginTop: 8 }}>
           <p style={{ fontSize: 13 }}>
             <strong>企業利益</strong> = 法人税収 ÷ 実効法人税率（23%）<br/>
-            <strong>内部留保増分</strong> = 企業利益 − GDP × 生産性分配率 × 名目賃金上昇率 × 30%<br/>
+            <strong>労働コスト圧力</strong> = 名目GDP × 生産性分配率 × 名目賃金上昇率<br/>
+            <strong>純企業所得</strong> = 企業利益 − 労働コスト圧力<br/>
+            <strong>還元額</strong> = 内部留保残高 × 還元率（デフォルト2%/年）<br/>
+            <strong>内部留保</strong> = 前年 + 純企業所得 − 還元額<br/>
             <strong>内部留保GDP比</strong> = 累積内部留保 ÷ 名目GDP × 100
           </p>
           <p style={{ fontSize: 12, marginTop: 6, color: '#64748b' }}>
-            初期値：550兆円（2024年推計）。内部留保GDP比が上昇し続ける場合、企業が利益を賃金に還元していないことを示し、家計へのトリクルダウンが機能していない状態です。
+            初期値：550兆円（2024年推計）。内部留保還元率が低いと内部留保GDP比が上昇し続け、企業が利益を賃金に還元していないことを示します。還元率を上げると内部留保が縮小し、家計への分配が改善されます。
           </p>
         </div>
       </TreeSection>

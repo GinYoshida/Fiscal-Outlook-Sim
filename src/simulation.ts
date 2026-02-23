@@ -187,9 +187,10 @@ export function runSimulation(p: SimParams): SimResult[] {
       const taxCorporateAdj = taxCorporate * (1 + exportProfit - importCost);
 
       const corporateProfit = taxCorporateAdj / p.effectiveCorporateTaxRate;
-      const wageGrowthCost = nominalGDP * prodShare * nomWageG;
-      const retainedDelta = corporateProfit - wageGrowthCost * 0.3;
-      retainedEarnings = retainedEarnings + retainedDelta;
+      const laborCostPressure = nominalGDP * prodShare * nomWageG;
+      const netCorporateIncome = corporateProfit - laborCostPressure;
+      const returnToWorkers = retainedEarnings * p.retainedEarningsReturnRate;
+      retainedEarnings = retainedEarnings + netCorporateIncome - returnToWorkers;
       const retainedToGDP = (retainedEarnings / nominalGDP) * 100;
       const debtToGDP = (p.initDebt / nominalGDP) * 100;
 
@@ -315,9 +316,10 @@ export function runSimulation(p: SimParams): SimResult[] {
       const tax = taxConsumption + taxIncome + taxCorporate + taxOther;
 
       const corporateProfit = taxCorporate / p.effectiveCorporateTaxRate;
-      const wageGrowthCost = nominalGDP * prodShare * nomWageG;
-      const retainedDelta = corporateProfit - wageGrowthCost * 0.3;
-      retainedEarnings = retainedEarnings + retainedDelta;
+      const laborCostPressure = nominalGDP * prodShare * nomWageG;
+      const netCorporateIncome = corporateProfit - laborCostPressure;
+      const returnToWorkers = retainedEarnings * p.retainedEarningsReturnRate;
+      retainedEarnings = retainedEarnings + netCorporateIncome - returnToWorkers;
       const retainedToGDP = (retainedEarnings / nominalGDP) * 100;
 
       const policyRate = Math.max(E - p.policyRateSpread / 100, 0);

@@ -18,6 +18,7 @@ export const OPTIMIZABLE_PARAMS: OptimizableParam[] = [
   { key: 'nominalWageGrowth', label: '名目賃金上昇率下限', min: 0, max: 5, step: 0.1 },
   { key: 'productivityShareRate', label: '生産性分配率', min: 0.1, max: 1.0, step: 0.05 },
   { key: 'wagePassThroughRate', label: 'インフレ転嫁率', min: 0.0, max: 1.0, step: 0.05 },
+  { key: 'retainedEarningsReturnRate', label: '内部留保還元率', min: 0.0, max: 0.10, step: 0.005 },
   { key: 'globalGrowth', label: '世界経済成長率', min: 0, max: 5, step: 0.1 },
   { key: 'naturalIncrease', label: '自然増', min: 0, max: 2, step: 0.1 },
   { key: 'energySubsidyRate', label: 'エネルギー補助金率', min: 0, max: 1, step: 0.1 },
