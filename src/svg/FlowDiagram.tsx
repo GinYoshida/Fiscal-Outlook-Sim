@@ -34,6 +34,7 @@ export default function FlowDiagram() {
         </filter>
       </defs>
 
+      {/* === 背景・エリア === */}
       <rect x="5" y="5" width="790" height="740" rx="12" fill="#f8fafc" stroke="#e2e8f0" strokeWidth="1" />
       <text x="400" y="28" textAnchor="middle" fontSize="14" fill="#64748b" fontWeight="700">統合政府の資金フロー（家計・為替影響を含む）</text>
 
@@ -45,12 +46,14 @@ export default function FlowDiagram() {
       <rect x="579" y="38" width="40" height="18" rx="3" fill="#d97706" />
       <text x="599" y="51" textAnchor="middle" fontSize="10" fill="white" fontWeight="600">海外</text>
 
+      {/* 公的セクター */}
       <rect x="20" y="62" width="540" height="220" rx="8" fill="#eff6ff" stroke="#3b82f6" strokeWidth="1" opacity="0.6" />
-      <text x="32" y="78" fontSize="11" fill="#3b82f6" fontWeight="700">公的セクター</text>
+      <text x="32" y="78" fontSize="11" fill="#3b82f6" fontWeight="700">公的セクター（統合政府＝歳出・公共サービス提供）</text>
 
       <rect x="30" y="85" width="520" height="185" rx="8" fill="none" stroke="#3b82f6" strokeWidth="1.5" opacity="0.5" />
       <text x="290" y="102" textAnchor="middle" fontSize="10" fill="#3b82f6" fontWeight="600">統合政府</text>
 
+      {/* === 主要エンティティ（ボックス） === */}
       <rect x="60" y="110" width="210" height="56" rx="10" fill="#3b82f6" filter="url(#shadow)" />
       <text x="165" y="135" textAnchor="middle" fontSize="14" fill="white" fontWeight="700">日本政府（財務省）</text>
       <text x="165" y="153" textAnchor="middle" fontSize="10" fill="white" opacity="0.9">税収・歳出・国債発行を管理</text>
@@ -58,12 +61,6 @@ export default function FlowDiagram() {
       <rect x="310" y="110" width="210" height="56" rx="10" fill="#8b5cf6" filter="url(#shadow)" />
       <text x="415" y="135" textAnchor="middle" fontSize="14" fill="white" fontWeight="700">日本銀行（BOJ）</text>
       <text x="415" y="153" textAnchor="middle" fontSize="10" fill="white" opacity="0.9">金融政策・国債保有・当座預金</text>
-
-      <line x1="415" y1="110" x2="270" y2="110" stroke="#22c55e" strokeWidth="2.5" markerEnd="url(#ah-green)" />
-      <rect x="295" y="95" width="80" height="18" rx="3" fill="white" stroke="#22c55e" strokeWidth="1" />
-      <text x="335" y="108" textAnchor="middle" fontSize="9" fill="#22c55e" fontWeight="600">国庫納付金</text>
-
-      <line x1="270" y1="166" x2="310" y2="166" stroke="#8b5cf6" strokeWidth="2" markerEnd="url(#ah-purple)" />
 
       <rect x="20" y="290" width="540" height="282" rx="8" fill="#f0fdf4" stroke="#16a34a" strokeWidth="1" opacity="0.5" />
       <text x="32" y="306" fontSize="11" fill="#16a34a" fontWeight="700">民間セクター</text>
@@ -95,58 +92,100 @@ export default function FlowDiagram() {
       <text x="685" y="275" textAnchor="middle" fontSize="10" fill="#92400e" fontWeight="600">外貨準備 ≈ 180兆円</text>
       <text x="685" y="293" textAnchor="middle" fontSize="9" fill="#92400e">円安時に評価益が発生</text>
 
-      <line x1="165" y1="166" x2="150" y2="313" stroke="#f97316" strokeWidth="2.5" markerEnd="url(#ah-orange)" />
-      <rect x="90" y="225" width="80" height="18" rx="3" fill="white" stroke="#f97316" strokeWidth="1" />
-      <text x="130" y="238" textAnchor="middle" fontSize="9" fill="#f97316" fontWeight="600">国債発行💴</text>
+      {/* === 矢印（すべて半透明） === */}
+      <g opacity="0.45">
+        {/* 国庫納付金 BOJ→政府 */}
+        <line x1="415" y1="110" x2="270" y2="110" stroke="#22c55e" strokeWidth="2.5" markerEnd="url(#ah-green)" />
+        {/* 政府→BOJ */}
+        <line x1="270" y1="166" x2="310" y2="166" stroke="#8b5cf6" strokeWidth="2" markerEnd="url(#ah-purple)" />
+        {/* 国債発行 政府→金融機関 */}
+        <line x1="165" y1="166" x2="150" y2="313" stroke="#f97316" strokeWidth="2.5" markerEnd="url(#ah-orange)" />
+        {/* 国債売却 金融機関→BOJ */}
+        <line x1="260" y1="330" x2="415" y2="168" stroke="#14b8a6" strokeWidth="2.5" markerEnd="url(#ah-teal)" />
+        {/* 当座預金 BOJ→金融機関 */}
+        <line x1="415" y1="168" x2="260" y2="340" stroke="#8b5cf6" strokeWidth="2" markerEnd="url(#ah-purple)" />
+        {/* 税金納付 企業→政府 */}
+        <line x1="100" y1="380" x2="100" y2="168" stroke="#3b82f6" strokeWidth="2.5" markerEnd="url(#ah-blue)" />
+        {/* 税・社保 家計→政府 */}
+        <line x1="80" y1="445" x2="80" y2="168" stroke="#3b82f6" strokeWidth="2" markerEnd="url(#ah-blue)" />
+        {/* 歳出 公的セクター→民間全体 */}
+        <line x1="290" y1="270" x2="290" y2="288" stroke="#ef4444" strokeWidth="3" markerEnd="url(#ah-red)" />
+        {/* 賃金支払 企業→家計 */}
+        <line x1="180" y1="430" x2="180" y2="443" stroke="#22c55e" strokeWidth="2.5" markerEnd="url(#ah-green)" />
+        {/* 輸出 企業→海外 */}
+        <line x1="260" y1="390" x2="593" y2="110" stroke="#d97706" strokeWidth="2.5" markerEnd="url(#ah-amber)" />
+        {/* 輸入 海外→企業 */}
+        <line x1="593" y1="130" x2="260" y2="405" stroke="#e11d48" strokeWidth="2.5" markerEnd="url(#ah-rose)" />
+        {/* 外貨準備評価益→歳入 */}
+        <path d="M 595 275 C 540 275 400 240 270 166" fill="none" stroke="#d97706" strokeWidth="2" markerEnd="url(#ah-amber)" />
+        {/* 円安→法人税↑・補助金↑ */}
+        <path d="M 595 155 C 520 200 360 210 220 168" fill="none" stroke="#e11d48" strokeWidth="2" markerEnd="url(#ah-rose)" />
+        {/* 円安→物価↑→生活費↑ */}
+        <path d="M 595 160 C 520 320 400 400 262 470" fill="none" stroke="#ec4899" strokeWidth="2" markerEnd="url(#ah-pink)" />
+        {/* 食費・光熱費支出 */}
+        <path d="M 260 480 C 400 510 550 400 593 150" fill="none" stroke="#e11d48" strokeWidth="2" markerEnd="url(#ah-rose)" />
+      </g>
 
-      <line x1="260" y1="330" x2="415" y2="168" stroke="#14b8a6" strokeWidth="2.5" markerEnd="url(#ah-teal)" />
-      <rect x="300" y="235" width="80" height="18" rx="3" fill="white" stroke="#14b8a6" strokeWidth="1" />
-      <text x="340" y="248" textAnchor="middle" fontSize="9" fill="#14b8a6" fontWeight="600">国債売却📉</text>
+      {/* === ラベルボックス（最前面・重ならない配置） === */}
+      <g>
+        {/* 国庫納付金 */}
+        <rect x="295" y="92" width="80" height="16" rx="3" fill="white" stroke="#22c55e" strokeWidth="1" />
+        <text x="335" y="104" textAnchor="middle" fontSize="8" fill="#22c55e" fontWeight="600">国庫納付金</text>
 
-      <line x1="415" y1="168" x2="260" y2="340" stroke="#8b5cf6" strokeWidth="2" markerEnd="url(#ah-purple)" />
-      <rect x="375" y="238" width="78" height="18" rx="3" fill="white" stroke="#8b5cf6" strokeWidth="1" />
-      <text x="414" y="251" textAnchor="middle" fontSize="9" fill="#8b5cf6" fontWeight="600">当座預金💰</text>
+        {/* 国債発行 */}
+        <rect x="90" y="220" width="72" height="16" rx="3" fill="white" stroke="#f97316" strokeWidth="1" />
+        <text x="126" y="232" textAnchor="middle" fontSize="8" fill="#f97316" fontWeight="600">国債発行💴</text>
 
-      <line x1="100" y1="380" x2="100" y2="168" stroke="#3b82f6" strokeWidth="2.5" markerEnd="url(#ah-blue)" />
-      <rect x="32" y="255" width="70" height="18" rx="3" fill="white" stroke="#3b82f6" strokeWidth="1" />
-      <text x="67" y="268" textAnchor="middle" fontSize="9" fill="#3b82f6" fontWeight="600">税金納付</text>
+        {/* 税金納付 */}
+        <rect x="28" y="255" width="60" height="16" rx="3" fill="white" stroke="#3b82f6" strokeWidth="1" />
+        <text x="58" y="267" textAnchor="middle" fontSize="8" fill="#3b82f6" fontWeight="600">税金納付</text>
 
-      <line x1="130" y1="168" x2="130" y2="378" stroke="#ef4444" strokeWidth="2.5" markerEnd="url(#ah-red)" />
-      <rect x="132" y="255" width="78" height="18" rx="3" fill="white" stroke="#ef4444" strokeWidth="1" />
-      <text x="171" y="268" textAnchor="middle" fontSize="9" fill="#ef4444" fontWeight="600">公共サービス</text>
+        {/* 歳出（公共サービス） */}
+        <rect x="248" y="271" width="84" height="16" rx="3" fill="white" stroke="#ef4444" strokeWidth="1" />
+        <text x="290" y="283" textAnchor="middle" fontSize="8" fill="#ef4444" fontWeight="600">歳出（公共サービス）</text>
 
-      <line x1="80" y1="445" x2="80" y2="168" stroke="#3b82f6" strokeWidth="2" markerEnd="url(#ah-blue)" />
-      <rect x="15" y="370" width="62" height="18" rx="3" fill="white" stroke="#3b82f6" strokeWidth="1" />
-      <text x="46" y="383" textAnchor="middle" fontSize="8" fill="#3b82f6" fontWeight="600">税・社保30%</text>
+        {/* 国債売却 */}
+        <rect x="310" y="218" width="72" height="16" rx="3" fill="white" stroke="#14b8a6" strokeWidth="1" />
+        <text x="346" y="230" textAnchor="middle" fontSize="8" fill="#14b8a6" fontWeight="600">国債売却📉</text>
 
-      <line x1="180" y1="430" x2="180" y2="443" stroke="#22c55e" strokeWidth="2.5" markerEnd="url(#ah-green)" />
-      <rect x="195" y="428" width="60" height="18" rx="3" fill="white" stroke="#22c55e" strokeWidth="1" />
-      <text x="225" y="441" textAnchor="middle" fontSize="9" fill="#22c55e" fontWeight="600">賃金支払</text>
+        {/* 当座預金 */}
+        <rect x="385" y="238" width="68" height="16" rx="3" fill="white" stroke="#8b5cf6" strokeWidth="1" />
+        <text x="419" y="250" textAnchor="middle" fontSize="8" fill="#8b5cf6" fontWeight="600">当座預金💰</text>
 
-      <line x1="260" y1="390" x2="593" y2="110" stroke="#d97706" strokeWidth="2.5" markerEnd="url(#ah-amber)" />
-      <rect x="400" y="240" width="56" height="18" rx="3" fill="white" stroke="#d97706" strokeWidth="1" />
-      <text x="428" y="253" textAnchor="middle" fontSize="9" fill="#d97706" fontWeight="600">輸出📦</text>
+        {/* 輸出 */}
+        <rect x="470" y="218" width="50" height="16" rx="3" fill="white" stroke="#d97706" strokeWidth="1" />
+        <text x="495" y="230" textAnchor="middle" fontSize="8" fill="#d97706" fontWeight="600">輸出📦</text>
 
-      <line x1="593" y1="130" x2="260" y2="405" stroke="#e11d48" strokeWidth="2.5" markerEnd="url(#ah-rose)" />
-      <rect x="460" y="255" width="60" height="18" rx="3" fill="white" stroke="#e11d48" strokeWidth="1" />
-      <text x="490" y="268" textAnchor="middle" fontSize="9" fill="#e11d48" fontWeight="600">輸入🛢️</text>
+        {/* 輸入 */}
+        <rect x="470" y="268" width="50" height="16" rx="3" fill="white" stroke="#e11d48" strokeWidth="1" />
+        <text x="495" y="280" textAnchor="middle" fontSize="8" fill="#e11d48" fontWeight="600">輸入🛢️</text>
 
-      <path d="M 595 275 C 540 275 400 240 270 166" fill="none" stroke="#d97706" strokeWidth="2" markerEnd="url(#ah-amber)" />
-      <rect x="405" y="195" width="120" height="18" rx="3" fill="#fffbeb" stroke="#d97706" strokeWidth="1" />
-      <text x="465" y="208" textAnchor="middle" fontSize="8" fill="#92400e" fontWeight="600">外貨準備評価益→歳入</text>
+        {/* 税・社保 */}
+        <rect x="15" y="370" width="56" height="16" rx="3" fill="white" stroke="#3b82f6" strokeWidth="1" />
+        <text x="43" y="382" textAnchor="middle" fontSize="7" fill="#3b82f6" fontWeight="600">税・社保30%</text>
 
-      <path d="M 595 155 C 520 200 360 210 220 168" fill="none" stroke="#e11d48" strokeWidth="2" markerEnd="url(#ah-rose)" />
-      <rect x="390" y="174" width="120" height="18" rx="3" fill="#fff1f2" stroke="#e11d48" strokeWidth="1" />
-      <text x="450" y="187" textAnchor="middle" fontSize="8" fill="#e11d48" fontWeight="600">円安→法人税↑・補助金↑</text>
+        {/* 賃金支払 */}
+        <rect x="195" y="430" width="55" height="16" rx="3" fill="white" stroke="#22c55e" strokeWidth="1" />
+        <text x="222" y="442" textAnchor="middle" fontSize="8" fill="#22c55e" fontWeight="600">賃金支払</text>
 
-      <path d="M 595 160 C 520 320 400 400 262 470" fill="none" stroke="#ec4899" strokeWidth="2" markerEnd="url(#ah-pink)" />
-      <rect x="355" y="355" width="120" height="18" rx="3" fill="#fdf2f8" stroke="#ec4899" strokeWidth="1" />
-      <text x="415" y="368" textAnchor="middle" fontSize="8" fill="#ec4899" fontWeight="600">円安→物価↑→生活費↑</text>
+        {/* 外貨準備評価益 */}
+        <rect x="405" y="190" width="110" height="16" rx="3" fill="#fffbeb" stroke="#d97706" strokeWidth="1" />
+        <text x="460" y="202" textAnchor="middle" fontSize="7" fill="#92400e" fontWeight="600">外貨準備評価益→歳入</text>
 
-      <path d="M 260 480 C 400 510 550 400 593 150" fill="none" stroke="#e11d48" strokeWidth="2" markerEnd="url(#ah-rose)" />
-      <rect x="395" y="430" width="100" height="18" rx="3" fill="#fff1f2" stroke="#e11d48" strokeWidth="1" />
-      <text x="445" y="443" textAnchor="middle" fontSize="8" fill="#e11d48" fontWeight="600">食費・光熱費支出</text>
+        {/* 円安→法人税↑・補助金↑ */}
+        <rect x="280" y="178" width="110" height="16" rx="3" fill="#fff1f2" stroke="#e11d48" strokeWidth="1" />
+        <text x="335" y="190" textAnchor="middle" fontSize="7" fill="#e11d48" fontWeight="600">円安→法人税↑・補助金↑</text>
 
+        {/* 円安→物価↑→生活費↑ */}
+        <rect x="355" y="355" width="110" height="16" rx="3" fill="#fdf2f8" stroke="#ec4899" strokeWidth="1" />
+        <text x="410" y="367" textAnchor="middle" fontSize="7" fill="#ec4899" fontWeight="600">円安→物価↑→生活費↑</text>
+
+        {/* 食費・光熱費支出 */}
+        <rect x="395" y="435" width="90" height="16" rx="3" fill="#fff1f2" stroke="#e11d48" strokeWidth="1" />
+        <text x="440" y="447" textAnchor="middle" fontSize="7" fill="#e11d48" fontWeight="600">食費・光熱費支出</text>
+      </g>
+
+      {/* === 市場エリア === */}
       <rect x="12" y="585" width="778" height="55" rx="8" fill="#f1f5f9" stroke="#94a3b8" strokeWidth="1" />
       <rect x="16" y="585" width="40" height="18" rx="3" fill="#94a3b8" />
       <text x="36" y="598" textAnchor="middle" fontSize="10" fill="white" fontWeight="600">市場</text>
@@ -163,20 +202,22 @@ export default function FlowDiagram() {
       <text x="500" y="613" textAnchor="middle" fontSize="11" fill="#166534" fontWeight="700">📈 資産市場</text>
       <text x="500" y="626" textAnchor="middle" fontSize="9" fill="#166534">資産価格→格差</text>
 
+      {/* === 家計影響まとめ === */}
       <rect x="12" y="648" width="778" height="42" rx="6" fill="#fdf2f8" stroke="#ec4899" strokeWidth="1" opacity="0.8" />
       <text x="30" y="664" fontSize="9" fill="#92400e" fontWeight="600">家計への影響まとめ：</text>
       <text x="30" y="678" fontSize="8.5" fill="#64748b">賃金収入 − 税・社保(30%) − 食費(CPI連動) − 光熱費(円安連動) = 可処分所得 → 貧困率・格差に影響　|　円安 → 輸入物価↑ → CPI↑ → 実質賃金↓ → 貧困率↑</text>
 
+      {/* === 凡例 === */}
       <g transform="translate(20, 700)">
         <circle cx="8" cy="8" r="4" fill="#3b82f6" /><text x="16" y="12" fontSize="9" fill="#475569">税金</text>
-        <circle cx="52" cy="8" r="4" fill="#ef4444" /><text x="60" y="12" fontSize="9" fill="#475569">公共サービス</text>
-        <circle cx="140" cy="8" r="4" fill="#f97316" /><text x="148" y="12" fontSize="9" fill="#475569">国債発行</text>
-        <circle cx="212" cy="8" r="4" fill="#14b8a6" /><text x="220" y="12" fontSize="9" fill="#475569">国債売却</text>
-        <circle cx="280" cy="8" r="4" fill="#22c55e" /><text x="288" y="12" fontSize="9" fill="#475569">賃金・納付金</text>
-        <circle cx="370" cy="8" r="4" fill="#8b5cf6" /><text x="378" y="12" fontSize="9" fill="#475569">当座預金</text>
-        <circle cx="432" cy="8" r="4" fill="#d97706" /><text x="440" y="12" fontSize="9" fill="#475569">輸出</text>
-        <circle cx="472" cy="8" r="4" fill="#e11d48" /><text x="480" y="12" fontSize="9" fill="#475569">輸入・生活費</text>
-        <circle cx="558" cy="8" r="4" fill="#ec4899" /><text x="566" y="12" fontSize="9" fill="#475569">家計</text>
+        <circle cx="52" cy="8" r="4" fill="#ef4444" /><text x="60" y="12" fontSize="9" fill="#475569">歳出</text>
+        <circle cx="90" cy="8" r="4" fill="#f97316" /><text x="98" y="12" fontSize="9" fill="#475569">国債発行</text>
+        <circle cx="152" cy="8" r="4" fill="#14b8a6" /><text x="160" y="12" fontSize="9" fill="#475569">国債売却</text>
+        <circle cx="212" cy="8" r="4" fill="#22c55e" /><text x="220" y="12" fontSize="9" fill="#475569">賃金・納付金</text>
+        <circle cx="302" cy="8" r="4" fill="#8b5cf6" /><text x="310" y="12" fontSize="9" fill="#475569">当座預金</text>
+        <circle cx="370" cy="8" r="4" fill="#d97706" /><text x="378" y="12" fontSize="9" fill="#475569">輸出</text>
+        <circle cx="408" cy="8" r="4" fill="#e11d48" /><text x="416" y="12" fontSize="9" fill="#475569">輸入・生活費</text>
+        <circle cx="498" cy="8" r="4" fill="#ec4899" /><text x="506" y="12" fontSize="9" fill="#475569">家計影響</text>
       </g>
     </svg>
   )
