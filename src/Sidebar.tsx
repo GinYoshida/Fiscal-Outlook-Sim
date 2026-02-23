@@ -25,7 +25,7 @@ function Slider({ label, value, min, max, step, tooltip, onChange, searchHidden 
 
   return (
     <div className="slider-group">
-      <div className="slider-header">
+      <div className="slider-label-row">
         <label>
           {label}
           {tooltip && (
@@ -34,18 +34,6 @@ function Slider({ label, value, min, max, step, tooltip, onChange, searchHidden 
             </span>
           )}
         </label>
-        <input
-          type="number"
-          className="slider-number-input"
-          value={parseFloat(value.toFixed(decimals))}
-          step={step}
-          min={min}
-          max={max}
-          onChange={e => {
-            const v = parseFloat(e.target.value)
-            if (!isNaN(v)) onChange(Math.min(max, Math.max(min, v)))
-          }}
-        />
       </div>
       <input
         type="range"
@@ -54,6 +42,18 @@ function Slider({ label, value, min, max, step, tooltip, onChange, searchHidden 
         step={step}
         value={value}
         onChange={e => onChange(parseFloat(e.target.value))}
+      />
+      <input
+        type="number"
+        className="slider-number-input"
+        value={parseFloat(value.toFixed(decimals))}
+        step={step}
+        min={min}
+        max={max}
+        onChange={e => {
+          const v = parseFloat(e.target.value)
+          if (!isNaN(v)) onChange(Math.min(max, Math.max(min, v)))
+        }}
       />
     </div>
   )
