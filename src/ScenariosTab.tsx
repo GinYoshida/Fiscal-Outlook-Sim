@@ -1,0 +1,338 @@
+import { useMemo, useState } from 'react'
+import {
+  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ReferenceLine,
+  RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
+  LineChart, Line,
+} from 'recharts'
+import { SCENARIOS } from './data'
+import { runSimulation, type SimResult } from './simulation'
+
+const SCENARIO_COLORS = [
+  '#6366f1', '#22c55e', '#ef4444', '#f97316', '#3b82f6',
+  '#ec4899', '#8b5cf6', '#14b8a6', '#64748b', '#eab308',
+]
+
+interface ScenarioSummary {
+  name: string;
+  shortName: string;
+  label: string;
+  debt2055: number;
+  interestBurden2055: number;
+  povertyRate2055: number;
+  gini2055: number;
+  debtGDPRatio2055: number;
+  nfa2055: number;
+  realWageAvg: number;
+  fiscalBalance2055: number;
+  merits: string[];
+  demerits: string[];
+  policies: string[];
+  warningCount: number;
+  simData: SimResult[];
+}
+
+function getShortName(name: string): string {
+  return name.replace(/^[①-⑩]\s*/, '').replace(/（.*）/, '').trim()
+}
+
+export function ScenariosTab() {
+  const [expandedIndex, setExpandedIndex] = useState<number | null>(null)
+
+  const summaries: ScenarioSummary[] = useMemo(() => {
+    return SCENARIOS.map(scenario => {
+      const sim = runSimulation(scenario.params)
+      const last = sim[sim.length - 1]
+      const nominalGDP = scenario.params.initNominalGDP *
+        Math.pow(1 + (scenario.params.realGrowth + scenario.params.inflationRate) / 100, 30)
+
+      let warningCount = 0
+      sim.forEach(d => {
+        if (d.interestBurden > 30) warningCount++
+        if (d.povertyRate > 20) warningCount++
+        if (d.nfa < scenario.params.nfaThreshold) warningCount++
+      })
+
+      const avgRealWage = sim.reduce((s, d) => s + d.realWageGrowth, 0) / sim.length
+
+      return {
+        name: scenario.name,
+        shortName: getShortName(scenario.name),
+        label: scenario.label,
+        debt2055: last.debt,
+        interestBurden2055: last.interestBurden,
+        povertyRate2055: last.povertyRate,
+        gini2055: last.giniIndex,
+        debtGDPRatio2055: (last.debt / nominalGDP) * 100,
+        nfa2055: last.nfa,
+        realWageAvg: avgRealWage,
+        fiscalBalance2055: last.fiscalBalance,
+        merits: scenario.merits,
+        demerits: scenario.demerits,
+        policies: scenario.policies,
+        warningCount,
+        simData: sim,
+      }
+    })
+  }, [])
+
+  const comparisonData = useMemo(() => {
+    return summaries.map((s, i) => ({
+      name: `${i + 1}`,
+      fullName: s.shortName,
+      '債務残高': Math.round(s.debt2055),
+      '利払負担率': parseFloat(s.interestBurden2055.toFixed(1)),
+      '貧困率': parseFloat(s.povertyRate2055.toFixed(1)),
+      '対外純資産': Math.round(s.nfa2055),
+    }))
+  }, [summaries])
+
+  const radarData = useMemo(() => {
+    const maxDebt = Math.max(...summaries.map(s => s.debt2055))
+    const minDebt = Math.min(...summaries.map(s => s.debt2055))
+    const maxBurden = Math.max(...summaries.map(s => s.interestBurden2055))
+    const minBurden = Math.min(...summaries.map(s => s.interestBurden2055))
+    const maxPoverty = Math.max(...summaries.map(s => s.povertyRate2055))
+    const minPoverty = Math.min(...summaries.map(s => s.povertyRate2055))
+    const maxGini = Math.max(...summaries.map(s => s.gini2055))
+    const minGini = Math.min(...summaries.map(s => s.gini2055))
+    const maxNFA = Math.max(...summaries.map(s => s.nfa2055))
+    const minNFA = Math.min(...summaries.map(s => s.nfa2055))
+
+    const normalize = (val: number, min: number, max: number, invert: boolean) => {
+      if (max === min) return 50
+      const ratio = (val - min) / (max - min)
+      return Math.round((invert ? 1 - ratio : ratio) * 100)
+    }
+
+    const metrics = ['財政健全性', '利払負担', '家計安定', '格差抑制', '対外資産']
+    return metrics.map(metric => {
+      const entry: Record<string, string | number> = { metric }
+      summaries.forEach((s, i) => {
+        let val = 50
+        switch (metric) {
+          case '財政健全性': val = normalize(s.debt2055, minDebt, maxDebt, true); break
+          case '利払負担': val = normalize(s.interestBurden2055, minBurden, maxBurden, true); break
+          case '家計安定': val = normalize(s.povertyRate2055, minPoverty, maxPoverty, true); break
+          case '格差抑制': val = normalize(s.gini2055, minGini, maxGini, true); break
+          case '対外資産': val = normalize(s.nfa2055, minNFA, maxNFA, false); break
+        }
+        entry[`s${i}`] = val
+      })
+      return entry
+    })
+  }, [summaries])
+
+  const debtTimeSeriesData = useMemo(() => {
+    const years = summaries[0].simData.map(d => d.year)
+    return years.map((year, yi) => {
+      const entry: Record<string, number> = { year }
+      summaries.forEach((s, i) => {
+        entry[`s${i}`] = parseFloat(s.simData[yi].interestBurden.toFixed(1))
+      })
+      return entry
+    })
+  }, [summaries])
+
+  const getRatingColor = (warnings: number) => {
+    if (warnings === 0) return '#22c55e'
+    if (warnings <= 5) return '#84cc16'
+    if (warnings <= 15) return '#f59e0b'
+    return '#ef4444'
+  }
+
+  const getRatingLabel = (warnings: number) => {
+    if (warnings === 0) return 'A+'
+    if (warnings <= 5) return 'A'
+    if (warnings <= 10) return 'B+'
+    if (warnings <= 15) return 'B'
+    if (warnings <= 25) return 'C'
+    return 'D'
+  }
+
+  return (
+    <div>
+      <div className="scenarios-overview-header">
+        <h2>📊 全シナリオ比較分析</h2>
+        <p>10のシナリオを横並びで比較し、それぞれの特徴・リスク・改善策を一覧できます</p>
+      </div>
+
+      <div className="scenarios-comparison-chart">
+        <h3>2055年時点：利払負担率・貧困率の比較</h3>
+        <ResponsiveContainer width="100%" height={320}>
+          <BarChart data={comparisonData} margin={{ top: 10, right: 60, left: 0, bottom: 30 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+            <XAxis dataKey="name" tick={{ fontSize: 11 }} label={{ value: 'シナリオ番号', position: 'insideBottom', offset: -20, fontSize: 11 }} />
+            <YAxis yAxisId="left" tick={{ fontSize: 11 }} label={{ value: '%', angle: -90, position: 'insideLeft', fontSize: 11 }} />
+            <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11 }} label={{ value: '兆円', angle: 90, position: 'insideRight', fontSize: 11 }} />
+            <Tooltip
+              formatter={(value: number, name: string) => {
+                if (name === '債務残高' || name === '対外純資産') return [`${value.toLocaleString()}兆円`, name]
+                return [`${value}%`, name]
+              }}
+              labelFormatter={(label) => {
+                const item = comparisonData.find(d => d.name === label)
+                return item ? `${label}. ${item.fullName}` : label
+              }}
+            />
+            <Legend wrapperStyle={{ fontSize: 11 }} />
+            <Bar yAxisId="left" dataKey="利払負担率" fill="#f97316" />
+            <Bar yAxisId="left" dataKey="貧困率" fill="#ef4444" />
+            <Bar yAxisId="right" dataKey="対外純資産" fill="#3b82f6" />
+            <ReferenceLine yAxisId="left" y={30} stroke="#ef4444" strokeDasharray="3 3" label={{ value: '利払30%', fontSize: 10, fill: '#ef4444' }} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+
+      <div className="scenarios-radar-section">
+        <h3>シナリオ総合評価レーダー</h3>
+        <p className="radar-desc">各指標を0〜100に正規化（高いほど良好）</p>
+        <ResponsiveContainer width="100%" height={360}>
+          <RadarChart data={radarData} cx="50%" cy="50%" outerRadius="70%">
+            <PolarGrid stroke="#e5e7eb" />
+            <PolarAngleAxis dataKey="metric" tick={{ fontSize: 11 }} />
+            <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fontSize: 9 }} />
+            {summaries.map((s, i) => (
+              <Radar
+                key={i}
+                name={s.shortName}
+                dataKey={`s${i}`}
+                stroke={SCENARIO_COLORS[i]}
+                fill={SCENARIO_COLORS[i]}
+                fillOpacity={0.05}
+                strokeWidth={1.5}
+              />
+            ))}
+            <Legend wrapperStyle={{ fontSize: 10 }} />
+            <Tooltip />
+          </RadarChart>
+        </ResponsiveContainer>
+      </div>
+
+      <div className="scenarios-timeseries-section">
+        <h3>利払負担率の推移比較（2026〜2055年）</h3>
+        <ResponsiveContainer width="100%" height={300}>
+          <LineChart data={debtTimeSeriesData} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+            <XAxis dataKey="year" tick={{ fontSize: 10 }} />
+            <YAxis tick={{ fontSize: 10 }} label={{ value: '%', angle: -90, position: 'insideLeft', fontSize: 11 }} />
+            <Tooltip formatter={(value: number, name: string) => {
+              const idx = parseInt(name.replace('s', ''))
+              return [`${value}%`, summaries[idx]?.shortName || name]
+            }} />
+            <Legend formatter={(value: string) => {
+              const idx = parseInt(value.replace('s', ''))
+              return summaries[idx]?.shortName || value
+            }} wrapperStyle={{ fontSize: 10 }} />
+            <ReferenceLine y={30} stroke="#ef4444" strokeDasharray="3 3" label={{ value: '警告ライン', fontSize: 10, fill: '#ef4444' }} />
+            {summaries.map((_, i) => (
+              <Line key={i} type="monotone" dataKey={`s${i}`} stroke={SCENARIO_COLORS[i]} strokeWidth={1.5} dot={false} />
+            ))}
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+
+      <div className="scenarios-summary-table">
+        <h3>シナリオ別 2055年指標サマリー</h3>
+        <div className="table-scroll">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>シナリオ</th>
+                <th>評価</th>
+                <th>債務残高</th>
+                <th>利払負担率</th>
+                <th>貧困率</th>
+                <th>ジニ係数</th>
+                <th>対外純資産</th>
+                <th>平均実質賃金</th>
+              </tr>
+            </thead>
+            <tbody>
+              {summaries.map((s, i) => (
+                <tr key={i} style={{ cursor: 'pointer', background: expandedIndex === i ? '#f0f9ff' : undefined }} onClick={() => setExpandedIndex(expandedIndex === i ? null : i)}>
+                  <td style={{ fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap' }}>{s.name}</td>
+                  <td>
+                    <span className="rating-badge" style={{ background: getRatingColor(s.warningCount), color: '#fff' }}>
+                      {getRatingLabel(s.warningCount)}
+                    </span>
+                  </td>
+                  <td style={{ color: s.debt2055 > 2000 ? '#ef4444' : undefined }}>{Math.round(s.debt2055).toLocaleString()}兆</td>
+                  <td style={{ color: s.interestBurden2055 > 30 ? '#ef4444' : undefined }}>{s.interestBurden2055.toFixed(1)}%</td>
+                  <td style={{ color: s.povertyRate2055 > 20 ? '#ef4444' : undefined }}>{s.povertyRate2055.toFixed(1)}%</td>
+                  <td style={{ color: s.gini2055 > 0.4 ? '#ef4444' : undefined }}>{s.gini2055.toFixed(3)}</td>
+                  <td style={{ color: s.nfa2055 < 200 ? '#ef4444' : undefined }}>{Math.round(s.nfa2055).toLocaleString()}兆</td>
+                  <td style={{ color: s.realWageAvg < 0 ? '#ef4444' : '#22c55e' }}>{s.realWageAvg >= 0 ? '+' : ''}{s.realWageAvg.toFixed(2)}%</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="scenarios-cards">
+        <h3>各シナリオ詳細分析</h3>
+        {summaries.map((s, i) => (
+          <div key={i} className={`scenario-card ${expandedIndex === i ? 'expanded' : ''}`}>
+            <div className="scenario-card-header" onClick={() => setExpandedIndex(expandedIndex === i ? null : i)}>
+              <div className="scenario-card-title-row">
+                <span className="scenario-card-number" style={{ background: SCENARIO_COLORS[i] }}>{i + 1}</span>
+                <div>
+                  <div className="scenario-card-name">{s.name}</div>
+                  <div className="scenario-card-label">{s.label}</div>
+                </div>
+              </div>
+              <div className="scenario-card-badges">
+                <span className="rating-badge" style={{ background: getRatingColor(s.warningCount), color: '#fff' }}>
+                  {getRatingLabel(s.warningCount)}
+                </span>
+                <span className="scenario-card-expand">{expandedIndex === i ? '▲' : '▼'}</span>
+              </div>
+            </div>
+            {expandedIndex === i && (
+              <div className="scenario-card-body">
+                <div className="scenario-card-metrics">
+                  <div className="scenario-metric">
+                    <span className="scenario-metric-label">債務残高</span>
+                    <span className="scenario-metric-value">{Math.round(s.debt2055).toLocaleString()}兆円</span>
+                  </div>
+                  <div className="scenario-metric">
+                    <span className="scenario-metric-label">利払負担率</span>
+                    <span className="scenario-metric-value" style={{ color: s.interestBurden2055 > 30 ? '#ef4444' : '#22c55e' }}>{s.interestBurden2055.toFixed(1)}%</span>
+                  </div>
+                  <div className="scenario-metric">
+                    <span className="scenario-metric-label">貧困率</span>
+                    <span className="scenario-metric-value" style={{ color: s.povertyRate2055 > 20 ? '#ef4444' : '#f59e0b' }}>{s.povertyRate2055.toFixed(1)}%</span>
+                  </div>
+                  <div className="scenario-metric">
+                    <span className="scenario-metric-label">対外純資産</span>
+                    <span className="scenario-metric-value" style={{ color: s.nfa2055 < 200 ? '#ef4444' : '#22c55e' }}>{Math.round(s.nfa2055).toLocaleString()}兆円</span>
+                  </div>
+                </div>
+                <div className="scenario-analysis-grid">
+                  <div className="scenario-analysis-section merits">
+                    <div className="scenario-analysis-section-title">✅ メリット</div>
+                    <ul>
+                      {s.merits.map((m, j) => <li key={j}>{m}</li>)}
+                    </ul>
+                  </div>
+                  <div className="scenario-analysis-section demerits">
+                    <div className="scenario-analysis-section-title">⚠️ デメリット</div>
+                    <ul>
+                      {s.demerits.map((d, j) => <li key={j}>{d}</li>)}
+                    </ul>
+                  </div>
+                </div>
+                <div className="scenario-analysis-section policies">
+                  <div className="scenario-analysis-section-title">💡 改善に向けた施策</div>
+                  <ol>
+                    {s.policies.map((p, j) => <li key={j}>{p}</li>)}
+                  </ol>
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}

@@ -67,4 +67,4 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.components.v1.html(html, height=900, scrolling=False)
+st.components.v1.html(html, height=2000, scrolling=True)

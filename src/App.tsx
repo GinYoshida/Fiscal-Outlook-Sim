@@ -4,6 +4,7 @@ import { runSimulation } from './simulation'
 import { Sidebar } from './Sidebar'
 import { SimulationTab } from './SimulationTab'
 import { ExplanationTab } from './ExplanationTab'
+import { ScenariosTab } from './ScenariosTab'
 
 function App() {
   const [params, setParams] = useState<SimParams>({ ...SCENARIOS[0].params })
@@ -66,6 +67,12 @@ function App() {
           >
             📊 シミュレーション
           </button>
+          <button
+            className={`tab-button ${activeTab === 2 ? 'active' : ''}`}
+            onClick={() => setActiveTab(2)}
+          >
+            🗂️ シナリオ一覧
+          </button>
         </div>
 
         {activeTab === 0 && (
@@ -84,6 +91,9 @@ function App() {
             childAge2026={childAge2026}
             scenarioIndex={scenarioIndex}
           />
+        )}
+        {activeTab === 2 && (
+          <ScenariosTab />
         )}
       </main>
     </div>
