@@ -274,6 +274,30 @@ export function SimulationTab({ params, simData, actualData }: Props) {
     return fillYearGaps([...actual, ...sim])
   }, [actualData, simData])
 
+  const expBreakdownData = useMemo(() => {
+    const sim = simData.map(d => ({
+      year: d.year,
+      社会保障: parseFloat(d.socialSecurity.toFixed(1)),
+      子育て支援: parseFloat(d.childcare.toFixed(1)),
+      地方交付税: parseFloat(d.localGovTransfer.toFixed(1)),
+      防衛: parseFloat(d.defense.toFixed(1)),
+      その他政策: parseFloat(d.otherPolicyExp.toFixed(1)),
+      エネルギー補助金: parseFloat(d.energySubsidy.toFixed(1)),
+      利払い費: parseFloat(d.interest.toFixed(1)),
+    }))
+    return fillYearGaps(sim)
+  }, [simData])
+
+  const budgetCompositionData = useMemo(() => {
+    const sim = simData.map(d => ({
+      year: d.year,
+      税収: parseFloat(d.revenueTaxRatio.toFixed(1)),
+      公債金: parseFloat(d.revenueBondRatio.toFixed(1)),
+      その他収入: parseFloat(d.revenueOtherRatio.toFixed(1)),
+    }))
+    return fillYearGaps(sim)
+  }, [simData])
+
   const bojData = useMemo(() => {
     const actual = actualData.map(d => ({ year: d.year, '日銀純利益': d.bojPayment as number | null, '統合政府への反映額': d.bojPayment as number | null, '累積損失': null as number | null }))
     const sim = simData.map(d => ({
@@ -484,10 +508,17 @@ export function SimulationTab({ params, simData, actualData }: Props) {
       { label: '─', values: years.map(() => '') },
       { label: '支出合計', values: [...aData.map(d => fmt(d.totalCost)), ...sFiltered.map(d => fmt(d.totalCost))] },
       { label: '├ 政策経費', values: [...aData.map(d => fmt(d.policyExp)), ...sFiltered.map(d => fmt(d.policyExp))], indent: 1 },
+      { label: '│　├ 社会保障', values: [...aData.map(() => '―'), ...sFiltered.map(d => fmt(d.socialSecurity))], indent: 2 },
+      { label: '│　├ 子育て支援', values: [...aData.map(() => '―'), ...sFiltered.map(d => fmt(d.childcare))], indent: 2 },
+      { label: '│　├ 地方交付税', values: [...aData.map(() => '―'), ...sFiltered.map(d => fmt(d.localGovTransfer))], indent: 2 },
+      { label: '│　├ 防衛', values: [...aData.map(() => '―'), ...sFiltered.map(d => fmt(d.defense))], indent: 2 },
+      { label: '│　├ その他政策', values: [...aData.map(() => '―'), ...sFiltered.map(d => fmt(d.otherPolicyExp))], indent: 2 },
+      { label: '│　└ エネルギー補助金', values: [...aData.map(() => '―'), ...sFiltered.map(d => fmt(d.energySubsidy))], indent: 2 },
       { label: '└ 利払い費', values: [...aData.map(d => fmt(d.interest)), ...sFiltered.map(d => fmt(d.interest))], indent: 1 },
       { label: '─', values: years.map(() => '') },
       { label: '財政収支', values: [...aData.map(d => fmt(d.fiscalBalance)), ...sFiltered.map(d => fmt(d.fiscalBalance))] },
-      { label: '国債発行額', values: [...aData.map(() => '―'), ...sFiltered.map(d => fmt(d.bondIssuance))] },
+      { label: '国債発行額（公債金）', values: [...aData.map(() => '―'), ...sFiltered.map(d => fmt(d.bondIssuance))] },
+      { label: '公債金依存度 (%)', values: [...aData.map(() => '―'), ...sFiltered.map(d => fmt(d.revenueBondRatio))] },
       { label: '債務残高', values: [...aData.map(d => fmt(d.debt, 0)), ...sFiltered.map(d => fmt(d.debt, 0))] },
       { label: '利払負担率 (%)', values: [...aData.map(d => fmt(d.interestBurden)), ...sFiltered.map(d => fmt(d.interestBurden))] },
       { label: '財政リスク加算 (%)', values: [...aData.map(() => '―'), ...sFiltered.map(d => fmt(d.fiscalRiskPremium))] },
@@ -537,13 +568,19 @@ export function SimulationTab({ params, simData, actualData }: Props) {
       { label: '─', values: years.map(() => '') },
       { label: '支出合計', values: data.map(d => fmt(d.totalCost)) },
       { label: '├ 政策経費', values: data.map(d => fmt(d.policyExp)), indent: 1 },
+      { label: '│　├ 社会保障', values: data.map(d => fmt(d.socialSecurity)), indent: 2 },
+      { label: '│　├ 子育て支援', values: data.map(d => fmt(d.childcare)), indent: 2 },
+      { label: '│　├ 地方交付税', values: data.map(d => fmt(d.localGovTransfer)), indent: 2 },
+      { label: '│　├ 防衛', values: data.map(d => fmt(d.defense)), indent: 2 },
+      { label: '│　├ その他政策', values: data.map(d => fmt(d.otherPolicyExp)), indent: 2 },
       { label: '│　└ エネルギー補助金', values: data.map(d => fmt(d.energySubsidy)), indent: 2 },
       { label: '└ 利払い費', values: data.map(d => fmt(d.interest)), indent: 1 },
       { label: '　　├ 債務残高', values: data.map(d => fmt(d.debt, 0)), indent: 2 },
       { label: '　　└ 平均クーポン', values: data.map(d => fmt(d.avgCoupon, 2) + '%'), indent: 2 },
       { label: '─', values: years.map(() => '') },
       { label: '財政収支', values: data.map(d => fmt(d.fiscalBalance)) },
-      { label: '国債発行額', values: data.map(d => fmt(d.bondIssuance)) },
+      { label: '国債発行額（公債金）', values: data.map(d => fmt(d.bondIssuance)) },
+      { label: '公債金依存度 (%)', values: data.map(d => fmt(d.revenueBondRatio)) },
       { label: '債務残高', values: data.map(d => fmt(d.debt, 0)) },
       { label: '利払負担率 (%)', values: data.map(d => fmt(d.interestBurden)) },
       { label: '財政リスク加算 (%)', values: data.map(d => fmt(d.fiscalRiskPremium)) },
@@ -876,16 +913,37 @@ export function SimulationTab({ params, simData, actualData }: Props) {
         </ResponsiveContainer>
       </Collapsible>
 
-      <Collapsible title="支出合計">
-        <div className="chart-subtitle">支出内訳（兆円）</div>
+      <Collapsible title="予算構成・歳出内訳">
+        <div className="chart-subtitle">歳入の財源構成（%）</div>
         <ResponsiveContainer width="100%" height={280}>
-          <BarChart data={expenditureData}>
+          <BarChart data={budgetCompositionData}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+            <XAxis dataKey="year" tick={{ fontSize: 10 }} />
+            <YAxis tick={{ fontSize: 10 }} unit="%" domain={[0, 100]} />
+            <Tooltip content={<NoDataTooltip unit="%" />} />
+            <Legend />
+            <Bar dataKey="税収" stackId="a" fill="#22c55e" />
+            <Bar dataKey="公債金" stackId="a" fill="#ef4444" />
+            <Bar dataKey="その他収入" stackId="a" fill="#94a3b8" />
+          </BarChart>
+        </ResponsiveContainer>
+        <div className="chart-note">
+          歳入全体（税収＋公債金＋その他収入）に占める割合。公債金（国債発行）依存度が高いほど財政の持続可能性リスクが高まります
+        </div>
+        <div className="chart-subtitle" style={{ marginTop: 16 }}>歳出分野別内訳（兆円）</div>
+        <ResponsiveContainer width="100%" height={320}>
+          <BarChart data={expBreakdownData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis dataKey="year" tick={{ fontSize: 10 }} />
             <YAxis tick={{ fontSize: 10 }} unit="兆円" />
             <Tooltip content={<NoDataTooltip unit=" 兆円" />} />
             <Legend />
-            <Bar dataKey="政策経費" stackId="a" fill="#3b82f6" />
+            <Bar dataKey="社会保障" stackId="a" fill="#3b82f6" />
+            <Bar dataKey="子育て支援" stackId="a" fill="#a855f7" />
+            <Bar dataKey="地方交付税" stackId="a" fill="#f59e0b" />
+            <Bar dataKey="防衛" stackId="a" fill="#6b7280" />
+            <Bar dataKey="その他政策" stackId="a" fill="#06b6d4" />
+            <Bar dataKey="エネルギー補助金" stackId="a" fill="#84cc16" />
             <Bar dataKey="利払い費" stackId="a" fill="#ef4444" />
           </BarChart>
         </ResponsiveContainer>

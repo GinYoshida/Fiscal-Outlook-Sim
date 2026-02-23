@@ -69,6 +69,12 @@ export interface SimParams {
   bojCAFloor: number;
   fiscalRiskSensitivity: number;
   interestBurdenThreshold: number;
+  initSocialSecurity: number;
+  initChildcare: number;
+  initLocalGovTransfer: number;
+  initDefense: number;
+  childcareGrowth: number;
+  defenseGrowth: number;
 }
 
 export interface Scenario {
@@ -159,6 +165,12 @@ const baseParams: SimParams = {
   bojCAFloor: 100,
   fiscalRiskSensitivity: 0.1,
   interestBurdenThreshold: 20,
+  initSocialSecurity: 37,
+  initChildcare: 5,
+  initLocalGovTransfer: 17,
+  initDefense: 7,
+  childcareGrowth: 2.0,
+  defenseGrowth: 1.5,
 };
 
 export const SCENARIOS: Scenario[] = [

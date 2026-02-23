@@ -53,6 +53,16 @@ export interface SimResult {
   bojCAActual: number;
   bojYieldActual: number;
   fiscalRiskPremium: number;
+  socialSecurity: number;
+  childcare: number;
+  localGovTransfer: number;
+  defense: number;
+  otherPolicyExp: number;
+  bondRevenue: number;
+  revenueTotal: number;
+  revenueTaxRatio: number;
+  revenueBondRatio: number;
+  revenueOtherRatio: number;
 }
 
 function giniToIncomeRatio(gini: number): number {
@@ -165,16 +175,30 @@ export function runSimulation(p: SimParams): SimResult[] {
 
       const otherRevWithFx = p.otherRevenue + Math.max(fxValuationGain * 0.1, 0);
 
-      const totalRevenue = taxConsumption + taxIncome + taxCorporateAdj + taxOther + bojPayment + otherRevWithFx;
       const avgCoupon = p.initAvgCoupon / 100;
       const interest = p.initDebt * avgCoupon;
-      const policyExp = p.initPolicyExp + energySubsidy;
+
+      const socialSecurity = p.initSocialSecurity;
+      const childcare = p.initChildcare;
+      const localGovTransfer = p.initLocalGovTransfer;
+      const defense = p.initDefense;
+      const knownExp = socialSecurity + childcare + localGovTransfer + defense + energySubsidy;
+      const otherPolicyExp = Math.max(p.initPolicyExp - knownExp + energySubsidy, 0);
+      const policyExp = socialSecurity + childcare + localGovTransfer + defense + otherPolicyExp + energySubsidy;
+
+      const taxTotal = taxConsumption + taxIncome + taxCorporateAdj + taxOther;
+      const totalRevenue = taxTotal + bojPayment + otherRevWithFx;
       const totalCost = policyExp + interest;
       const fiscalBalance = totalRevenue - totalCost;
       const debt = p.initDebt + (totalCost - totalRevenue);
-      const taxTotal = taxConsumption + taxIncome + taxCorporateAdj + taxOther;
       const interestBurden = taxTotal !== 0 ? (interest / taxTotal) * 100 : 0;
       const bondIssuance = Math.max(totalCost - totalRevenue, 0);
+
+      const bondRevenue = bondIssuance;
+      const revenueTotal = totalRevenue + bondRevenue;
+      const revenueTaxRatio = revenueTotal > 0 ? (taxTotal / revenueTotal) * 100 : 0;
+      const revenueBondRatio = revenueTotal > 0 ? (bondRevenue / revenueTotal) * 100 : 0;
+      const revenueOtherRatio = revenueTotal > 0 ? ((bojPayment + otherRevWithFx) / revenueTotal) * 100 : 0;
 
       const modelIncome = BASE_INCOME * (1 + nomWageG);
       const modelFoodCost = BASE_INCOME * BASE_FOOD_RATIO * (1 + cpiIncrease);
@@ -212,6 +236,8 @@ export function runSimulation(p: SimParams): SimResult[] {
         effectiveMarketRate: E * 100,
         bojJGB, bojCAActual, bojYieldActual: bojYieldActual * 100,
         fiscalRiskPremium: fiscalRiskPremium * 100,
+        socialSecurity, childcare, localGovTransfer, defense, otherPolicyExp,
+        bondRevenue, revenueTotal, revenueTaxRatio, revenueBondRatio, revenueOtherRatio,
       });
     } else {
       const prev = results[i - 1];
@@ -273,8 +299,15 @@ export function runSimulation(p: SimParams): SimResult[] {
       const totalRevenue = tax + bojPayment + otherRevWithFx;
 
       const energySubsidy = p.inflationRate * p.energySubsidyRate * 10;
-      const policyExpBase = prev.policyExp - prev.energySubsidy;
-      const policyExp = policyExpBase * (1 + B) + p.naturalIncrease + energySubsidy;
+
+      const socialSecurity = prev.socialSecurity * (1 + B) + p.naturalIncrease * 0.7;
+      const childcare = prev.childcare * (1 + p.childcareGrowth / 100);
+      const localGovTransfer = prev.localGovTransfer * (1 + D * 0.5);
+      const defense = prev.defense * (1 + p.defenseGrowth / 100);
+      const prevOtherBase = prev.otherPolicyExp;
+      const otherPolicyExp = prevOtherBase * (1 + B);
+      const policyExp = socialSecurity + childcare + localGovTransfer + defense + otherPolicyExp + energySubsidy;
+
       const avgCouponDec = (prev.avgCoupon / 100 * 8 / 9) + (E * 1 / 9);
       const interest = prev.debt * avgCouponDec;
       const totalCost = policyExp + interest;
@@ -282,6 +315,12 @@ export function runSimulation(p: SimParams): SimResult[] {
       const debt = prev.debt + (totalCost - totalRevenue);
       const interestBurden = tax !== 0 ? (interest / tax) * 100 : 0;
       const bondIssuance = Math.max(totalCost - totalRevenue, 0);
+
+      const bondRevenue = bondIssuance;
+      const revenueTotal = totalRevenue + bondRevenue;
+      const revenueTaxRatio = revenueTotal > 0 ? (tax / revenueTotal) * 100 : 0;
+      const revenueBondRatio = revenueTotal > 0 ? (bondRevenue / revenueTotal) * 100 : 0;
+      const revenueOtherRatio = revenueTotal > 0 ? ((bojPayment + otherRevWithFx) / revenueTotal) * 100 : 0;
 
       const cumulativeCpi = results.reduce((acc, r) => acc * (1 + r.cpiIncrease / 100), 1) * (1 + cpiIncrease);
       const cumulativeWage = results.reduce((acc, r) => acc * (1 + r.wageIncrease / 100), 1) * (1 + wageIncrease);
@@ -322,6 +361,8 @@ export function runSimulation(p: SimParams): SimResult[] {
         effectiveMarketRate: E * 100,
         bojJGB, bojCAActual, bojYieldActual: bojYieldActual * 100,
         fiscalRiskPremium: fiscalRiskPremium * 100,
+        socialSecurity, childcare, localGovTransfer, defense, otherPolicyExp,
+        bondRevenue, revenueTotal, revenueTaxRatio, revenueBondRatio, revenueOtherRatio,
       });
     }
   }

@@ -191,8 +191,29 @@ export function Sidebar({ params, scenarioIndex, onScenarioChange, onParamChange
         onChange={v => onParamChange('taxRateNew', v)} />
 
       <NumberInput label="政策的経費 (兆円)" value={p.initPolicyExp} step={5}
-        tooltip="2026年度の政策的経費の初期値。社会保障・公共事業・教育・防衛等の歳出合計（利払い費を除く）です。"
+        tooltip="2026年度の政策的経費の初期値（合計値）。下の歳出内訳で分野別に設定できます。"
         onChange={v => onParamChange('initPolicyExp', v)} />
+
+      <h4>歳出内訳（初期値）</h4>
+      <NumberInput label="社会保障費 (兆円)" value={p.initSocialSecurity} step={1}
+        tooltip="年金・医療・介護等の社会保障給付（約37兆円）。高齢化による自然増（年0.5兆円の約70%）とインフレ連動で増加します。"
+        onChange={v => onParamChange('initSocialSecurity', v)} />
+      <NumberInput label="子ども・子育て支援 (兆円)" value={p.initChildcare} step={0.5}
+        tooltip="こども家庭庁予算・児童手当等（約5兆円）。少子化対策の政策優先度に応じて成長率を設定できます。"
+        onChange={v => onParamChange('initChildcare', v)} />
+      <NumberInput label="地方交付税 (兆円)" value={p.initLocalGovTransfer} step={1}
+        tooltip="地方自治体への財源移転（約17兆円）。税収の名目成長率の50%に連動して増加します。"
+        onChange={v => onParamChange('initLocalGovTransfer', v)} />
+      <NumberInput label="防衛費 (兆円)" value={p.initDefense} step={0.5}
+        tooltip="防衛省予算（約7兆円）。2023年度から5年間で43兆円規模への増額が決定されています。"
+        onChange={v => onParamChange('initDefense', v)} />
+      <Slider label="子育て支援 増加率 (%/年)" value={p.childcareGrowth} min={0} max={10} step={0.5}
+        tooltip="子育て支援予算の年間増加率。少子化対策強化で高く設定すると予算が急増します。"
+        onChange={v => onParamChange('childcareGrowth', v)} />
+      <Slider label="防衛費 増加率 (%/年)" value={p.defenseGrowth} min={0} max={5} step={0.5}
+        tooltip="防衛費の年間増加率。安全保障環境の変化に応じた防衛力強化の度合いです。"
+        onChange={v => onParamChange('defenseGrowth', v)} />
+
       <Slider label="平均クーポン (%)" value={p.initAvgCoupon} min={0} max={5} step={0.1}
         tooltip="政府債務全体の加重平均利率。既発債の金利が残るため、市場金利が上がってもすぐには上昇しません。9年借換ロジックで毎年1/9ずつ新金利に置き換わります。"
         onChange={v => onParamChange('initAvgCoupon', v)} />

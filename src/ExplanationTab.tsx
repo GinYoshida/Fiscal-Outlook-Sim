@@ -503,6 +503,44 @@ export function ExplanationTab({ params, simData, actualData, dataSources }: Pro
         </table>
       </TreeSection>
 
+      <TreeSection title="G：予算構成と歳出内訳" tree={`├── 歳入構成（財源別）
+│　├── 税収比率 = 税収合計 ÷ (税収+公債金+その他)
+│　├── 公債金依存度 = 国債発行額 ÷ 歳出合計
+│　└── その他収入比率 = その他収入 ÷ 全体
+└── 歳出内訳（分野別）
+　　├── 社会保障 ← 前年 × (1+インフレ) + 自然増
+　　├── 子育て支援 ← 前年 × (1+成長率)
+　　├── 地方交付税 ← 前年 × (1+税収伸び×0.5)
+　　├── 防衛 ← 前年 × (1+成長率)
+　　├── その他政策 ← 残余（合計との差額）
+　　└── エネルギー補助金 ← 円安連動`}>
+        <p><strong>予算の財源構成（歳入サイド）</strong></p>
+        <p>政府予算の歳入は「税収」「公債金（国債発行）」「その他収入（日銀納付金等）」の3つの財源で構成されます。公債金依存度が高いほど、将来の利払い負担が増大し財政の持続可能性が低下します。</p>
+        <hr style={{ margin: '16px 0', borderColor: '#e2e8f0' }} />
+        <p><strong>歳出の分野別内訳（支出サイド）</strong></p>
+        <table style={{ marginTop: 8 }}>
+          <thead>
+            <tr><th>分野</th><th>初期値</th><th>成長モデル</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>社会保障</td><td>37兆円</td><td>前年×(1+インフレ率) + 自然増0.35兆円</td></tr>
+            <tr><td>子育て支援</td><td>5兆円</td><td>前年×(1+政策成長率)</td></tr>
+            <tr><td>地方交付税</td><td>17兆円</td><td>前年×(1+税収伸び率×50%)</td></tr>
+            <tr><td>防衛</td><td>7兆円</td><td>前年×(1+政策成長率)</td></tr>
+            <tr><td>その他政策</td><td>残余</td><td>政策経費合計からの差額</td></tr>
+            <tr><td>エネルギー補助金</td><td>0</td><td>円安進行時に自動発生</td></tr>
+          </tbody>
+        </table>
+        <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, padding: '12px 16px', marginTop: 12 }}>
+          <p style={{ fontWeight: 600, marginBottom: 6 }}>社会保障費の自然増について</p>
+          <p style={{ fontSize: 13 }}>
+            高齢化に伴う社会保障費の自然増は年間約0.5兆円（2024年度概算要求ベース）です。
+            このうち約70%（0.35兆円）が予算に反映されると想定しています。
+            これはインフレ率とは別の構造的な増加要因で、高齢者人口の増加に連動します。
+          </p>
+        </div>
+      </TreeSection>
+
       <h2 className="section-title" style={{ marginTop: 24 }}>ウォーターフォール分析</h2>
 
       <div className="year-slider-container">
