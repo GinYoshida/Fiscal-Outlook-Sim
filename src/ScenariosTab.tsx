@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ReferenceLine,
-  RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   LineChart, Line,
 } from 'recharts'
 import { SCENARIOS } from './data'
@@ -75,18 +74,16 @@ export function ScenariosTab() {
     })
   }, [])
 
-  const comparisonData = useMemo(() => {
-    return summaries.map((s, i) => ({
-      name: `${i + 1}`,
-      fullName: s.shortName,
-      '債務残高': Math.round(s.debt2055),
-      '利払負担率': parseFloat(s.interestBurden2055.toFixed(1)),
-      '貧困率': parseFloat(s.povertyRate2055.toFixed(1)),
-      '対外純資産': Math.round(s.nfa2055),
-    }))
+  const comparisonCharts = useMemo(() => {
+    const base = summaries.map((s, i) => ({ name: `${i + 1}`, fullName: s.shortName }))
+    return {
+      burden: base.map((b, i) => ({ ...b, '利払負担率': parseFloat(summaries[i].interestBurden2055.toFixed(1)) })),
+      poverty: base.map((b, i) => ({ ...b, '貧困率': parseFloat(summaries[i].povertyRate2055.toFixed(1)), 'ジニ係数': parseFloat((summaries[i].gini2055 * 100).toFixed(1)) })),
+      assets: base.map((b, i) => ({ ...b, '債務残高': Math.round(summaries[i].debt2055), '対外純資産': Math.round(summaries[i].nfa2055) })),
+    }
   }, [summaries])
 
-  const radarData = useMemo(() => {
+  const evalBarData = useMemo(() => {
     const maxDebt = Math.max(...summaries.map(s => s.debt2055))
     const minDebt = Math.min(...summaries.map(s => s.debt2055))
     const maxBurden = Math.max(...summaries.map(s => s.interestBurden2055))
@@ -104,22 +101,19 @@ export function ScenariosTab() {
       return Math.round((invert ? 1 - ratio : ratio) * 100)
     }
 
-    const metrics = ['財政健全性', '利払負担', '家計安定', '格差抑制', '対外資産']
-    return metrics.map(metric => {
-      const entry: Record<string, string | number> = { metric }
-      summaries.forEach((s, i) => {
-        let val = 50
-        switch (metric) {
-          case '財政健全性': val = normalize(s.debt2055, minDebt, maxDebt, true); break
-          case '利払負担': val = normalize(s.interestBurden2055, minBurden, maxBurden, true); break
-          case '家計安定': val = normalize(s.povertyRate2055, minPoverty, maxPoverty, true); break
-          case '格差抑制': val = normalize(s.gini2055, minGini, maxGini, true); break
-          case '対外資産': val = normalize(s.nfa2055, minNFA, maxNFA, false); break
-        }
-        entry[`s${i}`] = val
-      })
+    const metrics: { key: string; label: string; color: string; calc: (s: ScenarioSummary) => number }[] = [
+      { key: 'fiscal', label: '財政健全性', color: '#6366f1', calc: s => normalize(s.debt2055, minDebt, maxDebt, true) },
+      { key: 'burden', label: '利払負担', color: '#f97316', calc: s => normalize(s.interestBurden2055, minBurden, maxBurden, true) },
+      { key: 'household', label: '家計安定', color: '#22c55e', calc: s => normalize(s.povertyRate2055, minPoverty, maxPoverty, true) },
+      { key: 'gini', label: '格差抑制', color: '#ec4899', calc: s => normalize(s.gini2055, minGini, maxGini, true) },
+      { key: 'nfa', label: '対外資産', color: '#3b82f6', calc: s => normalize(s.nfa2055, minNFA, maxNFA, false) },
+    ]
+
+    return { metrics, data: summaries.map((s, i) => {
+      const entry: Record<string, string | number> = { name: `${i + 1}`, fullName: s.shortName }
+      metrics.forEach(m => { entry[m.label] = m.calc(s) })
       return entry
-    })
+    })}
   }, [summaries])
 
   const debtTimeSeriesData = useMemo(() => {
@@ -157,55 +151,78 @@ export function ScenariosTab() {
       </div>
 
       <div className="scenarios-comparison-chart">
-        <h3>2055年時点：利払負担率・貧困率の比較</h3>
-        <ResponsiveContainer width="100%" height={320}>
-          <BarChart data={comparisonData} margin={{ top: 10, right: 60, left: 0, bottom: 30 }}>
+        <h3>2055年時点：利払負担率</h3>
+        <ResponsiveContainer width="100%" height={220}>
+          <BarChart data={comparisonCharts.burden} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-            <XAxis dataKey="name" tick={{ fontSize: 11 }} label={{ value: 'シナリオ番号', position: 'insideBottom', offset: -20, fontSize: 11 }} />
-            <YAxis yAxisId="left" tick={{ fontSize: 11 }} label={{ value: '%', angle: -90, position: 'insideLeft', fontSize: 11 }} />
-            <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11 }} label={{ value: '兆円', angle: 90, position: 'insideRight', fontSize: 11 }} />
-            <Tooltip
-              formatter={(value: number, name: string) => {
-                if (name === '債務残高' || name === '対外純資産') return [`${value.toLocaleString()}兆円`, name]
-                return [`${value}%`, name]
-              }}
-              labelFormatter={(label) => {
-                const item = comparisonData.find(d => d.name === label)
-                return item ? `${label}. ${item.fullName}` : label
-              }}
-            />
-            <Legend wrapperStyle={{ fontSize: 11 }} />
-            <Bar yAxisId="left" dataKey="利払負担率" fill="#f97316" />
-            <Bar yAxisId="left" dataKey="貧困率" fill="#ef4444" />
-            <Bar yAxisId="right" dataKey="対外純資産" fill="#3b82f6" />
-            <ReferenceLine yAxisId="left" y={30} stroke="#ef4444" strokeDasharray="3 3" label={{ value: '利払30%', fontSize: 10, fill: '#ef4444' }} />
+            <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+            <YAxis tick={{ fontSize: 11 }} label={{ value: '%', angle: -90, position: 'insideLeft', fontSize: 11 }} />
+            <Tooltip formatter={(value: number) => [`${value}%`]} labelFormatter={(label) => {
+              const item = comparisonCharts.burden.find(d => d.name === label)
+              return item ? `${label}. ${item.fullName}` : label
+            }} />
+            <Bar dataKey="利払負担率" fill="#f97316" />
+            <ReferenceLine y={30} stroke="#ef4444" strokeDasharray="3 3" label={{ value: '警告30%', fontSize: 10, fill: '#ef4444' }} />
           </BarChart>
         </ResponsiveContainer>
       </div>
 
-      <div className="scenarios-radar-section">
-        <h3>シナリオ総合評価レーダー</h3>
-        <p className="radar-desc">各指標を0〜100に正規化（高いほど良好）</p>
-        <ResponsiveContainer width="100%" height={360}>
-          <RadarChart data={radarData} cx="50%" cy="50%" outerRadius="70%">
-            <PolarGrid stroke="#e5e7eb" />
-            <PolarAngleAxis dataKey="metric" tick={{ fontSize: 11 }} />
-            <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fontSize: 9 }} />
-            {summaries.map((s, i) => (
-              <Radar
-                key={i}
-                name={s.shortName}
-                dataKey={`s${i}`}
-                stroke={SCENARIO_COLORS[i]}
-                fill={SCENARIO_COLORS[i]}
-                fillOpacity={0.05}
-                strokeWidth={1.5}
-              />
-            ))}
-            <Legend wrapperStyle={{ fontSize: 10 }} />
-            <Tooltip />
-          </RadarChart>
+      <div className="scenarios-comparison-chart">
+        <h3>2055年時点：貧困率・ジニ係数</h3>
+        <ResponsiveContainer width="100%" height={220}>
+          <BarChart data={comparisonCharts.poverty} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+            <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+            <YAxis tick={{ fontSize: 11 }} label={{ value: '%', angle: -90, position: 'insideLeft', fontSize: 11 }} />
+            <Tooltip formatter={(value: number, name: string) => [`${value}%`, name]} labelFormatter={(label) => {
+              const item = comparisonCharts.poverty.find(d => d.name === label)
+              return item ? `${label}. ${item.fullName}` : label
+            }} />
+            <Legend wrapperStyle={{ fontSize: 11 }} />
+            <Bar dataKey="貧困率" fill="#ef4444" />
+            <Bar dataKey="ジニ係数" fill="#ec4899" />
+            <ReferenceLine y={20} stroke="#ef4444" strokeDasharray="3 3" label={{ value: '貧困率20%', fontSize: 10, fill: '#ef4444' }} />
+          </BarChart>
         </ResponsiveContainer>
+      </div>
+
+      <div className="scenarios-comparison-chart">
+        <h3>2055年時点：債務残高・対外純資産</h3>
+        <ResponsiveContainer width="100%" height={220}>
+          <BarChart data={comparisonCharts.assets} margin={{ top: 10, right: 20, left: 10, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+            <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+            <YAxis tick={{ fontSize: 11 }} label={{ value: '兆円', angle: -90, position: 'insideLeft', fontSize: 11 }} />
+            <Tooltip formatter={(value: number) => [`${value.toLocaleString()}兆円`]} labelFormatter={(label) => {
+              const item = comparisonCharts.assets.find(d => d.name === label)
+              return item ? `${label}. ${item.fullName}` : label
+            }} />
+            <Legend wrapperStyle={{ fontSize: 11 }} />
+            <Bar dataKey="債務残高" fill="#8b5cf6" />
+            <Bar dataKey="対外純資産" fill="#3b82f6" />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+
+      <div className="scenarios-eval-bars">
+        <h3>シナリオ総合評価（0〜100、高いほど良好）</h3>
+        {evalBarData.metrics.map(m => (
+          <div key={m.key} className="scenarios-comparison-chart" style={{ marginBottom: 8 }}>
+            <h4 style={{ fontSize: 13, fontWeight: 600, color: '#374151', margin: '0 0 4px 0' }}>{m.label}</h4>
+            <ResponsiveContainer width="100%" height={140}>
+              <BarChart data={evalBarData.data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                <YAxis domain={[0, 100]} tick={{ fontSize: 10 }} />
+                <Tooltip formatter={(value: number) => [`${value}点`]} labelFormatter={(label) => {
+                  const item = evalBarData.data.find(d => d.name === label)
+                  return item ? `${label}. ${item.fullName}` : label
+                }} />
+                <Bar dataKey={m.label} fill={m.color} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        ))}
       </div>
 
       <div className="scenarios-timeseries-section">
