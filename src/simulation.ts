@@ -168,20 +168,6 @@ export function runSimulation(p: SimParams): SimResult[] {
       const endogenousWage = C * prodShare + B * wagePassThrough;
       const nomWageG = Math.max(endogenousWage, baseNomWageG);
 
-      const yenCostPush = Math.max(yenFactor, 0) * 0.3;
-      const cpiIncrease = B + yenCostPush;
-      const energySubsidyEffect = cpiIncrease * p.energySubsidyRate * 0.5;
-      const effectiveCpi = cpiIncrease - energySubsidyEffect;
-      const wageIncrease = nomWageG;
-      const realWageGrowth = wageIncrease - effectiveCpi;
-
-      const povertyRate = effectiveCpi > wageIncrease
-        ? p.initPovertyRate * (1 + (effectiveCpi - wageIncrease) * p.povertySensitivity)
-        : p.initPovertyRate * (1 - (wageIncrease - effectiveCpi) * p.povertySensitivity * 0.3);
-
-      const assetGrowth = yenFactor * 0.5 + C;
-      const giniIndex = p.initGini + (assetGrowth - realWageGrowth) * 0.01;
-
       const exportProfit = Math.max(yenFactor, 0) * 0.3;
       const importCost = Math.max(yenFactor, 0) * 0.2;
       const taxCorporateAdj = taxCorporate * (1 + exportProfit - importCost);
@@ -193,6 +179,23 @@ export function runSimulation(p: SimParams): SimResult[] {
       retainedEarnings = retainedEarnings + netCorporateIncome - returnToWorkers;
       const retainedToGDP = (retainedEarnings / nominalGDP) * 100;
       const debtToGDP = (p.initDebt / nominalGDP) * 100;
+
+      const returnBoostToWage = nominalGDP > 0 ? (returnToWorkers / nominalGDP) : 0;
+
+      const yenCostPush = Math.max(yenFactor, 0) * 0.3;
+      const cpiIncrease = B + yenCostPush;
+      const energySubsidyEffect = cpiIncrease * p.energySubsidyRate * 0.5;
+      const effectiveCpi = cpiIncrease - energySubsidyEffect;
+      const wageIncrease = nomWageG + returnBoostToWage;
+      const realWageGrowth = wageIncrease - effectiveCpi;
+
+      const effectiveSensitivity = p.povertySensitivity * (1 + (1 - prodShare) * 0.5);
+      const povertyRate = effectiveCpi > wageIncrease
+        ? p.initPovertyRate * (1 + (effectiveCpi - wageIncrease) * effectiveSensitivity)
+        : p.initPovertyRate * (1 - (wageIncrease - effectiveCpi) * effectiveSensitivity * 0.3);
+
+      const assetGrowth = yenFactor * 0.5 + C;
+      const giniIndex = p.initGini + (assetGrowth - realWageGrowth) * 0.01;
 
       const energySubsidy = p.inflationRate * p.energySubsidyRate * 10;
 
@@ -289,20 +292,6 @@ export function runSimulation(p: SimParams): SimResult[] {
       const endogenousWage = C * prodShare + B * wagePassThrough;
       const nomWageG = Math.max(endogenousWage, baseNomWageG);
 
-      const yenCostPush = Math.max(yenDep, 0) * 0.3;
-      const cpiIncrease = B + yenCostPush;
-      const energySubsidyEffect = cpiIncrease * p.energySubsidyRate * 0.5;
-      const effectiveCpi = cpiIncrease - energySubsidyEffect;
-      const wageIncrease = nomWageG;
-      const realWageGrowth = wageIncrease - effectiveCpi;
-
-      const povertyRate = effectiveCpi > wageIncrease
-        ? prev.povertyRate * (1 + (effectiveCpi - wageIncrease) * p.povertySensitivity)
-        : prev.povertyRate * (1 - (wageIncrease - effectiveCpi) * p.povertySensitivity * 0.3);
-
-      const assetGrowth = Math.max(yenDep, 0) * 0.5 + C;
-      const giniIndex = prev.giniIndex + (assetGrowth - realWageGrowth) * 0.01;
-
       let taxConsumption = prev.taxConsumption * (1 + B * 1.0);
       if (changeYear !== null && year === changeYear) {
         taxConsumption = prev.taxConsumption * (1 + B * 1.0) * (p.taxRateNew / 10.0);
@@ -321,6 +310,23 @@ export function runSimulation(p: SimParams): SimResult[] {
       const returnToWorkers = retainedEarnings * p.retainedEarningsReturnRate;
       retainedEarnings = retainedEarnings + netCorporateIncome - returnToWorkers;
       const retainedToGDP = (retainedEarnings / nominalGDP) * 100;
+
+      const returnBoostToWage = nominalGDP > 0 ? (returnToWorkers / nominalGDP) : 0;
+
+      const yenCostPush = Math.max(yenDep, 0) * 0.3;
+      const cpiIncrease = B + yenCostPush;
+      const energySubsidyEffect = cpiIncrease * p.energySubsidyRate * 0.5;
+      const effectiveCpi = cpiIncrease - energySubsidyEffect;
+      const wageIncrease = nomWageG + returnBoostToWage;
+      const realWageGrowth = wageIncrease - effectiveCpi;
+
+      const effectiveSensitivity = p.povertySensitivity * (1 + (1 - prodShare) * 0.5);
+      const povertyRate = effectiveCpi > wageIncrease
+        ? prev.povertyRate * (1 + (effectiveCpi - wageIncrease) * effectiveSensitivity)
+        : prev.povertyRate * (1 - (wageIncrease - effectiveCpi) * effectiveSensitivity * 0.3);
+
+      const assetGrowth = Math.max(yenDep, 0) * 0.5 + C;
+      const giniIndex = prev.giniIndex + (assetGrowth - realWageGrowth) * 0.01;
 
       const policyRate = Math.max(E - p.policyRateSpread / 100, 0);
       const bojRev = bojJGB * bojYieldActual;

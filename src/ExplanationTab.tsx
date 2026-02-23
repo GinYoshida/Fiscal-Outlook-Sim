@@ -361,8 +361,11 @@ export function ExplanationTab({ params, simData, actualData, dataSources }: Pro
 
       <TreeSection title="E：家計インパクト" tree={`├── CPI上昇 = インフレ率 + 円安コストプッシュ×0.3
 ├── 実効CPI = CPI上昇 − CPI上昇×補助金率×0.5
-├── 実質賃金伸び率 = 名目賃金上昇率 − 実効CPI
-├── 貧困率 = 前年 × (1 + (実効CPI-賃金)差 × 感応度)
+├── 内部留保還元ブースト = 還元額 ÷ 名目GDP
+├── 実効賃金上昇率 = 内生賃金 + 還元ブースト
+├── 実質賃金伸び率 = 実効賃金上昇率 − 実効CPI
+├── 実効感応度 = 基本感応度 × (1 + (1−分配率)×0.5)
+├── 貧困率 = 前年 × (1 + (実効CPI−賃金)差 × 実効感応度)
 ├── ジニ係数 = 前年 + (資産成長率 − 実質賃金伸び率) × 0.01
 ├── 所得格差倍率 = (1+ジニ) ÷ (1−ジニ)
 └── モデル家計（年収400万円）
@@ -371,9 +374,17 @@ export function ExplanationTab({ params, simData, actualData, dataSources }: Pro
 　　├── 光熱費 = 29万 × 累積CPI × 円安係数 × (1−補助金率×0.5)
 　　└── 可処分所得 = 年収×0.7 − 食費 − 光熱費`}>
         <p><strong>実質賃金伸び率</strong></p>
-        <p>実質賃金伸び率 = 名目賃金上昇率 − 実効CPI</p>
+        <p>実効賃金上昇率 = 内生賃金 + 内部留保還元ブースト</p>
+        <p>実質賃金伸び率 = 実効賃金上昇率 − 実効CPI</p>
         <p>実効CPI = (インフレ率 + 円安コストプッシュ) × (1 − 補助金率 × 0.5)</p>
-        <p>エネルギー補助金により家計が体感する物価上昇（実効CPI）が軽減されます。補助金率が高いほど実効CPIが低下し、実質賃金が改善します。</p>
+        <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: '12px 16px', marginTop: 8 }}>
+          <p style={{ fontSize: 13 }}>
+            <strong>内部留保還元ブースト</strong> = 内部留保残高 × 還元率 ÷ 名目GDP
+          </p>
+          <p style={{ fontSize: 12, marginTop: 6, color: '#64748b' }}>
+            企業が内部留保を賃金・設備投資として還元する効果を実質賃金に反映。還元率が高いほど家計の実質賃金が改善し、貧困率・ジニ係数にも好影響します。
+          </p>
+        </div>
         <table style={{ marginTop: 8 }}>
           <thead>
             <tr><th>パラメータ</th><th>値</th><th>意味</th><th>設定根拠</th></tr>
@@ -381,18 +392,27 @@ export function ExplanationTab({ params, simData, actualData, dataSources }: Pro
           <tbody>
             <tr><td>円安コストプッシュ係数</td><td>0.3</td><td>円安率のうち30%がCPIに転嫁</td><td>日銀「経済・物価情勢の展望」の為替パススルー率推計中央値</td></tr>
             <tr><td>名目賃金上昇率</td><td>サイドバーで設定</td><td>春闘・労働市場の賃上げ率</td><td>厚労省「毎月勤労統計」実績を参考</td></tr>
+            <tr><td>内部留保還元率</td><td>2%/年（デフォルト）</td><td>内部留保の年間還元割合</td><td>企業の設備投資・賃上げへの配分率を想定</td></tr>
           </tbody>
         </table>
         <hr style={{ margin: '16px 0', borderColor: '#e2e8f0' }} />
         <p><strong>貧困率モデル</strong></p>
-        <p>貧困率 = 前年貧困率 × (1 + (実効CPI − 賃金上昇率) × 感応度)</p>
-        <p>エネルギー補助金で軽減された実効CPIを用いて計算されます。補助金が手厚いほど実効CPIが下がり、貧困率の悪化が抑制されます。</p>
+        <p>貧困率 = 前年貧困率 × (1 + (実効CPI − 賃金上昇率) × <em>実効感応度</em>)</p>
+        <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 8, padding: '12px 16px', marginTop: 8 }}>
+          <p style={{ fontSize: 13 }}>
+            <strong>実効感応度</strong> = 基本感応度 × (1 + (1 − 生産性分配率) × 0.5)
+          </p>
+          <p style={{ fontSize: 12, marginTop: 6, color: '#64748b' }}>
+            生産性分配率が低い（企業に利益が偏る）ほど、同じ物価上昇に対する貧困率の悪化が大きくなります。分配率0.3→実効感応度1.35倍、分配率0.7→1.15倍。
+          </p>
+        </div>
         <table style={{ marginTop: 8 }}>
           <thead>
             <tr><th>パラメータ</th><th>値</th><th>設定根拠</th></tr>
           </thead>
           <tbody>
-            <tr><td>感応度（悪化方向）</td><td>0.5</td><td>OECD諸国の実証研究の中央値</td></tr>
+            <tr><td>基本感応度（悪化方向）</td><td>0.5</td><td>OECD諸国の実証研究の中央値</td></tr>
+            <tr><td>分配率連動係数</td><td>(1−分配率)×0.5</td><td>低分配率で脆弱性が増幅</td></tr>
             <tr><td>改善速度</td><td>悪化の30%</td><td>ラチェット効果（下方硬直性）</td></tr>
           </tbody>
         </table>
