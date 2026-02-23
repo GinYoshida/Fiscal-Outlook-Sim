@@ -142,13 +142,14 @@ export function runSimulation(p: SimParams): SimResult[] {
 
       const exchangeRate = p.initExchangeRate * (1 + yenDep);
       const yenFactor = (exchangeRate / p.initExchangeRate - 1);
-      const yenBenefit = yenFactor * 0.5;
+      const fxPassThrough = Math.max(yenFactor, 0) * 0.7;
 
-      const importAmount = p.initImport * (1 + C) * (1 + B * (1 + yenFactor));
-      const exportAmount = p.initExport * (1 + globalG) * (1 + yenBenefit);
+      const importAmount = p.initImport * (1 + C) * (1 + B) * (1 + fxPassThrough);
+      const exportAmount = p.initExport * (1 + globalG) * (1 + Math.max(yenFactor, 0) * 0.15);
       const tradeBalance = exportAmount - importAmount;
 
-      const investmentIncome = prevNFA * 0.03;
+      const realNFA = prevNFA / (1 + Math.max(yenFactor, 0));
+      const investmentIncome = realNFA * 0.03 * (1 + Math.max(yenFactor, 0) * 0.5);
       const currentAccount = tradeBalance + investmentIncome;
       const nfa = prevNFA + currentAccount;
 
@@ -248,13 +249,14 @@ export function runSimulation(p: SimParams): SimResult[] {
 
       const exchangeRate = prev.exchangeRate * (1 + yenDep);
       const yenFactor = (exchangeRate / p.initExchangeRate - 1);
-      const yenBenefit = yenFactor * 0.5;
+      const fxPassThrough = Math.max(yenDep, 0) * 0.7;
 
-      const importAmount = prev.importAmount * (1 + C) * (1 + B * (1 + Math.max(yenDep, 0)));
-      const exportAmount = prev.exportAmount * (1 + globalG) * (1 + Math.max(yenDep, 0) * 0.5);
+      const importAmount = prev.importAmount * (1 + C) * (1 + B) * (1 + fxPassThrough);
+      const exportAmount = prev.exportAmount * (1 + globalG) * (1 + Math.max(yenDep, 0) * 0.15);
       const tradeBalance = exportAmount - importAmount;
 
-      const investmentIncome = prevNFA * 0.03;
+      const realNFA = prevNFA / (1 + Math.max(yenFactor, 0));
+      const investmentIncome = realNFA * 0.03 * (1 + Math.max(yenFactor, 0) * 0.5);
       const currentAccount = tradeBalance + investmentIncome;
       const nfa = prevNFA + currentAccount;
 

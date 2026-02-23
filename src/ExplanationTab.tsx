@@ -323,9 +323,10 @@ export function ExplanationTab({ params, simData, actualData, dataSources }: Pro
       </TreeSection>
 
       <TreeSection title="D：貿易収支" tree={`├── 為替レート = 前年レート × (1 + 円安進行率)
-├── 輸入額 = 前年 × (1 + 実質成長率) × (1 + インフレ × 円安係数)
-├── 輸出額 = 前年 × (1 + 世界成長率) × (1 + 円安メリット)
-└── 貿易収支 = 輸出 − 輸入`}>
+├── 輸入額 = 前年 × (1+実質成長率) × (1+インフレ率) × (1+為替パススルー70%)
+├── 輸出額 = 前年 × (1+世界成長率) × (1+円安弾性値15%)
+├── 所得収支 = 実質NFA × 3% × (1+円安×0.5)
+└── 経常収支 = 貿易収支 + 所得収支`}>
         <p><strong>為替レートの変動メカニズム</strong></p>
         <p>為替レートは「円安進行率」パラメータに基づいて毎年変動します。円安が進行すると：</p>
         <ul style={{ paddingLeft: 20, marginTop: 8 }}>
@@ -348,7 +349,8 @@ export function ExplanationTab({ params, simData, actualData, dataSources }: Pro
             <tr><th>内部パラメータ</th><th>値</th><th>設定根拠</th></tr>
           </thead>
           <tbody>
-            <tr><td>円安メリット係数（輸出）</td><td>0.5</td><td>JETRO推計の中央値</td></tr>
+            <tr><td>輸入為替パススルー率</td><td>0.7 (70%)</td><td>エネルギー100%・原材料75%・工業品50%の加重平均</td></tr>
+            <tr><td>輸出円安弾性値</td><td>0.15</td><td>海外生産移転後の実証値（2010年代以降）</td></tr>
             <tr><td>法人税への輸出利益効果</td><td>0.3</td><td>上場企業の海外売上比率と為替感応度から推計</td></tr>
             <tr><td>法人税への輸入コスト効果</td><td>0.2</td><td>輸入依存度の高い企業割合がやや少ないため</td></tr>
             <tr><td>外貨準備評価益の歳入計上率</td><td>10%</td><td>実現益として計上可能な割合を保守的に設定</td></tr>
