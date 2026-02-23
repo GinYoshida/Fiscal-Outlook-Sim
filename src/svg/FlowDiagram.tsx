@@ -84,9 +84,10 @@ export default function FlowDiagram() {
       <text x="685" y="135" textAnchor="middle" fontSize="9" fill="white" opacity="0.9">世界経済成長率の影響</text>
       <text x="685" y="155" textAnchor="middle" fontSize="9" fill="white" opacity="0.9">円安→輸出増・輸入高</text>
 
+      {/* 海外投資家 → 対外純資産(NFA)・所得収支 に修正 */}
       <rect x="595" y="185" width="180" height="55" rx="10" fill="#7c3aed" filter="url(#shadow)" />
-      <text x="685" y="210" textAnchor="middle" fontSize="13" fill="white" fontWeight="700">海外投資家</text>
-      <text x="685" y="228" textAnchor="middle" fontSize="9" fill="white" opacity="0.9">国債保有・対外純資産</text>
+      <text x="685" y="208" textAnchor="middle" fontSize="13" fill="white" fontWeight="700">対外純資産（NFA）</text>
+      <text x="685" y="226" textAnchor="middle" fontSize="9" fill="white" opacity="0.9">所得収支（NFA×3%）→歳入</text>
 
       <rect x="595" y="255" width="180" height="55" rx="8" fill="#fffbeb" stroke="#d97706" strokeWidth="1" />
       <text x="685" y="275" textAnchor="middle" fontSize="10" fill="#92400e" fontWeight="600">外貨準備 ≈ 180兆円</text>
@@ -94,10 +95,10 @@ export default function FlowDiagram() {
 
       {/* === 矢印（すべて半透明） === */}
       <g opacity="0.45">
-        {/* 国庫納付金 BOJ→政府 */}
-        <line x1="415" y1="110" x2="270" y2="110" stroke="#22c55e" strokeWidth="2.5" markerEnd="url(#ah-green)" />
-        {/* 政府→BOJ */}
-        <line x1="270" y1="166" x2="310" y2="166" stroke="#8b5cf6" strokeWidth="2" markerEnd="url(#ah-purple)" />
+        {/* 国庫納付金 BOJ→政府 (上側 y=113) */}
+        <line x1="310" y1="113" x2="270" y2="113" stroke="#22c55e" strokeWidth="2.5" markerEnd="url(#ah-green)" />
+        {/* 政府→BOJ 当座預金 (下側 y=163) */}
+        <line x1="270" y1="163" x2="310" y2="163" stroke="#8b5cf6" strokeWidth="2" markerEnd="url(#ah-purple)" />
         {/* 国債発行 政府→金融機関 */}
         <line x1="165" y1="166" x2="150" y2="313" stroke="#f97316" strokeWidth="2.5" markerEnd="url(#ah-orange)" />
         {/* 国債売却 金融機関→BOJ */}
@@ -124,13 +125,21 @@ export default function FlowDiagram() {
         <path d="M 595 160 C 520 320 400 400 262 470" fill="none" stroke="#ec4899" strokeWidth="2" markerEnd="url(#ah-pink)" />
         {/* 食費・光熱費支出 */}
         <path d="M 260 480 C 400 510 550 400 593 150" fill="none" stroke="#e11d48" strokeWidth="2" markerEnd="url(#ah-rose)" />
+        {/* NFA→所得収支→歳入 */}
+        <path d="M 595 210 C 540 210 480 195 270 160" fill="none" stroke="#7c3aed" strokeWidth="2" markerEnd="url(#ah-purple)" />
+        {/* 経常収支→NFA */}
+        <path d="M 260 395 C 450 380 550 300 595 230" fill="none" stroke="#7c3aed" strokeWidth="1.5" strokeDasharray="6 3" markerEnd="url(#ah-purple)" />
       </g>
 
       {/* === ラベルボックス（最前面・重ならない配置） === */}
       <g>
-        {/* 国庫納付金 */}
-        <rect x="295" y="92" width="80" height="16" rx="3" fill="white" stroke="#22c55e" strokeWidth="1" />
-        <text x="335" y="104" textAnchor="middle" fontSize="8" fill="#22c55e" fontWeight="600">国庫納付金</text>
+        {/* 国庫納付金 — 2つのボックスの間の上端に配置 */}
+        <rect x="272" y="118" width="36" height="14" rx="3" fill="white" stroke="#22c55e" strokeWidth="1" />
+        <text x="290" y="129" textAnchor="middle" fontSize="7" fill="#22c55e" fontWeight="600">納付金</text>
+
+        {/* 当座預金 — 2つのボックスの間の下端に配置 (国庫納付金と被らない) */}
+        <rect x="272" y="145" width="36" height="14" rx="3" fill="white" stroke="#8b5cf6" strokeWidth="1" />
+        <text x="290" y="156" textAnchor="middle" fontSize="7" fill="#8b5cf6" fontWeight="600">当座預金</text>
 
         {/* 国債発行 */}
         <rect x="90" y="220" width="72" height="16" rx="3" fill="white" stroke="#f97316" strokeWidth="1" />
@@ -148,7 +157,7 @@ export default function FlowDiagram() {
         <rect x="310" y="218" width="72" height="16" rx="3" fill="white" stroke="#14b8a6" strokeWidth="1" />
         <text x="346" y="230" textAnchor="middle" fontSize="8" fill="#14b8a6" fontWeight="600">国債売却📉</text>
 
-        {/* 当座預金 */}
+        {/* 当座預金 BOJ→金融機関 */}
         <rect x="385" y="238" width="68" height="16" rx="3" fill="white" stroke="#8b5cf6" strokeWidth="1" />
         <text x="419" y="250" textAnchor="middle" fontSize="8" fill="#8b5cf6" fontWeight="600">当座預金💰</text>
 
@@ -172,17 +181,25 @@ export default function FlowDiagram() {
         <rect x="405" y="190" width="110" height="16" rx="3" fill="#fffbeb" stroke="#d97706" strokeWidth="1" />
         <text x="460" y="202" textAnchor="middle" fontSize="7" fill="#92400e" fontWeight="600">外貨準備評価益→歳入</text>
 
+        {/* 所得収支 NFA→歳入 */}
+        <rect x="405" y="172" width="100" height="16" rx="3" fill="#f5f3ff" stroke="#7c3aed" strokeWidth="1" />
+        <text x="455" y="184" textAnchor="middle" fontSize="7" fill="#7c3aed" fontWeight="600">所得収支(NFA×3%)</text>
+
+        {/* 経常収支→NFA */}
+        <rect x="380" y="330" width="90" height="16" rx="3" fill="#f5f3ff" stroke="#7c3aed" strokeWidth="1" />
+        <text x="425" y="342" textAnchor="middle" fontSize="7" fill="#7c3aed" fontWeight="600">経常収支→NFA</text>
+
         {/* 円安→法人税↑・補助金↑ */}
-        <rect x="280" y="178" width="110" height="16" rx="3" fill="#fff1f2" stroke="#e11d48" strokeWidth="1" />
-        <text x="335" y="190" textAnchor="middle" fontSize="7" fill="#e11d48" fontWeight="600">円安→法人税↑・補助金↑</text>
+        <rect x="280" y="206" width="110" height="16" rx="3" fill="#fff1f2" stroke="#e11d48" strokeWidth="1" />
+        <text x="335" y="218" textAnchor="middle" fontSize="7" fill="#e11d48" fontWeight="600">円安→法人税↑・補助金↑</text>
 
         {/* 円安→物価↑→生活費↑ */}
         <rect x="355" y="355" width="110" height="16" rx="3" fill="#fdf2f8" stroke="#ec4899" strokeWidth="1" />
         <text x="410" y="367" textAnchor="middle" fontSize="7" fill="#ec4899" fontWeight="600">円安→物価↑→生活費↑</text>
 
         {/* 食費・光熱費支出 */}
-        <rect x="395" y="435" width="90" height="16" rx="3" fill="#fff1f2" stroke="#e11d48" strokeWidth="1" />
-        <text x="440" y="447" textAnchor="middle" fontSize="7" fill="#e11d48" fontWeight="600">食費・光熱費支出</text>
+        <rect x="395" y="455" width="90" height="16" rx="3" fill="#fff1f2" stroke="#e11d48" strokeWidth="1" />
+        <text x="440" y="467" textAnchor="middle" fontSize="7" fill="#e11d48" fontWeight="600">食費・光熱費支出</text>
       </g>
 
       {/* === 市場エリア === */}
@@ -217,7 +234,8 @@ export default function FlowDiagram() {
         <circle cx="302" cy="8" r="4" fill="#8b5cf6" /><text x="310" y="12" fontSize="9" fill="#475569">当座預金</text>
         <circle cx="370" cy="8" r="4" fill="#d97706" /><text x="378" y="12" fontSize="9" fill="#475569">輸出</text>
         <circle cx="408" cy="8" r="4" fill="#e11d48" /><text x="416" y="12" fontSize="9" fill="#475569">輸入・生活費</text>
-        <circle cx="498" cy="8" r="4" fill="#ec4899" /><text x="506" y="12" fontSize="9" fill="#475569">家計影響</text>
+        <circle cx="498" cy="8" r="4" fill="#7c3aed" /><text x="506" y="12" fontSize="9" fill="#475569">NFA・所得収支</text>
+        <circle cx="598" cy="8" r="4" fill="#ec4899" /><text x="606" y="12" fontSize="9" fill="#475569">家計影響</text>
       </g>
     </svg>
   )
