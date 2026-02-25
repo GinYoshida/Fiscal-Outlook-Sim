@@ -394,6 +394,7 @@ function fmt(v: number, decimals = 1): string {
 
 export function SimulationTab({ params, simData, actualData, childAge2026, scenarioIndex }: Props) {
   const [tableView, setTableView] = useState<'5year' | 'full' | 'actual' | 'combined'>('combined')
+  const [logScaleHousehold, setLogScaleHousehold] = useState(false)
 
   const interestBurdenData = useMemo(() => {
     const actual = actualData.map(d => ({ year: d.year, 利払負担率: d.interestBurden }))
@@ -555,6 +556,14 @@ export function SimulationTab({ params, simData, actualData, childAge2026, scena
     }))
     return fillYearGaps(sim)
   }, [simData])
+
+  const householdHasNonPositive = useMemo(() => {
+    return modelHouseholdData.some(d =>
+      (d.可処分所得変化 !== null && d.可処分所得変化 <= 0) ||
+      (d.食費増加 !== null && d.食費増加 <= 0) ||
+      (d.光熱費増加 !== null && d.光熱費増加 <= 0)
+    )
+  }, [modelHouseholdData])
 
   const incomeRatioData = useMemo(() => {
     const actual = actualData.map(d => ({
@@ -1143,15 +1152,39 @@ export function SimulationTab({ params, simData, actualData, childAge2026, scena
         <div className="chart-note" style={{ marginBottom: 8, textAlign: 'left', fontSize: 12, color: '#64748b' }}>
           年収400万円（中央値）の家計を想定。税・社会保険料30%、食費25.5%（エンゲル係数）、光熱費7.3%で計算。2026年との差額を表示。
         </div>
-        <ChartSubtitle title="可処分所得と生活費の変化（万円/年）" />
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 4 }}>
+          <ChartSubtitle title="可処分所得と生活費の変化（万円/年）" />
+          <button
+            onClick={() => setLogScaleHousehold(!logScaleHousehold)}
+            style={{
+              fontSize: 11, padding: '2px 8px', borderRadius: 4,
+              border: '1px solid #cbd5e1', cursor: 'pointer',
+              background: logScaleHousehold ? '#3b82f6' : '#f1f5f9',
+              color: logScaleHousehold ? '#fff' : '#475569',
+            }}
+          >
+            {logScaleHousehold ? '対数' : '線形'}
+          </button>
+        </div>
+        {logScaleHousehold && householdHasNonPositive && (
+          <div style={{ fontSize: 11, color: '#dc2626', textAlign: 'center', marginBottom: 4 }}>
+            ⚠ 0以下の値を含むため対数スケールを適用できません（線形表示中）
+          </div>
+        )}
         <ResponsiveContainer width="100%" height={280}>
           <BarChart data={modelHouseholdData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis dataKey="year" tick={{ fontSize: 10 }} />
-            <YAxis tick={{ fontSize: 10 }} unit="万円" />
+            <YAxis
+              tick={{ fontSize: 10 }}
+              unit="万円"
+              scale={(logScaleHousehold && !householdHasNonPositive) ? 'log' : 'auto'}
+              domain={(logScaleHousehold && !householdHasNonPositive) ? ['auto', 'auto'] : undefined}
+              allowDataOverflow={(logScaleHousehold && !householdHasNonPositive)}
+            />
             <Tooltip content={<NoDataTooltip unit=" 万円" childAge2026={childAge2026} />} />
             <Legend />
-            <ReferenceLine y={0} stroke="#94a3b8" strokeDasharray="3 3" />
+            {!(logScaleHousehold && !householdHasNonPositive) && <ReferenceLine y={0} stroke="#94a3b8" strokeDasharray="3 3" />}
             <Bar dataKey="食費増加" fill="#f97316" opacity={0.7} stackId="cost" />
             <Bar dataKey="光熱費増加" fill="#ef4444" opacity={0.7} stackId="cost" />
             <Bar dataKey="可処分所得変化" fill="#3b82f6" />
@@ -1203,7 +1236,13 @@ export function SimulationTab({ params, simData, actualData, childAge2026, scena
             <BarChart data={modelSummaryData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
               <XAxis dataKey="year" tick={{ fontSize: 10 }} />
-              <YAxis tick={{ fontSize: 10 }} unit="万円" />
+              <YAxis
+                tick={{ fontSize: 10 }}
+                unit="万円"
+                scale={logScaleHousehold ? 'log' : 'auto'}
+                domain={logScaleHousehold ? ['auto', 'auto'] : undefined}
+                allowDataOverflow={logScaleHousehold}
+              />
               <Tooltip content={<NoDataTooltip unit=" 万円" childAge2026={childAge2026} decimals={0} />} />
               <Legend />
               <Bar dataKey="名目年収" fill="#3b82f6" />
