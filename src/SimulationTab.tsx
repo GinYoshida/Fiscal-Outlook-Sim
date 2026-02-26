@@ -247,8 +247,12 @@ const CHART_HELP: Record<string, ChartHelpInfo> = {
     description: 'インフレ調整後の賃金の伸び。マイナスなら実質的な賃金カットで生活水準が低下します。',
     sensitiveParams: ['生産性分配率', 'インフレ転嫁率', 'インフレ率'],
   },
-  '可処分所得と生活費の変化（万円/年）': {
-    description: '年収400万円世帯の可処分所得変化と食費・光熱費増加の推移。家計への直接的なインパクトです。',
+  '可処分所得の変化（万円/年）': {
+    description: '年収400万円世帯の可処分所得（税・社保・食費・光熱費控除後）の2026年からの変化額です。',
+    sensitiveParams: ['インフレ率', '生産性分配率', 'インフレ転嫁率'],
+  },
+  '生活費の増加（万円/年）': {
+    description: '食費・光熱費の2026年からの増加額。CPIと円安が反映されます。エネルギー補助金で光熱費増が軽減されます。',
     sensitiveParams: ['インフレ率', '円安進行率', 'エネルギー補助金率'],
   },
   '所得格差倍率（上位20%÷下位20%）': {
@@ -577,9 +581,14 @@ export function SimulationTab({ params, simData, actualData, childAge2026, scena
     return fillYearGaps(sim)
   }, [simData])
 
-  const householdHasNonPositive = useMemo(() => {
+  const disposableHasNonPositive = useMemo(() => {
     return modelHouseholdData.some(d =>
-      (d.可処分所得変化 !== null && d.可処分所得変化 <= 0) ||
+      (d.可処分所得変化 !== null && d.可処分所得変化 <= 0)
+    )
+  }, [modelHouseholdData])
+
+  const costHasNonPositive = useMemo(() => {
+    return modelHouseholdData.some(d =>
       (d.食費増加 !== null && d.食費増加 <= 0) ||
       (d.光熱費増加 !== null && d.光熱費増加 <= 0)
     )
@@ -1173,7 +1182,7 @@ export function SimulationTab({ params, simData, actualData, childAge2026, scena
           年収400万円（中央値）の家計を想定。税・社会保険料30%、食費25.5%（エンゲル係数）、光熱費7.3%で計算。2026年との差額を表示。
         </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 4 }}>
-          <ChartSubtitle title="可処分所得と生活費の変化（万円/年）" />
+          <ChartSubtitle title="可処分所得の変化（万円/年）" />
           <button
             onClick={() => setLogScaleHousehold(!logScaleHousehold)}
             style={{
@@ -1186,28 +1195,49 @@ export function SimulationTab({ params, simData, actualData, childAge2026, scena
             {logScaleHousehold ? '対数' : '線形'}
           </button>
         </div>
-        {logScaleHousehold && householdHasNonPositive && (
+        {logScaleHousehold && disposableHasNonPositive && (
           <div style={{ fontSize: 11, color: '#dc2626', textAlign: 'center', marginBottom: 4 }}>
             ⚠ 0以下の値を含むため対数スケールを適用できません（線形表示中）
           </div>
         )}
-        <ResponsiveContainer width="100%" height={280}>
+        <ResponsiveContainer width="100%" height={240}>
           <BarChart data={modelHouseholdData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis dataKey="year" tick={{ fontSize: 10 }} />
             <YAxis
               tick={{ fontSize: 10 }}
               unit="万円"
-              scale={(logScaleHousehold && !householdHasNonPositive) ? 'log' : 'auto'}
-              domain={(logScaleHousehold && !householdHasNonPositive) ? ['auto', 'auto'] : undefined}
-              allowDataOverflow={(logScaleHousehold && !householdHasNonPositive)}
+              scale={(logScaleHousehold && !disposableHasNonPositive) ? 'log' : 'auto'}
+              domain={(logScaleHousehold && !disposableHasNonPositive) ? ['auto', 'auto'] : undefined}
+              allowDataOverflow={(logScaleHousehold && !disposableHasNonPositive)}
+            />
+            <Tooltip content={<NoDataTooltip unit=" 万円" childAge2026={childAge2026} />} />
+            {!(logScaleHousehold && !disposableHasNonPositive) && <ReferenceLine y={0} stroke="#94a3b8" strokeDasharray="3 3" />}
+            <Bar dataKey="可処分所得変化" fill="#3b82f6" name="可処分所得変化" />
+          </BarChart>
+        </ResponsiveContainer>
+        <ChartSubtitle title="生活費の増加（万円/年）" />
+        {logScaleHousehold && costHasNonPositive && (
+          <div style={{ fontSize: 11, color: '#dc2626', textAlign: 'center', marginBottom: 4 }}>
+            ⚠ 0以下の値を含むため対数スケールを適用できません（線形表示中）
+          </div>
+        )}
+        <ResponsiveContainer width="100%" height={240}>
+          <BarChart data={modelHouseholdData}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+            <XAxis dataKey="year" tick={{ fontSize: 10 }} />
+            <YAxis
+              tick={{ fontSize: 10 }}
+              unit="万円"
+              scale={(logScaleHousehold && !costHasNonPositive) ? 'log' : 'auto'}
+              domain={(logScaleHousehold && !costHasNonPositive) ? ['auto', 'auto'] : undefined}
+              allowDataOverflow={(logScaleHousehold && !costHasNonPositive)}
             />
             <Tooltip content={<NoDataTooltip unit=" 万円" childAge2026={childAge2026} />} />
             <Legend />
-            {!(logScaleHousehold && !householdHasNonPositive) && <ReferenceLine y={0} stroke="#94a3b8" strokeDasharray="3 3" />}
+            <ReferenceLine y={0} stroke="#94a3b8" strokeDasharray="3 3" />
             <Bar dataKey="食費増加" fill="#f97316" opacity={0.7} stackId="cost" />
             <Bar dataKey="光熱費増加" fill="#ef4444" opacity={0.7} stackId="cost" />
-            <Bar dataKey="可処分所得変化" fill="#3b82f6" />
           </BarChart>
         </ResponsiveContainer>
         <ChartSubtitle title="所得格差倍率（上位20%÷下位20%）" />
