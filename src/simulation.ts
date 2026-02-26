@@ -70,6 +70,7 @@ export interface SimResult {
   retainedEarnings: number;
   retainedToGDP: number;
   endogenousWage: number;
+  nfaDeteriorationStreak: number;
 }
 
 function giniToIncomeRatio(gini: number): number {
@@ -102,6 +103,7 @@ export function runSimulation(p: SimParams): SimResult[] {
   let bojJGB = p.initBojJGB;
   let bojCAActual = p.bojCA;
   let bojYieldActual = p.bojYield / 100;
+  let nfaDeteriorationStreak = 0;
 
   for (let i = 0; i < 30; i++) {
     const year = 2026 + i;
@@ -110,9 +112,21 @@ export function runSimulation(p: SimParams): SimResult[] {
     const prevCurrentAccount = i === 0 ? 0 : results[i - 1].currentAccount;
     const prevInterestBurden = i === 0 ? 12.8 : results[i - 1].interestBurden;
 
+    if (i >= 2) {
+      const ca1 = results[i - 1].currentAccount;
+      const ca2 = results[i - 2].currentAccount;
+      const delta = ca1 - ca2;
+      if (delta < 0 && ca1 < 0) {
+        nfaDeteriorationStreak++;
+      } else {
+        nfaDeteriorationStreak = Math.max(nfaDeteriorationStreak - 1, 0);
+      }
+    }
+
     let dynamicRiskPremium = 0;
     if (i > 0 && prevCurrentAccount < 0 && prevNFA < p.nfaThreshold) {
-      dynamicRiskPremium = p.currencyRiskPremium / 100;
+      const accelerationFactor = 1 + nfaDeteriorationStreak * 0.3;
+      dynamicRiskPremium = (p.currencyRiskPremium / 100) * accelerationFactor;
     }
 
     let fiscalRiskPremium = 0;
@@ -284,6 +298,7 @@ export function runSimulation(p: SimParams): SimResult[] {
         realPolicyExpIndex,
         nominalGDP, debtToGDP, corporateProfit, retainedEarnings, retainedToGDP,
         endogenousWage: endogenousWage * 100,
+        nfaDeteriorationStreak,
       });
     } else {
       const prev = results[i - 1];
@@ -451,6 +466,7 @@ export function runSimulation(p: SimParams): SimResult[] {
         realPolicyExpIndex,
         nominalGDP, debtToGDP, corporateProfit, retainedEarnings, retainedToGDP,
         endogenousWage: endogenousWage * 100,
+        nfaDeteriorationStreak,
       });
     }
   }

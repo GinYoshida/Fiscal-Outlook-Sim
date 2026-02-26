@@ -28,11 +28,20 @@ export const OPTIMIZABLE_PARAMS: OptimizableParam[] = [
 
 export function computeConstraintViolations(simData: SimResult[], constraints: Constraints): number {
   let violations = 0
+  let consecutiveCADeficit = 0
   for (const d of simData) {
     if (constraints.povertyRate.enabled && d.povertyRate > constraints.povertyRate.threshold) violations++
     if (constraints.giniIndex.enabled && d.giniIndex > constraints.giniIndex.threshold) violations++
     if (constraints.interestBurden.enabled && d.interestBurden > constraints.interestBurden.threshold) violations++
     if (constraints.realPolicyExpIndex.enabled && d.realPolicyExpIndex < constraints.realPolicyExpIndex.threshold) violations++
+    if (constraints.currentAccountDeficit.enabled) {
+      if (d.currentAccount < 0) {
+        consecutiveCADeficit++
+      } else {
+        consecutiveCADeficit = 0
+      }
+      if (consecutiveCADeficit > constraints.currentAccountDeficit.threshold) violations++
+    }
   }
   return violations
 }

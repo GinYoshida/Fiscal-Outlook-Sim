@@ -360,6 +360,25 @@ body {
   border-left: 3px solid var(--red);
 }
 
+.warning-event.warning-critical {
+  background: #7f1d1d;
+  border-left: 4px solid #fca5a5;
+  color: #fff;
+  font-weight: 700;
+}
+
+.warning-event.warning-critical .warning-year {
+  color: #fca5a5;
+}
+
+.warning-event.warning-critical .warning-type {
+  color: #fde68a;
+}
+
+.warning-event.warning-critical .warning-detail {
+  color: #fecaca;
+}
+
 .warning-year {
   font-weight: 700;
   color: var(--red);

@@ -8,7 +8,7 @@ import {
 import type { SimResult } from './simulation'
 import type { ActualDataPoint, SimParams } from './data'
 import { ACTUAL_DATA, SCENARIOS } from './data'
-import { computeWarnings } from './warnings'
+import { computeWarnings, type Warning } from './warnings'
 
 interface Props {
   params: SimParams;
@@ -102,47 +102,67 @@ const WARNING_DETAILS: Record<string, { impact: string[]; options: string[] }> =
       '別のシナリオと比較して妥当性を検証してください',
     ],
   },
+  '通貨信認リスク（最上級）': {
+    impact: [
+      '経常収支の赤字が長期化し、対外純資産（NFA）が継続的に減少しており、通貨の信認が根本的に損なわれるリスクが高い',
+      'イギリス（Brexit後のポンド急落）やトルコ（リラ危機）のように、経常赤字の回復見通しが立たない場合、投資家心理の急変（サドンストップ）が起きうる',
+      '通貨安→輸入コスト増→経常赤字拡大→さらに通貨安という自己強化的な負のスパイラルに陥るリスク',
+      '国債金利の急騰により利払い費が跳ね上がり、財政危機との複合リスクに発展しうる',
+    ],
+    options: [
+      '経常収支の構造的改善（エネルギー自給率向上、輸出産業育成）',
+      '対外純資産の防衛（外貨準備の戦略的活用）',
+      '財政再建による市場信認の回復',
+      '資本流入を促進する投資環境の整備',
+      '通貨スワップ協定など国際的なセーフティネットの構築',
+    ],
+  },
 }
 
-function WarningAccordion({ warnings }: { warnings: { year: number; type: string; detail: string }[] }) {
+function WarningAccordion({ warnings }: { warnings: Warning[] }) {
   const [openType, setOpenType] = useState<string | null>(null)
-  const warningTypes = new Map<string, number>()
+  const warningTypes = new Map<string, { firstYear: number; severity: string }>()
   warnings.forEach(w => {
-    if (!warningTypes.has(w.type)) warningTypes.set(w.type, w.year)
+    if (!warningTypes.has(w.type)) warningTypes.set(w.type, { firstYear: w.year, severity: w.severity || 'normal' })
   })
   const alerts = Array.from(warningTypes.entries())
-  if (alerts.length === 0) {
+  const criticalAlerts = alerts.filter(([, v]) => v.severity === 'critical')
+  const normalAlerts = alerts.filter(([, v]) => v.severity !== 'critical')
+  const sortedAlerts = [...criticalAlerts, ...normalAlerts]
+
+  if (sortedAlerts.length === 0) {
     return <div className="success-box" style={{ marginTop: 12 }}>✓ シミュレーション期間中、重大な財政リスクイベントは検出されませんでした。</div>
   }
   return (
     <div style={{ marginTop: 12 }}>
       <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 8, color: '#ef4444' }}>⚠️ 警告イベント（クリックで詳細を表示）</div>
       <div className="warning-timeline">
-        {alerts.map(([type, firstYear]) => {
+        {sortedAlerts.map(([type, { firstYear, severity }]) => {
           const count = warnings.filter(w => w.type === type).length
           const firstDetail = warnings.find(w => w.type === type)!.detail
           const isOpen = openType === type
           const details = WARNING_DETAILS[type]
+          const isCritical = severity === 'critical'
           return (
             <div key={type}>
               <div
-                className="warning-event"
+                className={`warning-event${isCritical ? ' warning-critical' : ''}`}
                 onClick={() => setOpenType(isOpen ? null : type)}
                 style={{ cursor: 'pointer', userSelect: 'none' }}
               >
-                <span style={{ fontSize: 12, color: '#ef4444', fontWeight: 700, transition: 'transform 0.2s', transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)', display: 'inline-block', marginRight: 4 }}>▶</span>
+                <span style={{ fontSize: 12, color: isCritical ? '#fff' : '#ef4444', fontWeight: 700, transition: 'transform 0.2s', transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)', display: 'inline-block', marginRight: 4 }}>▶</span>
                 <span className="warning-year">{firstYear}年〜</span>
-                <span className="warning-type">{type}</span>
-                <span className="warning-detail">{firstDetail}（{count}年間）</span>
+                <span className="warning-type">{isCritical ? '🚨 ' : ''}{type}</span>
+                <span className="warning-detail">{firstDetail}{count > 1 ? `（${count}年間）` : ''}</span>
               </div>
               {isOpen && details && (
-                <div style={{ margin: '4px 0 12px 20px', padding: '12px 16px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, fontSize: 13 }}>
-                  <div style={{ fontWeight: 700, color: '#991b1b', marginBottom: 6 }}>■ 実生活への影響</div>
-                  <ul style={{ paddingLeft: 20, marginBottom: 12, color: '#1e293b' }}>
+                <div style={{ margin: '4px 0 12px 20px', padding: '12px 16px', background: isCritical ? '#450a0a' : '#fef2f2', border: `1px solid ${isCritical ? '#991b1b' : '#fecaca'}`, borderRadius: 8, fontSize: 13, color: isCritical ? '#fecaca' : undefined }}>
+                  <div style={{ fontWeight: 700, color: isCritical ? '#fca5a5' : '#991b1b', marginBottom: 6 }}>■ 実生活への影響</div>
+                  <ul style={{ paddingLeft: 20, marginBottom: 12, color: isCritical ? '#fde2e2' : '#1e293b' }}>
                     {details.impact.map((item, i) => <li key={i} style={{ marginBottom: 4 }}>{item}</li>)}
                   </ul>
-                  <div style={{ fontWeight: 700, color: '#1e40af', marginBottom: 6 }}>■ 政策オプション</div>
-                  <ul style={{ paddingLeft: 20, color: '#1e293b' }}>
+                  <div style={{ fontWeight: 700, color: isCritical ? '#93c5fd' : '#1e40af', marginBottom: 6 }}>■ 政策オプション</div>
+                  <ul style={{ paddingLeft: 20, color: isCritical ? '#fde2e2' : '#1e293b' }}>
                     {details.options.map((item, i) => <li key={i} style={{ marginBottom: 4 }}>{item}</li>)}
                   </ul>
                 </div>

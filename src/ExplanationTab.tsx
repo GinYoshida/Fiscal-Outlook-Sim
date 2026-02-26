@@ -338,7 +338,7 @@ export function ExplanationTab({ params, simData, actualData, dataSources }: Pro
       <TreeSection title="C：収支・残高・内生金利" tree={`├── 実効市場金利 = 名目成長率 + ベースリスクP + 財政リスクP + 通貨リスクP
 │   ├── 財政リスクP = max(0, (利払負担率 − 閾値) × 感応度 / 100)
 │   │   └── 前年の利払負担率を使用（循環依存回避）
-│   └── 通貨リスクP = 経常赤字・NFA悪化時に自動加算
+│   └── 通貨リスクP = 経常赤字・NFA悪化時に自動加算 × 加速係数(悪化連続で増大)
 ├── 平均クーポン = 前年×(1-新発比率) + 市場金利×新発比率
 │   └── 新発比率 = min(1/9 + 赤字国債/残高, 0.3) ← 借換+新発
 ├── 利払い費 = 債務残高 × 平均クーポン
@@ -541,7 +541,32 @@ export function ExplanationTab({ params, simData, actualData, dataSources }: Pro
           <li><strong>条件1</strong>：経常収支が赤字（前年の経常収支 {'<'} 0）</li>
           <li><strong>条件2</strong>：対外純資産がNFA防衛ライン以下（前年のNFA {'<'} 閾値）</li>
         </ul>
-        <p style={{ marginTop: 8 }}>トリガー発動時：実効市場金利 = ベース金利 + 通貨リスクプレミアム</p>
+        <p style={{ marginTop: 8 }}>トリガー発動時：実効市場金利 = ベース金利 + 通貨リスクプレミアム × 加速係数</p>
+
+        <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '12px 16px', marginTop: 12 }}>
+          <p style={{ fontWeight: 600, marginBottom: 6 }}>非線形加速メカニズム（悪化傾向の反映）</p>
+          <p style={{ fontSize: 13 }}>
+            経常収支の年度差が悪化方向（マイナス拡大）に連続している場合、リスクプレミアムは加速度的に増加します。
+            これはイギリス（Brexit後のポンド急落）やトルコ（リラ危機）で観測された「回復見通しが立たない」場合の
+            投資家心理の非連続的な変化を反映しています。
+          </p>
+          <ul style={{ paddingLeft: 20, marginTop: 8, fontSize: 13 }}>
+            <li>経常収支が赤字かつ、前年差（delta）が悪化方向に連続すると「悪化連続カウンター」が増加</li>
+            <li>加速係数 = 1 + カウンター × 0.3（例：3年連続悪化で1.9倍）</li>
+            <li>改善に転じるとカウンターが段階的に減少（急回復はしない設計）</li>
+          </ul>
+        </div>
+
+        <div style={{ background: '#450a0a', border: '1px solid #991b1b', borderRadius: 8, padding: '12px 16px', marginTop: 12, color: '#fecaca' }}>
+          <p style={{ fontWeight: 600, marginBottom: 6, color: '#fca5a5' }}>🚨 最上級アラート：通貨信認リスク</p>
+          <p style={{ fontSize: 13 }}>
+            シミュレーション最終5年間で経常収支が連続マイナスかつNFAが継続的に減少している場合、
+            「通貨信認リスク（最上級）」アラートが発生します。これは通貨の信認が根本的に損なわれ、
+            サドンストップ（資本流入の急停止）が起きうる状態を示しています。
+            最適化機能の制約条件「経常赤字連続年数」を活用して、この状態を回避するパラメータ探索が可能です。
+          </p>
+        </div>
+
         <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '12px 16px', marginTop: 12 }}>
           <p style={{ fontWeight: 600, marginBottom: 6 }}>なぜ対外純資産の減少が金利を押し上げるのか？</p>
           <p style={{ fontSize: 13 }}>

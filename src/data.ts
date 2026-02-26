@@ -107,6 +107,7 @@ export interface Constraints {
   giniIndex: Constraint;
   interestBurden: Constraint;
   realPolicyExpIndex: Constraint;
+  currentAccountDeficit: Constraint;
 }
 
 export const DEFAULT_CONSTRAINTS: Constraints = {
@@ -114,6 +115,7 @@ export const DEFAULT_CONSTRAINTS: Constraints = {
   giniIndex: { enabled: true, threshold: 0.45 },
   interestBurden: { enabled: true, threshold: 30 },
   realPolicyExpIndex: { enabled: true, threshold: 70 },
+  currentAccountDeficit: { enabled: true, threshold: 5 },
 };
 
 export interface Scenario {

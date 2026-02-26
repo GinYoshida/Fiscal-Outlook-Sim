@@ -452,6 +452,18 @@ export function Sidebar({ params, scenarioIndex, onScenarioChange, onParamChange
         <p className="constraint-note">
           実質政策経費指数：初年度=100。インフレ調整後の政策的経費（利払除く）が初年度から何%の水準か
         </p>
+        <label className="constraint-row">
+          <input type="checkbox" checked={constraints.currentAccountDeficit.enabled}
+            onChange={e => updateConstraint('currentAccountDeficit', 'enabled', e.target.checked)} />
+          <span>経常赤字連続年数 ≤</span>
+          <input type="number" className="constraint-threshold" value={constraints.currentAccountDeficit.threshold}
+            step={1} min={1} max={30}
+            onChange={e => updateConstraint('currentAccountDeficit', 'threshold', parseFloat(e.target.value) || 5)} />
+          <span>年</span>
+        </label>
+        <p className="constraint-note">
+          経常収支が連続して赤字となる年数の上限。超過すると通貨リスクプレミアムが加速的に上昇します
+        </p>
       </div>
 
       <div className="optimizer-section">
