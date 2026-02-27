@@ -1,96 +1,65 @@
-import type { SimParams } from './data';
+/**
+ * simulation.ts — 統合政府財政シミュレーションエンジン
+ *
+ * 日本の財政・金融・家計・人口動態を30〜50年間シミュレートする。
+ *
+ * ロジックツリー（セクション構成）:
+ *   A. マクロ経済 — 名目成長率・インフレ率の基礎変数
+ *   B. リスクプレミアム — 通貨リスク・財政リスクの動的算出
+ *   C. 人的資本・労働力 — 教育投資・人口動態による成長補正
+ *   D. 出生率・社会活力 — TFRの内生的決定と成長率へのフィードバック
+ *   E. 金利・日銀 — 市場金利・政策金利・日銀バランスシート
+ *   F. 為替・貿易 — 円ドルレート・輸出入・経常収支・NFA
+ *   G. 税収 — 消費税・所得税・法人税・その他税収の推計
+ *   H. 物価・賃金・格差 — CPI・実質賃金・貧困率・ジニ係数
+ *   I. 歳出 — 社会保障・子育て・防衛・エネルギー補助金等
+ *   J. 家計モデル — モデル家計の可処分所得・食費・光熱費
+ *
+ * Fix一覧（経済的補正）:
+ *   Fix 1: 消費税変更→CPI一時的上昇（税率転嫁の価格効果）
+ *   Fix 2: エネルギー補助金の動的化（CPI＋円安連動）
+ *   Fix 4: 新規国債の平均クーポン反映（借換＋新発債の加重平均）
+ *   Fix 6: 消費税変更→家計負担増（食費・光熱費以外の消費への課税効果）
+ */
+
+import type { SimParams, SimResult } from './types';
+export type { SimResult } from './types';
 import { HISTORICAL_EDUCATION_GDP, HISTORICAL_TFR } from './data';
 
-export interface SimResult {
-  year: number;
-  tax: number;
-  bojPayment: number;
-  bojNetIncome: number;
-  bojCumulativeLoss: number;
-  totalRevenue: number;
-  policyExp: number;
-  avgCoupon: number;
-  interest: number;
-  totalCost: number;
-  debt: number;
-  fiscalBalance: number;
-  interestBurden: number;
-  bojRev: number;
-  bojCost: number;
-  policyRate: number;
-  taxConsumption: number;
-  taxIncome: number;
-  taxCorporate: number;
-  taxOther: number;
-  bondIssuance: number;
-  otherRevStamp: number;
-  otherRevGov: number;
-  otherRevAsset: number;
-  otherRevMisc: number;
-  exchangeRate: number;
-  importAmount: number;
-  exportAmount: number;
-  tradeBalance: number;
-  realWageGrowth: number;
-  povertyRate: number;
-  giniIndex: number;
-  energySubsidy: number;
-  fxValuationGain: number;
-  cpiIncrease: number;
-  wageIncrease: number;
-  modelIncome: number;
-  modelDisposable: number;
-  modelFoodCost: number;
-  modelEnergyCost: number;
-  modelFoodCostChange: number;
-  modelEnergyCostChange: number;
-  modelDisposableChange: number;
-  incomeRatio: number;
-  currentAccount: number;
-  nfa: number;
-  dynamicRiskPremium: number;
-  effectiveMarketRate: number;
-  bojJGB: number;
-  bojCAActual: number;
-  bojYieldActual: number;
-  fiscalRiskPremium: number;
-  socialSecurity: number;
-  childcare: number;
-  localGovTransfer: number;
-  defense: number;
-  otherPolicyExp: number;
-  bondRevenue: number;
-  revenueTotal: number;
-  revenueTaxRatio: number;
-  revenueBondRatio: number;
-  revenueOtherRatio: number;
-  realPolicyExpIndex: number;
-  nominalGDP: number;
-  debtToGDP: number;
-  corporateProfit: number;
-  retainedEarnings: number;
-  retainedToGDP: number;
-  endogenousWage: number;
-  nfaDeteriorationStreak: number;
-  humanCapitalIndex: number;
-  laborForceIndex: number;
-  tfr: number;
-  socialVitalityIndex: number;
-  educationEffect: number;
-  humanCapitalGrowth: number;
-}
-
+/**
+ * ジニ係数から五分位所得倍率を算出する
+ *
+ * ジニ係数と所得倍率の関係: ratio = (1 + gini) / (1 - gini)
+ * 完全平等（gini=0）のとき ratio=1、不平等が拡大するほど倍率が上昇する。
+ *
+ * @param gini - ジニ係数（0〜1）
+ * @returns 五分位所得倍率（最低1）
+ */
 function giniToIncomeRatio(gini: number): number {
   const ratio = (1 + gini) / (1 - gini);
   return Math.max(ratio, 1);
 }
 
+// 総務省「家計調査」2023年 勤労者世帯の平均年収（約400万円）
 const BASE_INCOME = 400;
+// 総務省「家計調査」2023年 エンゲル係数（食費÷消費支出）全世帯平均 約25.5%
 const BASE_FOOD_RATIO = 0.255;
+// 総務省「家計調査」2023年 光熱・水道費の消費支出比 約7.3%
 const BASE_ENERGY_RATIO = 0.073;
+// 社会保険料＋税の実効負担率（国民負担率ベース、財務省資料 約30%）
 const TAX_SOCIAL_RATIO = 0.30;
 
+/**
+ * 財政シミュレーションを実行する
+ *
+ * 入力パラメータに基づき、2026年から最大50年間の財政・経済指標を年次で算出する。
+ * 初年度（i=0）は初期値ベース、2年目以降は前年結果からの累積計算を行う。
+ *
+ * @param p - シミュレーション入力パラメータ（SimParams）
+ * @returns 各年のシミュレーション結果の配列（SimResult[]）
+ */
 export function runSimulation(p: SimParams): SimResult[] {
+  // ========== A. マクロ経済の基礎変数 ==========
   const B = p.inflationRate / 100;
   const C = p.realGrowth / 100;
   const D = B + C;
@@ -104,8 +73,12 @@ export function runSimulation(p: SimParams): SimResult[] {
   const foreignRate = p.foreignInterestRate / 100;
   const foreignCpi = p.foreignInflation / 100;
 
+  // 為替決定モデルの感応度パラメータ（金利平価・購買力平価ベース）
+  // FX_ALPHA: 内外金利差の為替への感応度（無担保カバー金利平価に基づく）
   const FX_ALPHA = 0.5;
+  // FX_BETA: 内外インフレ差の為替への感応度（相対的購買力平価に基づく）
   const FX_BETA = 0.3;
+  // FX_GAMMA: 通貨リスクプレミアムの為替への感応度（リスクオフ時の円安圧力）
   const FX_GAMMA = 0.5;
 
   const baseEnergyAmount = p.inflationRate * 10;
@@ -114,7 +87,10 @@ export function runSimulation(p: SimParams): SimResult[] {
   const laborPartChange = p.laborParticipationChange / 100;
   const techEff = p.techEffect / 100;
   const eduGDP = p.educationGDPRatio;
+  // EDU_ELASTICITY: 教育投資GDP比1%上昇あたりの人的資本成長率への寄与（無次元）
+  // OECD Education at a Glance の推計をベースに設定
   const EDU_ELASTICITY = 0.015;
+  // EDU_BASE: 教育投資GDP比の基準値（%）— 日本の過去10年平均（約3.0%）
   const EDU_BASE = 3.0;
 
   const results: SimResult[] = [];
@@ -136,6 +112,7 @@ export function runSimulation(p: SimParams): SimResult[] {
     const prevCurrentAccount = i === 0 ? 0 : results[i - 1].currentAccount;
     const prevInterestBurden = i === 0 ? 12.8 : results[i - 1].interestBurden;
 
+    // ========== B. リスクプレミアム ==========
     if (i >= 2) {
       const ca1 = results[i - 1].currentAccount;
       const ca2 = results[i - 2].currentAccount;
@@ -164,6 +141,7 @@ export function runSimulation(p: SimParams): SimResult[] {
       );
     }
 
+    // ========== C. 人的資本・労働力 ==========
     laborForceIndex = i === 0 ? 100 : laborForceIndex * (1 + popGrowth + laborPartChange);
 
     let laggedEduGDP: number;
@@ -179,6 +157,7 @@ export function runSimulation(p: SimParams): SimResult[] {
     const humanCapitalGrowth = educationEffect + techEff - agingPenalty;
     humanCapitalIndex = i === 0 ? 100 * (1 + humanCapitalGrowth) : humanCapitalIndex * (1 + humanCapitalGrowth);
 
+    // ========== D. 出生率・社会活力 ==========
     let tfrFeedback = 0;
     if (i >= 20) {
       const pastTFR = results[i - 20].tfr;
@@ -219,6 +198,7 @@ export function runSimulation(p: SimParams): SimResult[] {
 
     const socialSecurityDemographicPressure = popGrowth < 0 ? Math.abs(popGrowth) * 0.5 : 0;
 
+    // ========== E. 金利・日銀 ==========
     const baseMarketRate = hcD + p.riskPremium / 100;
     const E = baseMarketRate + dynamicRiskPremium + fiscalRiskPremium;
 
@@ -242,6 +222,7 @@ export function runSimulation(p: SimParams): SimResult[] {
         ? bojNetIncome
         : Math.max(bojNetIncome, 0);
 
+      // ========== F. 為替・貿易（初年度） ==========
       const yenDepRaw = baseBias + FX_ALPHA * (foreignRate - E) + FX_BETA * (B - foreignCpi) + FX_GAMMA * dynamicRiskPremium;
       const yenDep = Math.max(yenDepRaw, -0.5);
       const exchangeRate = p.initExchangeRate * (1 + yenDep);
@@ -263,6 +244,7 @@ export function runSimulation(p: SimParams): SimResult[] {
       const endogenousWage = C * prodShare + B * wagePassThrough + humanCapitalGrowth * 0.3;
       const nomWageG = Math.max(endogenousWage, baseNomWageG);
 
+      // ========== G. 税収（初年度） ==========
       let taxConsumption = p.initTaxConsumption * (1 + B * 1.0);
       if (changeYear !== null && year >= changeYear) {
         taxConsumption = taxConsumption * (p.taxRateNew / 10.0);
@@ -286,8 +268,11 @@ export function runSimulation(p: SimParams): SimResult[] {
 
       const returnBoostToWage = nominalGDP > 0 ? (returnToWorkers / nominalGDP) : 0;
 
+      // ========== H. 物価・賃金・格差（初年度） ==========
       const yenCostPush = Math.max(yenFactor, 0) * 0.3;
-      // Fix 1: 消費税率変更→CPI反映（変更年度のみ一時的CPI上昇）
+      // Fix 1: 消費税率変更→CPI反映
+      // 消費税率引き上げは一時的に物価を押し上げる（税率転嫁の価格効果）。
+      // 係数0.4は、全品目に対する課税品目比率と転嫁率を考慮した経験的推計値。
       const consumptionTaxCpiEffect = (changeYear !== null && year === changeYear)
         ? (p.taxRateNew - 10) / (100 + 10) * 0.4
         : 0;
@@ -306,6 +291,8 @@ export function runSimulation(p: SimParams): SimResult[] {
       const giniIndex = p.initGini + (assetGrowth - realWageGrowth) * 0.01;
 
       // Fix 2: エネルギー補助金の動的化（プランB）
+      // 固定額ではなく、CPI上昇率と円安度合いに連動させることで、
+      // エネルギー価格高騰時に自動的に補助金が増額される仕組み。
       const energyCostIndex = (1 + cpiIncrease) * (1 + Math.max(yenFactor, 0) * 0.5);
       const energySubsidy = baseEnergyAmount * p.energySubsidyRate * energyCostIndex;
 
@@ -314,6 +301,7 @@ export function runSimulation(p: SimParams): SimResult[] {
       const avgCoupon = p.initAvgCoupon / 100;
       const interest = p.initDebt * avgCoupon;
 
+      // ========== I. 歳出（初年度） ==========
       const socialSecurity = p.initSocialSecurity + socialSecurityDemographicPressure * p.initSocialSecurity;
       const childcare = p.initChildcare;
       const localGovTransfer = p.initLocalGovTransfer;
@@ -338,12 +326,15 @@ export function runSimulation(p: SimParams): SimResult[] {
 
       const realPolicyExpIndex = 100;
 
+      // ========== J. 家計モデル（初年度） ==========
       const modelIncome = BASE_INCOME * (1 + nomWageG);
       const modelFoodCost = BASE_INCOME * BASE_FOOD_RATIO * (1 + cpiIncrease);
       const modelEnergyCostGross = BASE_INCOME * BASE_ENERGY_RATIO * (1 + cpiIncrease) * (1 + Math.max(yenFactor, 0) * 0.5);
       const modelEnergyCost = modelEnergyCostGross * (1 - p.energySubsidyRate * 0.5);
       let modelDisposable = modelIncome * (1 - TAX_SOCIAL_RATIO) - modelFoodCost - modelEnergyCost;
       // Fix 6: 消費税率変更→家計の残りの消費にも負担増
+      // 食費・光熱費以外の消費支出にも消費税率変更の影響を反映する。
+      // 税込価格ベースで実効税負担を算出（内税方式: 税額 = 支出 × (税率差) / (100+新税率)）。
       if (changeYear !== null && year >= changeYear) {
         const consumptionTaxBurden = Math.max(modelDisposable, 0) * (p.taxRateNew - 10) / (100 + p.taxRateNew);
         modelDisposable -= consumptionTaxBurden;
@@ -395,6 +386,7 @@ export function runSimulation(p: SimParams): SimResult[] {
     } else {
       const prev = results[i - 1];
 
+      // ========== F. 為替・貿易（2年目以降） ==========
       const yenDepRaw = baseBias + FX_ALPHA * (foreignRate - E) + FX_BETA * (B - foreignCpi) + FX_GAMMA * dynamicRiskPremium;
       const yenDep = Math.max(yenDepRaw, -0.5);
       const exchangeRate = prev.exchangeRate * (1 + yenDep);
@@ -416,6 +408,7 @@ export function runSimulation(p: SimParams): SimResult[] {
       const endogenousWage = C * prodShare + B * wagePassThrough + humanCapitalGrowth * 0.3;
       const nomWageG = Math.max(endogenousWage, baseNomWageG);
 
+      // ========== G. 税収（2年目以降） ==========
       const prevWageDriver = prev.wageIncrease / 100;
       const hcTaxMultiplier = humanCapitalIndex / 100;
       const taxIncomeGrowth = (hcD * 0.5 + prevWageDriver * 0.5) * 1.4;
@@ -441,8 +434,10 @@ export function runSimulation(p: SimParams): SimResult[] {
 
       const returnBoostToWage = nominalGDP > 0 ? (returnToWorkers / nominalGDP) : 0;
 
+      // ========== H. 物価・賃金・格差（2年目以降） ==========
       const yenCostPush = Math.max(yenDep, 0) * 0.3;
       // Fix 1: 消費税率変更→CPI反映（変更年度のみ一時的CPI上昇）
+      // 税率転嫁は変更年のみの一時的効果。翌年以降はベース効果により消滅する。
       const consumptionTaxCpiEffect = (changeYear !== null && year === changeYear)
         ? (p.taxRateNew - 10) / (100 + 10) * 0.4
         : 0;
@@ -460,6 +455,7 @@ export function runSimulation(p: SimParams): SimResult[] {
       const assetGrowth = Math.max(yenDep, 0) * 0.5 + C;
       const giniIndex = prev.giniIndex + (assetGrowth - realWageGrowth) * 0.01;
 
+      // ========== E. 日銀損益（2年目以降） ==========
       const policyRate = Math.max(E - p.policyRateSpread / 100, 0);
       const bojRev = bojJGB * bojYieldActual;
       const bojCost = bojCAActual * policyRate;
@@ -477,9 +473,12 @@ export function runSimulation(p: SimParams): SimResult[] {
       const totalRevenue = tax + bojPayment + otherRevWithFx;
 
       // Fix 2: エネルギー補助金の動的化（プランB：CPI＋円安連動）
+      // 物価上昇や円安進行に連動して補助金額を自動調整し、
+      // 家計のエネルギー負担を一定水準以下に抑制する。
       const energyCostIndex = (1 + cpiIncrease) * (1 + Math.max(yenDep, 0) * 0.5);
       const energySubsidy = baseEnergyAmount * p.energySubsidyRate * energyCostIndex;
 
+      // ========== I. 歳出（2年目以降） ==========
       const socialSecurity = prev.socialSecurity * (1 + B) + p.naturalIncrease * 0.7 + socialSecurityDemographicPressure * prev.socialSecurity;
       const childcare = prev.childcare * (1 + p.childcareGrowth / 100);
       const localGovTransfer = prev.localGovTransfer * (1 + D * 0.5);
@@ -489,6 +488,8 @@ export function runSimulation(p: SimParams): SimResult[] {
       const policyExp = socialSecurity + childcare + localGovTransfer + defense + otherPolicyExp + energySubsidy;
 
       // Fix 4: 新規国債発行の平均クーポン反映（借換1/9 + 新発債分）
+      // 日本国債の平均残存期間は約9年。毎年1/9が借り換えられ、新市場金利で発行される。
+      // さらに新規発行分も加えた加重平均で平均クーポンが更新される。上限30%で安定性確保。
       const prevBondShare = prev.debt > 0 ? prev.bondIssuance / prev.debt : 0;
       const totalNewShare = Math.min(1 / 9 + prevBondShare, 0.3);
       const avgCouponDec = (prev.avgCoupon / 100 * (1 - totalNewShare)) + (E * totalNewShare);
@@ -511,6 +512,7 @@ export function runSimulation(p: SimParams): SimResult[] {
       const basePolicyExp = results[0].policyExp;
       const realPolicyExpIndex = basePolicyExp > 0 ? (policyExp / cumulativeInflation / basePolicyExp) * 100 : 100;
 
+      // ========== J. 家計モデル（2年目以降） ==========
       const cumulativeCpi = results.reduce((acc, r) => acc * (1 + r.cpiIncrease / 100), 1) * (1 + cpiIncrease);
       const cumulativeWage = results.reduce((acc, r) => acc * (1 + r.wageIncrease / 100), 1) * (1 + wageIncrease);
       const cumulativeYenDep = exchangeRate / p.initExchangeRate - 1;
@@ -520,6 +522,7 @@ export function runSimulation(p: SimParams): SimResult[] {
       const modelEnergyCost = modelEnergyCostGross * (1 - p.energySubsidyRate * 0.5);
       let modelDisposable = modelIncome * (1 - TAX_SOCIAL_RATIO) - modelFoodCost - modelEnergyCost;
       // Fix 6: 消費税率変更→家計の食費・光熱費以外の消費にも負担増
+      // 可処分所得のうち自由裁量消費に対して、税率差分の実効負担を控除する。
       if (changeYear !== null && year >= changeYear) {
         const consumptionTaxBurden = Math.max(modelDisposable, 0) * (p.taxRateNew - 10) / (100 + p.taxRateNew);
         modelDisposable -= consumptionTaxBurden;
