@@ -275,7 +275,7 @@ export const SCENARIOS: Scenario[] = [
   {
     name: "② 高成長シナリオ",
     label: "構造改革が奏功し、実質成長率が高まるケース",
-    params: { ...baseParams, realGrowth: 2.0, riskPremium: 0.3, otherRevenue: 16, nominalWageGrowth: 3.0, productivityShareRate: 0.7, wagePassThroughRate: 0.5, globalGrowth: 3.0, yenDepreciation: 0.0, retainedEarningsReturnRate: 0.05, foreignInterestRate: 3.0, foreignInflation: 2.0, populationGrowth: -0.3, laborParticipationChange: 0.3, educationGDPRatio: 4.5, techEffect: 0.5, baseTFR: 1.30, tfrSensitivity: 0.6 },
+    params: { ...baseParams, realGrowth: 2.0, riskPremium: 0.2, otherRevenue: 16, nominalWageGrowth: 3.0, productivityShareRate: 0.7, wagePassThroughRate: 0.5, globalGrowth: 3.0, yenDepreciation: 0.0, retainedEarningsReturnRate: 0.05, foreignInterestRate: 3.0, foreignInflation: 2.0, populationGrowth: -0.3, laborParticipationChange: 0.3, educationGDPRatio: 4.5, techEffect: 0.5, baseTFR: 1.30, tfrSensitivity: 0.6, naturalIncrease: 0.3, initTaxIncome: 24, initTaxCorporate: 18, initPolicyExp: 73, nfaThreshold: -500 },
     merits: [
       "税収の自然増で財政赤字が大幅に改善",
       "実質賃金が上昇し、国民生活が向上",
@@ -407,7 +407,7 @@ export const SCENARIOS: Scenario[] = [
   {
     name: "⑧ テクノロジー革命シナリオ",
     label: "AI・自動化で生産性が飛躍的に向上するが、格差拡大も伴うケース",
-    params: { ...baseParams, realGrowth: 2.5, inflationRate: 1.5, riskPremium: 0.2, nominalWageGrowth: 2.0, productivityShareRate: 0.3, wagePassThroughRate: 0.4, globalGrowth: 3.5, initTaxCorporate: 19, effectiveCorporateTaxRate: 0.25, yenDepreciation: -0.5, retainedEarningsReturnRate: 0.01, foreignInterestRate: 3.0, foreignInflation: 2.0, populationGrowth: -0.4, laborParticipationChange: 0.2, educationGDPRatio: 5.0, techEffect: 1.0, baseTFR: 1.20, tfrSensitivity: 0.5 },
+    params: { ...baseParams, realGrowth: 2.0, inflationRate: 1.5, riskPremium: 0.2, nominalWageGrowth: 2.5, productivityShareRate: 0.5, wagePassThroughRate: 0.5, globalGrowth: 3.5, initTaxCorporate: 19, effectiveCorporateTaxRate: 0.25, yenDepreciation: -0.5, retainedEarningsReturnRate: 0.03, foreignInterestRate: 3.0, foreignInflation: 2.0, populationGrowth: -0.3, laborParticipationChange: 0.3, educationGDPRatio: 5.0, techEffect: 0.8, baseTFR: 1.20, tfrSensitivity: 0.5, naturalIncrease: 0.3, initPolicyExp: 73 },
     merits: [
       "生産性向上で経済成長率が大幅に改善、税収が増加",
       "行政のデジタル化で公共サービスの効率が向上",
@@ -449,26 +449,27 @@ export const SCENARIOS: Scenario[] = [
     ],
   },
   {
-    name: "⑩ 増税＋再分配強化シナリオ",
-    label: "消費税は10%→12%に小幅増に抑え、所得税・法人税の累進強化と企業から家計への賃金還流で両立を目指すケース",
-    params: { ...baseParams, inflationRate: 1.5, realGrowth: 0.8, riskPremium: 0.3, initTaxConsumption: 24, taxRateChangeYear: "2030", taxRateNew: 12, initTaxIncome: 27, initTaxCorporate: 22, initPolicyExp: 78, otherRevenue: 18, naturalIncrease: 0.3, nominalWageGrowth: 2.5, productivityShareRate: 0.7, wagePassThroughRate: 0.6, effectiveCorporateTaxRate: 0.26, yenDepreciation: 0.0, retainedEarningsReturnRate: 0.05, foreignInterestRate: 3.0, foreignInflation: 2.0, populationGrowth: -0.3, laborParticipationChange: 0.2, educationGDPRatio: 4.0, techEffect: 0.3, baseTFR: 1.25, tfrSensitivity: 0.6 },
+    name: "⑩ 再分配強化シナリオ",
+    label: "消費税10%据え置きのまま、所得税・法人税の累進強化と企業から家計への賃金還流で財政改善を目指すケース",
+    params: { ...baseParams, inflationRate: 1.5, realGrowth: 0.8, riskPremium: 0.3, initTaxConsumption: 23.8, taxRateChangeYear: "なし", taxRateNew: 10, initTaxIncome: 28, initTaxCorporate: 23, initPolicyExp: 76, otherRevenue: 18, naturalIncrease: 0.3, nominalWageGrowth: 2.5, productivityShareRate: 0.7, wagePassThroughRate: 0.6, effectiveCorporateTaxRate: 0.26, yenDepreciation: 0.0, retainedEarningsReturnRate: 0.06, foreignInterestRate: 3.0, foreignInflation: 2.0, populationGrowth: -0.3, laborParticipationChange: 0.2, educationGDPRatio: 4.5, techEffect: 0.3, baseTFR: 1.25, tfrSensitivity: 0.6 },
     merits: [
-      "消費税を10%→12%（2030年）に小幅増に留め、旧シナリオ（15%）比で家計の逆進的負担を大幅軽減",
-      "財政再建の主な原資を所得税累進強化・法人税増にシフトし、負担能力に応じた課税を実現",
-      "内部留保還元率5%と賃金分配率70%の改善で、企業利益が賃金に還流し実質可処分所得が向上",
-      "実質成長率0.8%を維持するバランス型で、増税による景気後退リスクを抑制",
+      "消費税10%を据え置き、逆進性の強い間接税に頼らず家計の負担増を回避",
+      "所得税累進強化（28兆円）・法人税増（23兆円）で応能負担原則を徹底し、税の公平性を向上",
+      "内部留保還元率6%と賃金分配率70%の改善で、企業利益が賃金に還流し実質可処分所得が向上",
+      "教育投資GDP比4.5%への引き上げで人的資本を強化し、中長期的な成長基盤を構築",
     ],
     demerits: [
-      "法人税引き上げ（実効税率26%）と内部留保還元により、企業の設備投資余力が低下するリスク",
-      "所得税累進強化で高所得人材・高度専門職の海外流出リスク",
+      "法人税引き上げ（実効税率26%）と内部留保還元強化により、企業の設備投資余力・国際競争力が低下するリスク",
+      "所得税累進強化で高所得人材・高度専門職の海外流出（頭脳流出）リスク",
+      "消費税据え置きにより財源が所得税・法人税に集中し、景気変動による税収の振れ幅が大きくなる",
       "賃金分配率70%・転嫁率60%の達成には労使交渉や制度改革が不可欠で、政策実現の難度が高い",
     ],
     policies: [
-      "消費税を2030年に10%→12%へ小幅引き上げ、食料品・光熱費の軽減税率を拡充",
-      "所得税の最高税率引き上げと金融所得課税（配当・譲渡益）の総合課税化",
-      "法人税増税と引き換えに賃上げ税制を大幅拡充（賃上げ企業は実質減税）",
-      "内部留保課税の段階的導入＋従業員への利益分配制度（プロフィットシェアリング）の推進",
-      "最低賃金の段階的引き上げと中小企業への賃上げ支援策・生産性向上補助金のセット実施",
+      "消費税10%を維持し、低所得層への逆進的負担を抑制",
+      "所得税の最高税率引き上げと金融所得課税（配当・譲渡益・暗号資産）の総合課税化",
+      "法人税増税と引き換えに賃上げ税制を大幅拡充（賃上げ企業は実質減税、内部留保蓄積企業は増税）",
+      "内部留保課税の段階的導入＋従業員への利益分配制度（プロフィットシェアリング）の義務化検討",
+      "最低賃金の段階的引き上げ（年率3%以上）と中小企業への賃上げ支援策・生産性向上補助金のセット実施",
     ],
   },
 ];

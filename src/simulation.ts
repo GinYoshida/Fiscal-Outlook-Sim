@@ -114,7 +114,7 @@ export function runSimulation(p: SimParams): SimResult[] {
   const laborPartChange = p.laborParticipationChange / 100;
   const techEff = p.techEffect / 100;
   const eduGDP = p.educationGDPRatio;
-  const EDU_ELASTICITY = 0.5;
+  const EDU_ELASTICITY = 0.015;
   const EDU_BASE = 3.0;
 
   const results: SimResult[] = [];
@@ -150,12 +150,18 @@ export function runSimulation(p: SimParams): SimResult[] {
     let dynamicRiskPremium = 0;
     if (i > 0 && prevCurrentAccount < 0 && prevNFA < p.nfaThreshold) {
       const accelerationFactor = 1 + nfaDeteriorationStreak * 0.3;
-      dynamicRiskPremium = (p.currencyRiskPremium / 100) * accelerationFactor;
+      dynamicRiskPremium = Math.min(
+        (p.currencyRiskPremium / 100) * accelerationFactor,
+        0.03
+      );
     }
 
     let fiscalRiskPremium = 0;
     if (prevInterestBurden > p.interestBurdenThreshold) {
-      fiscalRiskPremium = (prevInterestBurden - p.interestBurdenThreshold) * p.fiscalRiskSensitivity / 100;
+      fiscalRiskPremium = Math.min(
+        (prevInterestBurden - p.interestBurdenThreshold) * p.fiscalRiskSensitivity / 100,
+        0.03
+      );
     }
 
     laborForceIndex = i === 0 ? 100 : laborForceIndex * (1 + popGrowth + laborPartChange);
