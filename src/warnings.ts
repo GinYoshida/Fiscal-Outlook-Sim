@@ -1,10 +1,28 @@
-import type { SimParams } from './data'
-import type { SimResult } from './simulation'
+/**
+ * warnings.ts — 財政リスク警告の検出エンジン
+ *
+ * シミュレーション結果に対して以下の警告を検出する:
+ * - 利払負担率30%超過（税収の3割以上が利払いに消費）
+ * - 通貨リスクプレミアム発動（経常赤字+NFA低下）
+ * - 実質賃金3年連続マイナス
+ * - 経常収支の赤字転落
+ * - 日銀自己資本バッファ超過
+ * - 財政収支の慢性的赤字（3年連続）
+ * - 前年比100%超の急激な変化
+ * - 通貨信認リスク（最上級）：最終5年間連続経常赤字+NFA継続減少
+ */
+import type { SimParams } from './types'
+import type { SimResult } from './types'
 
+/** 警告イベントの構造 */
 export interface Warning {
+  /** 警告が発生した年度 */
   year: number
+  /** 警告の種類（例: '利払負担率30%超過'） */
   type: string
+  /** 警告の詳細メッセージ */
   detail: string
+  /** 重大度（criticalは最上級の警告） */
   severity?: 'normal' | 'critical'
 }
 

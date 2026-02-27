@@ -1,5 +1,12 @@
+/**
+ * Sidebar.tsx — パラメータ入力サイドバー
+ *
+ * シミュレーションパラメータの調整、シナリオ選択、制約条件設定、
+ * 最適化実行、UST10Y/JGB10Yミニチャートの表示を担当する。
+ */
 import { useState, useRef, useCallback, useMemo } from 'react'
-import { SCENARIOS, ACTUAL_MACRO, type SimParams, type Constraints, type Constraint } from './data'
+import type { SimParams, Constraints, Constraint } from './types'
+import { SCENARIOS, ACTUAL_MACRO } from './data'
 import { OPTIMIZABLE_PARAMS, runOptimizer, countWarnings, type OptimizerProgress } from './optimizer'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ReferenceLine, ResponsiveContainer, Legend } from 'recharts'
 

@@ -1,10 +1,17 @@
+/**
+ * ExplanationTab.tsx — 解説タブ（ロジックツリーA〜Jの解説）
+ *
+ * シミュレーターの目的、計算ロジックツリー（A〜J）、各変数の解説、
+ * 統合政府の仕組み（フロー図・日銀納付金・金利感応度）、
+ * ウォーターフォール分析、データ出典を提供する。
+ */
 import { useState, useMemo } from 'react'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ResponsiveContainer, ReferenceLine, Cell
 } from 'recharts'
-import type { SimResult } from './simulation'
-import type { ActualDataPoint, SimParams, DataSource } from './data'
+import type { SimResult } from './types'
+import type { ActualDataPoint, SimParams, DataSource } from './types'
 import { ACTUAL_DATA } from './data'
 import FlowDiagram from './svg/FlowDiagram'
 

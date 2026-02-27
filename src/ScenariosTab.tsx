@@ -1,10 +1,24 @@
+/**
+ * ScenariosTab.tsx — シナリオ一覧・横断比較タブ
+ *
+ * 10種類のプリセットシナリオを30年固定で実行し、以下の形式で比較表示:
+ * - 棒グラフ（債務残高・利払負担率）
+ * - レーダーチャート（多軸評価）
+ * - 折れ線推移（主要指標の時系列）
+ * - サマリー表（全指標一覧）
+ * - 展開式カード（各シナリオの詳細）
+ *
+ * 評価基準:
+ *   A+ = 警告0件, A = ≤5件, B+ = ≤10件, B = ≤15件, C = ≤25件, D = >25件
+ */
 import { useMemo, useState } from 'react'
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ReferenceLine,
   LineChart, Line,
 } from 'recharts'
+import type { SimResult } from './types'
 import { SCENARIOS } from './data'
-import { runSimulation, type SimResult } from './simulation'
+import { runSimulation } from './simulation'
 
 const SCENARIO_COLORS = [
   '#6366f1', '#22c55e', '#ef4444', '#f97316', '#3b82f6',

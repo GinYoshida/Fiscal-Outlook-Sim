@@ -1,5 +1,16 @@
+/**
+ * App.tsx — アプリケーションルートコンポーネント
+ *
+ * 3タブ構成:
+ *   1. 解説タブ (ExplanationTab) — ロジックツリーA〜Jの解説
+ *   2. シミュレーションタブ (SimulationTab) — インタラクティブなチャート表示
+ *   3. シナリオ一覧タブ (ScenariosTab) — 10シナリオの横断比較
+ *
+ * サイドバーからパラメータを調整し、リアルタイムにシミュレーション結果が更新される。
+ */
 import { useState, useMemo, useCallback } from 'react'
-import { SCENARIOS, ACTUAL_DATA, DATA_SOURCES, DEFAULT_CONSTRAINTS, type SimParams, type Constraints } from './data'
+import type { SimParams, Constraints } from './types'
+import { SCENARIOS, ACTUAL_DATA, DATA_SOURCES, DEFAULT_CONSTRAINTS } from './data'
 import { runSimulation } from './simulation'
 import { Sidebar } from './Sidebar'
 import { SimulationTab } from './SimulationTab'

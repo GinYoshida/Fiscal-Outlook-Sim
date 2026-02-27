@@ -1,12 +1,28 @@
-import type { SimParams, Constraints } from './data'
-import { runSimulation, type SimResult } from './simulation'
+/**
+ * optimizer.ts — 勾配降下法による警告数最小化パラメータ探索
+ *
+ * 概要:
+ * - 選択されたパラメータ群に対し、勾配降下法で80回イテレーションを実行
+ * - 各パラメータの微小変化（step幅）に対する警告数の勾配を計算
+ * - 学習率を適応的に調整し、局所最適解を探索
+ * - 最適化対象: マクロ経済変数、為替、人口成長率、教育投資GDP比など
+ */
+import type { SimParams, Constraints } from './types'
+import type { SimResult } from './types'
+import { runSimulation } from './simulation'
 import { computeWarnings } from './warnings'
 
+/** 最適化可能なパラメータの定義 */
 export interface OptimizableParam {
+  /** SimParamsのキー名 */
   key: keyof SimParams
+  /** UI表示用の日本語ラベル */
   label: string
+  /** 探索範囲の下限 */
   min: number
+  /** 探索範囲の上限 */
   max: number
+  /** 勾配計算時の微小変化幅 */
   step: number
 }
 
