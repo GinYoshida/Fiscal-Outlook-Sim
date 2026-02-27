@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useMemo } from 'react'
-import { SCENARIOS, type SimParams, type Constraints, type Constraint } from './data'
+import { SCENARIOS, ACTUAL_MACRO, type SimParams, type Constraints, type Constraint } from './data'
 import { OPTIMIZABLE_PARAMS, runOptimizer, countWarnings, type OptimizerProgress } from './optimizer'
+import { LineChart, Line, XAxis, YAxis, Tooltip, ReferenceLine, ResponsiveContainer, Legend } from 'recharts'
 
 interface SidebarProps {
   params: SimParams;
@@ -232,9 +233,36 @@ export function Sidebar({ params, scenarioIndex, onScenarioChange, onParamChange
       </SidebarSection>
 
       <SidebarSection title="外部環境・家計">
-        <Slider label="円安進行率 (%/年)" value={p.yenDepreciation} min={-3} max={10} step={0.5}
-          tooltip="為替レートの年間変化率。プラスで円安、マイナスで円高。円安は輸入物価を押し上げ家計を圧迫する一方、輸出企業の利益を増やします。"
-          onChange={v => onParamChange('yenDepreciation', v)} searchHidden={sh("円安進行率 (%/年)", "為替レートの年間変化率")} />
+        <Slider label="為替バイアス (%/年)" value={p.yenDepreciation} min={-3} max={10} step={0.5}
+          tooltip="為替レートは金利差・インフレ差から内生的に決定されます。正の値は追加的な円安傾向、負の値は円高傾向を表します。"
+          onChange={v => onParamChange('yenDepreciation', v)} searchHidden={sh("為替バイアス (%/年)", "為替レートの追加的な変動バイアス")} />
+        <Slider label="海外金利 (%)" value={p.foreignInterestRate} min={0.5} max={8.0} step={0.1}
+          tooltip="海外（主に米国）の長期金利。金利差が為替レートに影響します。海外金利が高いほど円安圧力が強まります。"
+          onChange={v => onParamChange('foreignInterestRate', v)} searchHidden={sh("海外金利 (%)", "海外の長期金利水準")} />
+        <Slider label="海外インフレ率 (%)" value={p.foreignInflation} min={0.0} max={8.0} step={0.1}
+          tooltip="海外（主に米国）のインフレ率。日本のインフレ率との差が購買力平価を通じて為替レートに影響します。"
+          onChange={v => onParamChange('foreignInflation', v)} searchHidden={sh("海外インフレ率 (%)", "海外のインフレ率")} />
+        <div style={{ margin: '8px 0 4px 0' }}>
+          <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 4 }}>▼ 金利実績と設定値の比較</div>
+          <ResponsiveContainer width="100%" height={130}>
+            <LineChart data={ACTUAL_MACRO} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
+              <XAxis dataKey="year" tick={{ fontSize: 9, fill: '#94a3b8' }} />
+              <YAxis tick={{ fontSize: 9, fill: '#94a3b8' }} domain={[-0.5, 5]} />
+              <Tooltip contentStyle={{ fontSize: 11, background: '#1e293b', border: '1px solid #334155' }} labelStyle={{ color: '#e2e8f0' }} />
+              <Line type="monotone" dataKey="ust10y" name="UST10Y" stroke="#60a5fa" strokeWidth={1.5} dot={{ r: 2 }} strokeDasharray="4 2" />
+              <Line type="monotone" dataKey="jgb10y" name="JGB10Y" stroke="#f87171" strokeWidth={1.5} dot={{ r: 2 }} strokeDasharray="4 2" />
+              <ReferenceLine y={p.foreignInterestRate} stroke="#60a5fa" strokeDasharray="6 3" strokeWidth={2} label={{ value: `海外${p.foreignInterestRate}%`, position: 'right', fontSize: 9, fill: '#60a5fa' }} />
+              <ReferenceLine y={p.inflationRate + p.riskPremium} stroke="#f87171" strokeDasharray="6 3" strokeWidth={2} label={{ value: `国内${(p.inflationRate + p.riskPremium).toFixed(1)}%`, position: 'right', fontSize: 9, fill: '#f87171' }} />
+              <Legend wrapperStyle={{ fontSize: 9 }} />
+            </LineChart>
+          </ResponsiveContainer>
+          <p style={{ fontSize: 10, color: '#64748b', margin: '2px 0 0 0' }}>
+            過去10年レンジ: UST10Y 0.9%〜4.3% / JGB10Y -0.1%〜1.1%
+          </p>
+          <p style={{ fontSize: 10, color: '#64748b', margin: '2px 0 8px 0' }}>
+            為替 = バイアス + 0.5×(海外金利−国内金利) + 0.3×(国内CPI−海外CPI) + 0.5×リスクP
+          </p>
+        </div>
         <Slider label="名目賃金上昇率 下限 (%/年)" value={p.nominalWageGrowth} min={0} max={5} step={0.1}
           tooltip="賃金モデルの下限値。内生的に計算される名目賃金上昇率がこの値を下回る場合、この値が適用されます。"
           onChange={v => onParamChange('nominalWageGrowth', v)} searchHidden={sh("名目賃金上昇率 下限 (%/年)", "賃金モデルの下限値")} />
@@ -375,7 +403,7 @@ export function Sidebar({ params, scenarioIndex, onScenarioChange, onParamChange
 
       <SidebarSection title="貿易・為替（初期値）" defaultOpen={false}>
         <NumberInput label="為替レート (円/ドル)" value={p.initExchangeRate} step={5}
-          tooltip="初期の為替レート（円/ドル）。2024年は約150円/ドルです。円安進行率で毎年変動します。"
+          tooltip="初期の為替レート（円/ドル）。2024年は約150円/ドルです。内生為替モデルにより毎年変動します。"
           onChange={v => onParamChange('initExchangeRate', v)} searchHidden={sh("為替レート (円/ドル)", "初期の為替レート")} />
         <NumberInput label="輸出額 (兆円)" value={p.initExport} step={5}
           tooltip="初期の年間輸出額。2024年度は約100兆円です。世界経済成長率と円安による価格競争力で変動します。"

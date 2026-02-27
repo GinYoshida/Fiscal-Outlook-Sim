@@ -89,11 +89,17 @@ export function runSimulation(p: SimParams): SimResult[] {
   const D = B + C;
   const changeYear = p.taxRateChangeYear !== "なし" ? parseInt(p.taxRateChangeYear) : null;
 
-  const yenDep = p.yenDepreciation / 100;
+  const baseBias = p.yenDepreciation / 100;
   const baseNomWageG = p.nominalWageGrowth / 100;
   const globalG = p.globalGrowth / 100;
   const prodShare = p.productivityShareRate;
   const wagePassThrough = p.wagePassThroughRate;
+  const foreignRate = p.foreignInterestRate / 100;
+  const foreignCpi = p.foreignInflation / 100;
+
+  const FX_ALPHA = 0.5;
+  const FX_BETA = 0.3;
+  const FX_GAMMA = 0.5;
 
   const baseEnergyAmount = p.inflationRate * 10;
 
@@ -157,6 +163,8 @@ export function runSimulation(p: SimParams): SimResult[] {
         ? bojNetIncome
         : Math.max(bojNetIncome, 0);
 
+      const yenDepRaw = baseBias + FX_ALPHA * (foreignRate - E) + FX_BETA * (B - foreignCpi) + FX_GAMMA * dynamicRiskPremium;
+      const yenDep = Math.max(yenDepRaw, -0.5);
       const exchangeRate = p.initExchangeRate * (1 + yenDep);
       const yenFactor = (exchangeRate / p.initExchangeRate - 1);
       const fxPassThrough = Math.max(yenFactor, 0) * 0.7;
@@ -303,6 +311,8 @@ export function runSimulation(p: SimParams): SimResult[] {
     } else {
       const prev = results[i - 1];
 
+      const yenDepRaw = baseBias + FX_ALPHA * (foreignRate - E) + FX_BETA * (B - foreignCpi) + FX_GAMMA * dynamicRiskPremium;
+      const yenDep = Math.max(yenDepRaw, -0.5);
       const exchangeRate = prev.exchangeRate * (1 + yenDep);
       const yenFactor = (exchangeRate / p.initExchangeRate - 1);
       const fxPassThrough = Math.max(yenDep, 0) * 0.7;
