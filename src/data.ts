@@ -42,6 +42,7 @@ export interface ActualMacroPoint {
   jgb10y: number;
   ust10y: number;
   usCpi: number;
+  educationGDPRatio: number;
   nominalGrowth: number;
   inflation: number;
   realGrowth: number;
@@ -99,6 +100,13 @@ export interface SimParams {
   retainedEarningsReturnRate: number;
   foreignInterestRate: number;
   foreignInflation: number;
+  populationGrowth: number;
+  laborParticipationChange: number;
+  educationGDPRatio: number;
+  techEffect: number;
+  baseTFR: number;
+  tfrSensitivity: number;
+  simYears: number;
 }
 
 export interface Constraint {
@@ -151,17 +159,21 @@ export const ACTUAL_DATA: ActualDataPoint[] = [
 ];
 
 export const ACTUAL_MACRO: ActualMacroPoint[] = [
-  { year: 2015, jgb10y: 0.36, ust10y: 2.14, usCpi: 0.1, nominalGrowth: 3.5, inflation: 0.8, realGrowth: 2.7 },
-  { year: 2016, jgb10y: -0.07, ust10y: 1.84, usCpi: 1.3, nominalGrowth: 1.1, inflation: -0.1, realGrowth: 1.2 },
-  { year: 2017, jgb10y: 0.06, ust10y: 2.33, usCpi: 2.1, nominalGrowth: 2.0, inflation: 0.5, realGrowth: 1.5 },
-  { year: 2018, jgb10y: 0.07, ust10y: 2.91, usCpi: 2.4, nominalGrowth: 0.3, inflation: 1.0, realGrowth: -0.7 },
-  { year: 2019, jgb10y: -0.09, ust10y: 2.14, usCpi: 1.8, nominalGrowth: 0.8, inflation: 0.5, realGrowth: 0.3 },
-  { year: 2020, jgb10y: 0.02, ust10y: 0.89, usCpi: 1.2, nominalGrowth: -3.9, inflation: 0.0, realGrowth: -3.9 },
-  { year: 2021, jgb10y: 0.07, ust10y: 1.45, usCpi: 4.7, nominalGrowth: 2.4, inflation: -0.2, realGrowth: 2.6 },
-  { year: 2022, jgb10y: 0.25, ust10y: 2.95, usCpi: 8.0, nominalGrowth: 1.6, inflation: 2.5, realGrowth: -0.9 },
-  { year: 2023, jgb10y: 0.55, ust10y: 3.96, usCpi: 4.1, nominalGrowth: 5.7, inflation: 3.2, realGrowth: 2.5 },
-  { year: 2024, jgb10y: 1.05, ust10y: 4.28, usCpi: 2.9, nominalGrowth: 3.2, inflation: 2.7, realGrowth: 0.5 },
+  { year: 2015, jgb10y: 0.36, ust10y: 2.14, usCpi: 0.1, educationGDPRatio: 3.2, nominalGrowth: 3.5, inflation: 0.8, realGrowth: 2.7 },
+  { year: 2016, jgb10y: -0.07, ust10y: 1.84, usCpi: 1.3, educationGDPRatio: 3.2, nominalGrowth: 1.1, inflation: -0.1, realGrowth: 1.2 },
+  { year: 2017, jgb10y: 0.06, ust10y: 2.33, usCpi: 2.1, educationGDPRatio: 3.1, nominalGrowth: 2.0, inflation: 0.5, realGrowth: 1.5 },
+  { year: 2018, jgb10y: 0.07, ust10y: 2.91, usCpi: 2.4, educationGDPRatio: 3.1, nominalGrowth: 0.3, inflation: 1.0, realGrowth: -0.7 },
+  { year: 2019, jgb10y: -0.09, ust10y: 2.14, usCpi: 1.8, educationGDPRatio: 3.1, nominalGrowth: 0.8, inflation: 0.5, realGrowth: 0.3 },
+  { year: 2020, jgb10y: 0.02, ust10y: 0.89, usCpi: 1.2, educationGDPRatio: 3.4, nominalGrowth: -3.9, inflation: 0.0, realGrowth: -3.9 },
+  { year: 2021, jgb10y: 0.07, ust10y: 1.45, usCpi: 4.7, educationGDPRatio: 3.4, nominalGrowth: 2.4, inflation: -0.2, realGrowth: 2.6 },
+  { year: 2022, jgb10y: 0.25, ust10y: 2.95, usCpi: 8.0, educationGDPRatio: 3.3, nominalGrowth: 1.6, inflation: 2.5, realGrowth: -0.9 },
+  { year: 2023, jgb10y: 0.55, ust10y: 3.96, usCpi: 4.1, educationGDPRatio: 3.4, nominalGrowth: 5.7, inflation: 3.2, realGrowth: 2.5 },
+  { year: 2024, jgb10y: 1.05, ust10y: 4.28, usCpi: 2.9, educationGDPRatio: 3.5, nominalGrowth: 3.2, inflation: 2.7, realGrowth: 0.5 },
 ];
+
+export const HISTORICAL_EDUCATION_GDP: number[] = [3.0, 3.0, 3.0, 3.0, 3.0, 3.2, 3.2, 3.1, 3.1, 3.1, 3.4, 3.4, 3.3, 3.4, 3.5];
+
+export const HISTORICAL_TFR: number[] = [1.42, 1.42, 1.44, 1.45, 1.44, 1.43, 1.42, 1.36, 1.34, 1.30, 1.33, 1.30, 1.26, 1.20, 1.20];
 
 export const DATA_SOURCES: DataSource[] = [
   { name: "一般会計税収の推移", url: "https://www.mof.go.jp/tax_policy/summary/condition/a03.htm", desc: "税収データ" },
@@ -229,6 +241,13 @@ const baseParams: SimParams = {
   retainedEarningsReturnRate: 0.02,
   foreignInterestRate: 3.5,
   foreignInflation: 2.0,
+  populationGrowth: -0.5,
+  laborParticipationChange: 0.1,
+  educationGDPRatio: 3.5,
+  techEffect: 0.2,
+  baseTFR: 1.20,
+  tfrSensitivity: 0.5,
+  simYears: 30,
 };
 
 export const SCENARIOS: Scenario[] = [
@@ -256,7 +275,7 @@ export const SCENARIOS: Scenario[] = [
   {
     name: "② 高成長シナリオ",
     label: "構造改革が奏功し、実質成長率が高まるケース",
-    params: { ...baseParams, realGrowth: 2.0, riskPremium: 0.3, otherRevenue: 16, nominalWageGrowth: 3.0, productivityShareRate: 0.7, wagePassThroughRate: 0.5, globalGrowth: 3.0, yenDepreciation: 0.0, retainedEarningsReturnRate: 0.05, foreignInterestRate: 3.0, foreignInflation: 2.0 },
+    params: { ...baseParams, realGrowth: 2.0, riskPremium: 0.3, otherRevenue: 16, nominalWageGrowth: 3.0, productivityShareRate: 0.7, wagePassThroughRate: 0.5, globalGrowth: 3.0, yenDepreciation: 0.0, retainedEarningsReturnRate: 0.05, foreignInterestRate: 3.0, foreignInflation: 2.0, populationGrowth: -0.3, laborParticipationChange: 0.3, educationGDPRatio: 4.5, techEffect: 0.5, baseTFR: 1.30, tfrSensitivity: 0.6 },
     merits: [
       "税収の自然増で財政赤字が大幅に改善",
       "実質賃金が上昇し、国民生活が向上",
@@ -278,7 +297,7 @@ export const SCENARIOS: Scenario[] = [
   {
     name: "③ スタグフレーション",
     label: "高インフレ＋低成長が長期化するケース",
-    params: { ...baseParams, inflationRate: 4.0, realGrowth: 0.0, riskPremium: 1.0, naturalIncrease: 1.0, policyRateSpread: 0.5, yenDepreciation: 1.5, nominalWageGrowth: 1.0, productivityShareRate: 0.3, wagePassThroughRate: 0.2, povertySensitivity: 0.8, energySubsidyRate: 0.5, retainedEarningsReturnRate: 0.01, foreignInterestRate: 3.5, foreignInflation: 2.0 },
+    params: { ...baseParams, inflationRate: 4.0, realGrowth: 0.0, riskPremium: 1.0, naturalIncrease: 1.0, policyRateSpread: 0.5, yenDepreciation: 1.5, nominalWageGrowth: 1.0, productivityShareRate: 0.3, wagePassThroughRate: 0.2, povertySensitivity: 0.8, energySubsidyRate: 0.5, retainedEarningsReturnRate: 0.01, foreignInterestRate: 3.5, foreignInflation: 2.0, populationGrowth: -0.6, laborParticipationChange: 0.0, educationGDPRatio: 3.0, techEffect: 0.1, baseTFR: 1.10, tfrSensitivity: 0.3 },
     merits: [
       "インフレにより名目債務の実質価値が目減りする（インフレ税効果）",
       "名目税収が増加し、見かけ上の財政指標が改善",
@@ -300,7 +319,7 @@ export const SCENARIOS: Scenario[] = [
   {
     name: "④ 金利急騰シナリオ",
     label: "国債の信認低下でリスクプレミアムが上昇するケース",
-    params: { ...baseParams, inflationRate: 2.5, realGrowth: 0.3, riskPremium: 2.0, yenDepreciation: -1.0, nominalWageGrowth: 1.0, productivityShareRate: 0.4, wagePassThroughRate: 0.2, foreignInterestRate: 3.0, foreignInflation: 2.0 },
+    params: { ...baseParams, inflationRate: 2.5, realGrowth: 0.3, riskPremium: 2.0, yenDepreciation: -1.0, nominalWageGrowth: 1.0, productivityShareRate: 0.4, wagePassThroughRate: 0.2, foreignInterestRate: 3.0, foreignInflation: 2.0, populationGrowth: -0.5, laborParticipationChange: 0.0, educationGDPRatio: 3.2, techEffect: 0.1, baseTFR: 1.15, tfrSensitivity: 0.4 },
     merits: [
       "金利上昇が市場規律を働かせ、財政規律への圧力が高まる",
       "預金者や年金基金にとって運用利回りが改善",
@@ -322,7 +341,7 @@ export const SCENARIOS: Scenario[] = [
   {
     name: "⑤ 財政再建シナリオ",
     label: "歳出削減と増税で財政健全化を目指すケース",
-    params: { ...baseParams, inflationRate: 1.5, realGrowth: 1.0, riskPremium: 0.3, initTaxConsumption: 26, initTaxIncome: 24, initTaxCorporate: 18, initPolicyExp: 75, otherRevenue: 17, naturalIncrease: 0.3, yenDepreciation: 0.0, nominalWageGrowth: 2.0, productivityShareRate: 0.6, wagePassThroughRate: 0.4, retainedEarningsReturnRate: 0.03, foreignInterestRate: 3.0, foreignInflation: 2.0 },
+    params: { ...baseParams, inflationRate: 1.5, realGrowth: 1.0, riskPremium: 0.3, initTaxConsumption: 26, initTaxIncome: 24, initTaxCorporate: 18, initPolicyExp: 75, otherRevenue: 17, naturalIncrease: 0.3, yenDepreciation: 0.0, nominalWageGrowth: 2.0, productivityShareRate: 0.6, wagePassThroughRate: 0.4, retainedEarningsReturnRate: 0.03, foreignInterestRate: 3.0, foreignInflation: 2.0, populationGrowth: -0.4, laborParticipationChange: 0.2, educationGDPRatio: 4.0, techEffect: 0.3, baseTFR: 1.25, tfrSensitivity: 0.5 },
     merits: [
       "債務残高の対GDP比が安定化・低下し、財政の持続可能性が確保",
       "金利リスクプレミアムが低下し、民間の借入コストも改善",
@@ -344,7 +363,7 @@ export const SCENARIOS: Scenario[] = [
   {
     name: "⑥ 急激円安シナリオ",
     label: "円安が急激に進行し、輸入物価高騰と家計圧迫が進むケース",
-    params: { ...baseParams, inflationRate: 3.5, realGrowth: 0.3, riskPremium: 1.0, yenDepreciation: 3.0, nominalWageGrowth: 1.0, productivityShareRate: 0.3, wagePassThroughRate: 0.2, globalGrowth: 2.0, povertySensitivity: 0.7, energySubsidyRate: 0.6, foreignInterestRate: 4.5, foreignInflation: 2.5 },
+    params: { ...baseParams, inflationRate: 3.5, realGrowth: 0.3, riskPremium: 1.0, yenDepreciation: 3.0, nominalWageGrowth: 1.0, productivityShareRate: 0.3, wagePassThroughRate: 0.2, globalGrowth: 2.0, povertySensitivity: 0.7, energySubsidyRate: 0.6, foreignInterestRate: 4.5, foreignInflation: 2.5, populationGrowth: -0.5, laborParticipationChange: 0.0, educationGDPRatio: 3.0, techEffect: 0.1, baseTFR: 1.10, tfrSensitivity: 0.4 },
     merits: [
       "輸出産業・インバウンド観光の競争力が大幅に向上",
       "海外資産の円換算評価益が増加（NFA評価益）",
@@ -366,7 +385,7 @@ export const SCENARIOS: Scenario[] = [
   {
     name: "⑦ 少子化加速シナリオ",
     label: "出生率がさらに低下し、社会保障費膨張と労働力不足が深刻化するケース",
-    params: { ...baseParams, realGrowth: 0.0, naturalIncrease: 1.5, initSocialSecurity: 39, childcareGrowth: 3.0, nominalWageGrowth: 0.8, productivityShareRate: 0.4, wagePassThroughRate: 0.3, povertySensitivity: 0.6, yenDepreciation: 0.5, foreignInterestRate: 3.5, foreignInflation: 2.0 },
+    params: { ...baseParams, realGrowth: 0.0, naturalIncrease: 1.5, initSocialSecurity: 39, childcareGrowth: 3.0, nominalWageGrowth: 0.8, productivityShareRate: 0.4, wagePassThroughRate: 0.3, povertySensitivity: 0.6, yenDepreciation: 0.5, foreignInterestRate: 3.5, foreignInflation: 2.0, populationGrowth: -1.0, laborParticipationChange: -0.1, educationGDPRatio: 3.0, techEffect: 0.2, baseTFR: 0.90, tfrSensitivity: 0.3 },
     merits: [
       "一人当たり資産は維持されやすい（人口減による希薄化が限定的）",
       "住宅・不動産の供給過剰で住居費が低下する可能性",
@@ -388,7 +407,7 @@ export const SCENARIOS: Scenario[] = [
   {
     name: "⑧ テクノロジー革命シナリオ",
     label: "AI・自動化で生産性が飛躍的に向上するが、格差拡大も伴うケース",
-    params: { ...baseParams, realGrowth: 2.5, inflationRate: 1.5, riskPremium: 0.2, nominalWageGrowth: 2.0, productivityShareRate: 0.3, wagePassThroughRate: 0.4, globalGrowth: 3.5, initTaxCorporate: 19, effectiveCorporateTaxRate: 0.25, yenDepreciation: -0.5, retainedEarningsReturnRate: 0.01, foreignInterestRate: 3.0, foreignInflation: 2.0 },
+    params: { ...baseParams, realGrowth: 2.5, inflationRate: 1.5, riskPremium: 0.2, nominalWageGrowth: 2.0, productivityShareRate: 0.3, wagePassThroughRate: 0.4, globalGrowth: 3.5, initTaxCorporate: 19, effectiveCorporateTaxRate: 0.25, yenDepreciation: -0.5, retainedEarningsReturnRate: 0.01, foreignInterestRate: 3.0, foreignInflation: 2.0, populationGrowth: -0.4, laborParticipationChange: 0.2, educationGDPRatio: 5.0, techEffect: 1.0, baseTFR: 1.20, tfrSensitivity: 0.5 },
     merits: [
       "生産性向上で経済成長率が大幅に改善、税収が増加",
       "行政のデジタル化で公共サービスの効率が向上",
@@ -410,7 +429,7 @@ export const SCENARIOS: Scenario[] = [
   {
     name: "⑨ グローバル危機シナリオ",
     label: "地政学リスク・パンデミック等で世界経済が混乱するケース",
-    params: { ...baseParams, realGrowth: -0.5, inflationRate: 3.0, riskPremium: 1.5, yenDepreciation: 1.0, globalGrowth: 0.5, initDefense: 9, defenseGrowth: 4.0, energySubsidyRate: 0.7, nominalWageGrowth: 0.5, productivityShareRate: 0.3, wagePassThroughRate: 0.2, povertySensitivity: 0.8, naturalIncrease: 1.2, foreignInterestRate: 4.0, foreignInflation: 3.0 },
+    params: { ...baseParams, realGrowth: -0.5, inflationRate: 3.0, riskPremium: 1.5, yenDepreciation: 1.0, globalGrowth: 0.5, initDefense: 9, defenseGrowth: 4.0, energySubsidyRate: 0.7, nominalWageGrowth: 0.5, productivityShareRate: 0.3, wagePassThroughRate: 0.2, povertySensitivity: 0.8, naturalIncrease: 1.2, foreignInterestRate: 4.0, foreignInflation: 3.0, populationGrowth: -0.6, laborParticipationChange: 0.0, educationGDPRatio: 3.0, techEffect: 0.1, baseTFR: 1.10, tfrSensitivity: 0.3 },
     merits: [
       "安全保障投資の拡大で防衛産業・技術基盤が強化",
       "サプライチェーン再構築で国内産業の自立性が向上",
@@ -432,7 +451,7 @@ export const SCENARIOS: Scenario[] = [
   {
     name: "⑩ 増税＋再分配強化シナリオ",
     label: "消費税は10%→12%に小幅増に抑え、所得税・法人税の累進強化と企業から家計への賃金還流で両立を目指すケース",
-    params: { ...baseParams, inflationRate: 1.5, realGrowth: 0.8, riskPremium: 0.3, initTaxConsumption: 24, taxRateChangeYear: "2030", taxRateNew: 12, initTaxIncome: 27, initTaxCorporate: 22, initPolicyExp: 78, otherRevenue: 18, naturalIncrease: 0.3, nominalWageGrowth: 2.5, productivityShareRate: 0.7, wagePassThroughRate: 0.6, effectiveCorporateTaxRate: 0.26, yenDepreciation: 0.0, retainedEarningsReturnRate: 0.05, foreignInterestRate: 3.0, foreignInflation: 2.0 },
+    params: { ...baseParams, inflationRate: 1.5, realGrowth: 0.8, riskPremium: 0.3, initTaxConsumption: 24, taxRateChangeYear: "2030", taxRateNew: 12, initTaxIncome: 27, initTaxCorporate: 22, initPolicyExp: 78, otherRevenue: 18, naturalIncrease: 0.3, nominalWageGrowth: 2.5, productivityShareRate: 0.7, wagePassThroughRate: 0.6, effectiveCorporateTaxRate: 0.26, yenDepreciation: 0.0, retainedEarningsReturnRate: 0.05, foreignInterestRate: 3.0, foreignInflation: 2.0, populationGrowth: -0.3, laborParticipationChange: 0.2, educationGDPRatio: 4.0, techEffect: 0.3, baseTFR: 1.25, tfrSensitivity: 0.6 },
     merits: [
       "消費税を10%→12%（2030年）に小幅増に留め、旧シナリオ（15%）比で家計の逆進的負担を大幅軽減",
       "財政再建の主な原資を所得税累進強化・法人税増にシフトし、負担能力に応じた課税を実現",

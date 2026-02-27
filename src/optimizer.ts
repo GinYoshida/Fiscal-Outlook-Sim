@@ -25,6 +25,9 @@ export const OPTIMIZABLE_PARAMS: OptimizableParam[] = [
   { key: 'energySubsidyRate', label: 'エネルギー補助金率', min: 0, max: 1, step: 0.1 },
   { key: 'bojQTRate', label: 'QT縮小額', min: 0, max: 80, step: 5 },
   { key: 'fiscalRiskSensitivity', label: '財政リスク感応度', min: 0, max: 0.5, step: 0.01 },
+  { key: 'populationGrowth', label: '人口成長率', min: -2.0, max: 1.0, step: 0.1 },
+  { key: 'educationGDPRatio', label: '教育投資対GDP比', min: 2.0, max: 7.0, step: 0.1 },
+  { key: 'techEffect', label: 'テクノロジー効果', min: 0.0, max: 2.0, step: 0.1 },
 ]
 
 export function computeConstraintViolations(simData: SimResult[], constraints: Constraints): number {

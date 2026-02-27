@@ -51,8 +51,8 @@ function App() {
         onChildAgeChange={setChildAge2026}
       />
       <main className={`main-content ${sidebarOpen ? 'sidebar-is-open' : ''}`}>
-        <h1 className="app-title">🏛️ 統合政府 30年財政シミュレーター</h1>
-        <p className="app-subtitle">2026〜2055年：日本政府＋日銀の財政推移シミュレーション</p>
+        <h1 className="app-title">🏛️ 統合政府 {params.simYears || 30}年財政シミュレーター</h1>
+        <p className="app-subtitle">2026〜{2025 + (params.simYears || 30)}年：日本政府＋日銀の財政推移シミュレーション</p>
 
         <div className="tabs">
           <button

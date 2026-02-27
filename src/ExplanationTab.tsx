@@ -222,11 +222,11 @@ export function ExplanationTab({ params, simData, actualData, dataSources }: Pro
         </div>
       </Expander>
 
-      <h2 className="section-title" style={{ marginTop: 24 }}>2055年、私たちの子供たちが生きる「残り香」を計算する</h2>
+      <h2 className="section-title" style={{ marginTop: 24 }}>シミュレーション最終年、私たちの子供たちが生きる「残り香」を計算する</h2>
       <div className="prose">
         <p>
           「借金はいくらでもできる」「過去が大丈夫だったから次も大丈夫」――。
-          こうした原則を無視した楽観論の陰で、いま7歳の子供が30代半ばの社会の中核を担う2055年、
+          こうした原則を無視した楽観論の陰で、いま7歳の子供が社会の中核を担うシミュレーション最終年、
           彼らが受け取るバトンはどれほど重くなっているでしょうか？
         </p>
         <p style={{ marginTop: 12 }}>
@@ -714,6 +714,114 @@ export function ExplanationTab({ params, simData, actualData, dataSources }: Pro
             初期値：550兆円（2024年推計）。内部留保還元率が低いと内部留保GDP比が上昇し続け、企業が利益を賃金に還元していないことを示します。還元率を上げると内部留保が縮小し、家計への分配が改善されます。
           </p>
         </div>
+      </TreeSection>
+
+      <TreeSection title="J：人的資本・人口動態モデル" tree={`├── 労働力指数 = 前年 × (1 + 人口成長率 + 労働参加率変化)
+├── 教育効果 = 弾性値 × (15年前の教育投資GDP比 − 基準) / 基準
+├── 老化減耗 = |人口成長率| × 0.3
+├── 人的資本成長率 = 教育効果 + テクノロジー効果 − 老化減耗
+├── 人的資本指数 = 前年 × (1 + 人的資本成長率)
+├── 内生TFR = ベースTFR + 賃金効果 + 格差効果 + 子育て支援効果
+│   ├── 賃金効果 = 0.08 × 累積実質賃金変化率（3年平均）× 感応度
+│   ├── 格差効果 = 1.5 × (基準ジニ − 現在ジニ) × 感応度
+│   └── 子育て支援効果 = 0.15 × (子育て支援GDP比 − 基準) × 感応度
+└── 社会活力指数 = 100 × (TFR/ベースTFR) × (1+人的資本成長率) × (1+実質賃金変化率)`}>
+        <p><strong>労働力指数と人口動態</strong></p>
+        <p>労働力指数は人口成長率と労働参加率の変化を組み合わせて、利用可能な労働力の推移を追跡します。日本は人口減少局面にあるため、労働参加率の向上（女性・高齢者の活躍推進）が人口減を部分的に相殺する重要な要素となります。</p>
+        <hr style={{ margin: '16px 0', borderColor: '#e2e8f0' }} />
+        <p><strong>教育投資パイプライン（15年ラグ）</strong></p>
+        <p>教育投資の効果は即座には現れず、約15年のタイムラグを伴って労働市場に反映されます。これは教育を受けた世代が労働力の中核となるまでの期間に対応しています。</p>
+        <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: '12px 16px', marginTop: 8 }}>
+          <p style={{ fontSize: 13 }}>
+            <strong>教育効果</strong> = γ × (15年前の教育投資GDP比 − 基準3.0%) / 基準3.0%
+          </p>
+          <p style={{ fontSize: 12, marginTop: 6, color: '#64748b' }}>
+            γ（弾性値）= 0.5。OECD平均の公教育支出GDP比は約4.9%で、日本の3.5%は先進国最低水準です。
+            シミュレーション開始から15年間は過去の教育投資実績（2011〜2025年推計）を使用し、
+            それ以降はパラメータで設定した教育投資GDP比が効果を発揮し始めます。
+          </p>
+        </div>
+        <hr style={{ margin: '16px 0', borderColor: '#e2e8f0' }} />
+        <p><strong>人的資本成長率と人的資本指数</strong></p>
+        <p>人的資本成長率 = 教育効果 + テクノロジー効果 − 老化減耗</p>
+        <table style={{ marginTop: 8 }}>
+          <thead>
+            <tr><th>要素</th><th>計算式</th><th>説明</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>教育効果</td><td>γ × (laggedEdu − 3.0) / 3.0</td><td>15年前の教育投資水準が人的資本の質を決定</td></tr>
+            <tr><td>テクノロジー効果</td><td>パラメータ設定値</td><td>AI・DX等の技術革新による生産性向上</td></tr>
+            <tr><td>老化減耗</td><td>|人口成長率| × 0.3</td><td>人口減少率が大きいほど経験・知識の喪失が加速</td></tr>
+          </tbody>
+        </table>
+        <p style={{ marginTop: 8 }}>人的資本指数は初年度100を基準とし、毎年の人的資本成長率で複利的に変動します。この指数は実質成長率（寄与度0.4）、所得税収（乗数効果）、賃金（寄与度0.3）に影響を与えます。</p>
+        <hr style={{ margin: '16px 0', borderColor: '#e2e8f0' }} />
+        <p><strong>内生的出生率（TFR）モデル</strong></p>
+        <p>合計特殊出生率（TFR）を経済状況の関数として内生的に決定します。</p>
+        <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 8, padding: '12px 16px', marginTop: 8 }}>
+          <p style={{ fontSize: 13 }}>
+            <strong>TFR</strong> = clamp(ベースTFR + 賃金効果 + 格差効果 + 子育て支援効果, 0.8, 2.07)
+          </p>
+        </div>
+        <table style={{ marginTop: 8 }}>
+          <thead>
+            <tr><th>効果</th><th>計算式</th><th>根拠</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>賃金効果</td><td>0.08 × 直近3年累積実質賃金変化率 × 感応度</td><td>実質賃金の上昇は出産意欲を高める（厚労省「出生動向基本調査」）</td></tr>
+            <tr><td>格差効果</td><td>1.5 × (基準ジニ − 現在ジニ) × 感応度</td><td>格差縮小は将来への安心感を高め出生率を改善（OECD実証研究）</td></tr>
+            <tr><td>子育て支援効果</td><td>0.15 × (子育て支援GDP比 − 0.81%) × 感応度</td><td>子育て支援の充実がTFRを押し上げる（北欧モデルの実証）</td></tr>
+          </tbody>
+        </table>
+        <p style={{ fontSize: 12, color: '#64748b', marginTop: 8 }}>上限2.07は人口置換水準、下限0.80は韓国の実績最低水準を参考に設定。感応度パラメータ（0〜1）で経済要因への反応の強さを調整可能です。</p>
+        <hr style={{ margin: '16px 0', borderColor: '#e2e8f0' }} />
+        <p><strong>出生率→人口フィードバック（20年ラグ）</strong></p>
+        <p>TFRの変化は20年後に新たな労働力として人口成長率にフィードバックされます。</p>
+        <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, padding: '12px 16px', marginTop: 8 }}>
+          <p style={{ fontSize: 13 }}>
+            t ≥ 20年目: tfrFeedback = (TFR(t-20) − ベースTFR) × 0.005
+          </p>
+          <p style={{ fontSize: 12, marginTop: 6, color: '#64748b' }}>
+            20年前にTFRが改善していれば現在の人口成長率にプラスのフィードバック、悪化していればマイナスのフィードバックが発生します。この効果を確認するにはシミュレーション期間を40〜50年に設定する必要があります。
+          </p>
+        </div>
+        <hr style={{ margin: '16px 0', borderColor: '#e2e8f0' }} />
+        <p><strong>社会活力指数</strong></p>
+        <p>社会活力指数 = 100 × (TFR / ベースTFR) × (1 + 人的資本成長率) × (1 + 実質賃金変化率)</p>
+        <p>出生率・人的資本・賃金の3要素を統合した複合指標で、社会の持続可能性を総合的に評価します。</p>
+        <ul style={{ paddingLeft: 20, marginTop: 8, fontSize: 13 }}>
+          <li><strong>120以上</strong>：好循環（出生率改善・人的資本蓄積・賃金上昇の正のスパイラル）</li>
+          <li><strong>80〜120</strong>：中立（現状維持から緩やかな変動）</li>
+          <li><strong>80以下</strong>：悪循環（少子化加速・人的資本流出・賃金停滞の負のスパイラル）</li>
+        </ul>
+        <div style={{ background: '#fefce8', border: '1px solid #fde68a', borderRadius: 8, padding: '12px 16px', marginTop: 12 }}>
+          <p style={{ fontWeight: 600, marginBottom: 6 }}>社会活力指数の意味と限界</p>
+          <p style={{ fontSize: 13 }}>
+            この指数は出生率・人的資本・賃金という3つの相互連関する要素を1つの数値に集約したものです。好循環（出生率改善→将来の労働力確保→人的資本投資の効率化→賃金上昇→さらなる出生率改善）と悪循環（逆方向）のダイナミクスを捉えることを目的としていますが、移民政策・技術革新の非連続的変化・社会制度改革などの効果は十分に反映されていません。
+          </p>
+        </div>
+        <hr style={{ margin: '16px 0', borderColor: '#e2e8f0' }} />
+        <p><strong>人的資本の財政モデルへの接続</strong></p>
+        <table style={{ marginTop: 8 }}>
+          <thead>
+            <tr><th>接続先</th><th>影響</th><th>メカニズム</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>実質成長率</td><td>hcGrowth × 0.4 を名目成長率に加算</td><td>人的資本の蓄積が生産性を通じてGDP成長に寄与</td></tr>
+            <tr><td>所得税収</td><td>humanCapitalIndex/100 を乗算</td><td>人的資本が高いほど高スキル労働者が増え所得税収が増加</td></tr>
+            <tr><td>賃金</td><td>hcGrowth × 0.3 を内生賃金に加算</td><td>人的資本の質的向上が賃金上昇圧力を生む</td></tr>
+            <tr><td>社会保障費</td><td>|popGrowth| × 従属比率係数 を自然増に加算</td><td>人口減少率が大きいほど高齢者扶養負担が増大</td></tr>
+          </tbody>
+        </table>
+        <hr style={{ margin: '16px 0', borderColor: '#e2e8f0' }} />
+        <p><strong>データ出典</strong></p>
+        <ul style={{ paddingLeft: 20, fontSize: 12, color: '#64748b' }}>
+          <li>教育投資GDP比：OECD「Education at a Glance」各年版、日本の公教育支出GDP比実績（2015〜2024年）</li>
+          <li>出生率データ：厚生労働省「人口動態統計」、国立社会保障・人口問題研究所「日本の将来推計人口」</li>
+          <li>出生率の経済弾性値：厚生労働省「出生動向基本調査」、OECD「Society at a Glance」における各国比較分析</li>
+          <li>教育投資のリターン（15年ラグ）：Hanushek & Woessmann (2015) "The Knowledge Capital of Nations"</li>
+          <li>人口置換水準（2.07）：国連人口部の標準定義</li>
+        </ul>
       </TreeSection>
 
       <h2 className="section-title" style={{ marginTop: 24 }}>ウォーターフォール分析</h2>

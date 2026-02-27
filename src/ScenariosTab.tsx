@@ -39,7 +39,8 @@ export function ScenariosTab() {
 
   const summaries: ScenarioSummary[] = useMemo(() => {
     return SCENARIOS.map(scenario => {
-      const sim = runSimulation(scenario.params)
+      const fixedParams = { ...scenario.params, simYears: 30 }
+      const sim = runSimulation(fixedParams)
       const last = sim[sim.length - 1]
       const nominalGDP = scenario.params.initNominalGDP *
         Math.pow(1 + (scenario.params.realGrowth + scenario.params.inflationRate) / 100, 30)
@@ -163,7 +164,7 @@ export function ScenariosTab() {
       </div>
 
       <div className="scenarios-summary-table">
-        <h3>シナリオ別 2055年指標サマリー</h3>
+        <h3>シナリオ別 最終年指標サマリー</h3>
         <div className="table-scroll">
           <table className="data-table">
             <thead>
@@ -266,7 +267,7 @@ export function ScenariosTab() {
       </div>
 
       <div className="scenarios-comparison-chart">
-        <h3>2055年時点：利払負担率</h3>
+        <h3>最終年時点：利払負担率</h3>
         <ResponsiveContainer width="100%" height={220}>
           <BarChart data={comparisonCharts.burden} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -283,7 +284,7 @@ export function ScenariosTab() {
       </div>
 
       <div className="scenarios-comparison-chart">
-        <h3>2055年時点：貧困率</h3>
+        <h3>最終年時点：貧困率</h3>
         <ResponsiveContainer width="100%" height={200}>
           <BarChart data={comparisonCharts.poverty} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -300,7 +301,7 @@ export function ScenariosTab() {
       </div>
 
       <div className="scenarios-comparison-chart">
-        <h3>2055年時点：ジニ係数</h3>
+        <h3>最終年時点：ジニ係数</h3>
         <ResponsiveContainer width="100%" height={200}>
           <BarChart data={comparisonCharts.gini} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -316,7 +317,7 @@ export function ScenariosTab() {
       </div>
 
       <div className="scenarios-comparison-chart">
-        <h3>2055年時点：債務残高</h3>
+        <h3>最終年時点：債務残高</h3>
         <ResponsiveContainer width="100%" height={200}>
           <BarChart data={comparisonCharts.debt} margin={{ top: 10, right: 20, left: 10, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -332,7 +333,7 @@ export function ScenariosTab() {
       </div>
 
       <div className="scenarios-comparison-chart">
-        <h3>2055年時点：対外純資産</h3>
+        <h3>最終年時点：対外純資産</h3>
         <ResponsiveContainer width="100%" height={200}>
           <BarChart data={comparisonCharts.nfa} margin={{ top: 10, right: 20, left: 10, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -369,7 +370,7 @@ export function ScenariosTab() {
       </div>
 
       <div className="scenarios-timeseries-section">
-        <h3>利払負担率の推移比較（2026〜2055年）</h3>
+        <h3>利払負担率の推移比較（2026〜2055年・30年固定）</h3>
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={debtTimeSeriesData} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />

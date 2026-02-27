@@ -12,6 +12,7 @@ export interface ScenarioParams {
   otherRevenue: number;
   naturalIncrease: number;
   policyRateSpread: number;
+  simYears?: number;
 }
 
 export interface YearData {
@@ -120,7 +121,7 @@ export function runSimulation(params: ScenarioParams): YearData[] {
   const E = D + params.riskPremium / 100;
 
   const years: YearData[] = [];
-  const n = 30;
+  const n = Math.max(30, Math.min(params.simYears || 30, 50));
 
   for (let i = 0; i < n; i++) {
     const year = 2026 + i;

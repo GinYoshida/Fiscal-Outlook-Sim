@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom'
 import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ResponsiveContainer, BarChart, Bar, ReferenceLine,
-  LineChart, Line,
+  LineChart, Line, ReferenceArea,
 } from 'recharts'
 import type { SimResult } from './simulation'
 import type { ActualDataPoint, SimParams } from './data'
@@ -175,12 +175,16 @@ function WarningAccordion({ warnings }: { warnings: Warning[] }) {
   )
 }
 
-const ALL_YEARS = Array.from({ length: 41 }, (_, i) => 2015 + i)
+function getAllYears(simYears: number) {
+  const endYear = 2025 + simYears;
+  return Array.from({ length: endYear - 2015 + 1 }, (_, i) => 2015 + i);
+}
 
-function fillYearGaps<T extends Record<string, unknown>>(data: T[]): (T & { _noData?: boolean })[] {
+function fillYearGaps<T extends Record<string, unknown>>(data: T[], simYears: number = 30): (T & { _noData?: boolean })[] {
+  const allYears = getAllYears(simYears)
   const dataMap = new Map<number, T>()
   data.forEach(d => dataMap.set(d.year as number, d))
-  return ALL_YEARS.map(year => {
+  return allYears.map(year => {
     if (dataMap.has(year)) return { ...dataMap.get(year)!, _noData: false }
     const entry: Record<string, unknown> = { year, _noData: true }
     if (data.length > 0) {
@@ -331,6 +335,18 @@ const CHART_HELP: Record<string, ChartHelpInfo> = {
     description: '歳出に占める政策経費と利払い費の割合。利払い比率が増えると政策の自由度が低下します。',
     sensitiveParams: ['ベースリスクプレミアム', '政策的経費', 'インフレ率'],
   },
+  '人的資本指数・労働力指数': {
+    description: '人的資本指数は教育投資・技術進歩・人口動態から算出。労働力指数は人口成長率と労働参加率変化で変動します。100を基準とし、上回れば改善、下回れば悪化。',
+    sensitiveParams: ['人口成長率', '教育投資GDP比', 'テクノロジー効果'],
+  },
+  '合計特殊出生率（TFR）の推移': {
+    description: '内生的に計算される合計特殊出生率。賃金・格差・子育て支援の3要因で変動します。2.07は人口置換水準、1.20は現在の日本の水準。',
+    sensitiveParams: ['ベースTFR', '出生率感応度', '人口成長率'],
+  },
+  '社会活力指数': {
+    description: 'TFR・人的資本成長率・実質賃金変化率から算出する総合指標。120以上で好循環、80以下で悪循環を示します。',
+    sensitiveParams: ['人口成長率', '教育投資GDP比', 'テクノロジー効果'],
+  },
 }
 
 function HelpIcon({ help }: { help: ChartHelpInfo }) {
@@ -423,19 +439,19 @@ export function SimulationTab({ params, simData, actualData, childAge2026, scena
   const interestBurdenData = useMemo(() => {
     const actual = actualData.map(d => ({ year: d.year, 利払負担率: d.interestBurden }))
     const sim = simData.map(d => ({ year: d.year, 利払負担率: parseFloat(d.interestBurden.toFixed(1)) }))
-    return fillYearGaps([...actual, ...sim])
+    return fillYearGaps([...actual, ...sim], params.simYears)
   }, [actualData, simData])
 
   const fiscalBalanceData = useMemo(() => {
     const actual = actualData.map(d => ({ year: d.year, 財政収支: d.fiscalBalance }))
     const sim = simData.map(d => ({ year: d.year, 財政収支: parseFloat(d.fiscalBalance.toFixed(1)) }))
-    return fillYearGaps([...actual, ...sim])
+    return fillYearGaps([...actual, ...sim], params.simYears)
   }, [actualData, simData])
 
   const debtData = useMemo(() => {
     const actual = actualData.map(d => ({ year: d.year, 債務残高: d.debt }))
     const sim = simData.map(d => ({ year: d.year, 債務残高: Math.round(d.debt) }))
-    return fillYearGaps([...actual, ...sim])
+    return fillYearGaps([...actual, ...sim], params.simYears)
   }, [actualData, simData])
 
   const revenueData = useMemo(() => {
@@ -448,7 +464,7 @@ export function SimulationTab({ params, simData, actualData, childAge2026, scena
       法人税: parseFloat(d.taxCorporate.toFixed(1)), その他税: parseFloat(d.taxOther.toFixed(1)),
       利息純収入: d.interest < 0 ? parseFloat(Math.abs(d.interest).toFixed(1)) : 0
     }))
-    return fillYearGaps([...actual, ...sim])
+    return fillYearGaps([...actual, ...sim], params.simYears)
   }, [actualData, simData])
 
   const revenueRatioData = useMemo(() => {
@@ -464,7 +480,7 @@ export function SimulationTab({ params, simData, actualData, childAge2026, scena
     }
     const actual = actualData.map(d => ({ year: d.year, ...toRatio({ 消費税: d.taxConsumption, 所得税: d.taxIncome, 法人税: d.taxCorporate, その他税: d.taxOther }) }))
     const sim = simData.map(d => ({ year: d.year, ...toRatio({ 消費税: d.taxConsumption, 所得税: d.taxIncome, 法人税: d.taxCorporate, その他税: d.taxOther }) }))
-    return fillYearGaps([...actual, ...sim])
+    return fillYearGaps([...actual, ...sim], params.simYears)
   }, [actualData, simData])
 
   const expenditureData = useMemo(() => {
@@ -472,7 +488,7 @@ export function SimulationTab({ params, simData, actualData, childAge2026, scena
     const sim = simData.map(d => ({
       year: d.year, 政策経費: parseFloat(d.policyExp.toFixed(1)), 利払い費: parseFloat(Math.max(d.interest, 0).toFixed(1))
     }))
-    return fillYearGaps([...actual, ...sim])
+    return fillYearGaps([...actual, ...sim], params.simYears)
   }, [actualData, simData])
 
   const expenditureRatioData = useMemo(() => {
@@ -488,7 +504,7 @@ export function SimulationTab({ params, simData, actualData, childAge2026, scena
       if (total === 0) return { year: d.year, 政策経費: 0, 利払い費: 0 }
       return { year: d.year, 政策経費: parseFloat((d.policyExp / total * 100).toFixed(1)), 利払い費: parseFloat((effectiveInterest / total * 100).toFixed(1)) }
     })
-    return fillYearGaps([...actual, ...sim])
+    return fillYearGaps([...actual, ...sim], params.simYears)
   }, [actualData, simData])
 
   const expBreakdownData = useMemo(() => {
@@ -502,7 +518,7 @@ export function SimulationTab({ params, simData, actualData, childAge2026, scena
       エネルギー補助金: parseFloat(d.energySubsidy.toFixed(1)),
       利払い費: parseFloat(Math.max(d.interest, 0).toFixed(1)),
     }))
-    return fillYearGaps(sim)
+    return fillYearGaps(sim, params.simYears)
   }, [simData])
 
   const budgetCompositionData = useMemo(() => {
@@ -512,7 +528,7 @@ export function SimulationTab({ params, simData, actualData, childAge2026, scena
       公債金: parseFloat(d.revenueBondRatio.toFixed(1)),
       その他収入: parseFloat(d.revenueOtherRatio.toFixed(1)),
     }))
-    return fillYearGaps(sim)
+    return fillYearGaps(sim, params.simYears)
   }, [simData])
 
   const bojData = useMemo(() => {
@@ -523,7 +539,7 @@ export function SimulationTab({ params, simData, actualData, childAge2026, scena
       '統合政府への反映額': parseFloat(d.bojPayment.toFixed(1)),
       '累積損失': parseFloat((-d.bojCumulativeLoss).toFixed(1)),
     }))
-    return fillYearGaps([...actual, ...sim])
+    return fillYearGaps([...actual, ...sim], params.simYears)
   }, [actualData, simData])
 
   const bojBSData = useMemo(() => {
@@ -539,7 +555,7 @@ export function SimulationTab({ params, simData, actualData, childAge2026, scena
       '当座預金': parseFloat(d.bojCAActual.toFixed(0)),
       '保有利回り': parseFloat(d.bojYieldActual.toFixed(2)),
     }))
-    return fillYearGaps([...actual, ...sim])
+    return fillYearGaps([...actual, ...sim], params.simYears)
   }, [actualData, simData])
 
   const rateData = useMemo(() => {
@@ -552,7 +568,7 @@ export function SimulationTab({ params, simData, actualData, childAge2026, scena
       財政リスク加算: parseFloat(d.fiscalRiskPremium.toFixed(2)),
       日銀保有利回り: parseFloat(d.bojYieldActual.toFixed(2)),
     }))
-    return fillYearGaps(sim)
+    return fillYearGaps(sim, params.simYears)
   }, [params, simData])
 
   const householdData = useMemo(() => {
@@ -568,7 +584,7 @@ export function SimulationTab({ params, simData, actualData, childAge2026, scena
       ジニ係数: parseFloat((d.giniIndex * 100).toFixed(1)),
       実質賃金伸び率: parseFloat(d.realWageGrowth.toFixed(1)) as number | null,
     }))
-    return fillYearGaps([...actual, ...sim])
+    return fillYearGaps([...actual, ...sim], params.simYears)
   }, [actualData, simData])
 
   const modelHouseholdData = useMemo(() => {
@@ -578,7 +594,7 @@ export function SimulationTab({ params, simData, actualData, childAge2026, scena
       食費増加: parseFloat(d.modelFoodCostChange.toFixed(1)),
       光熱費増加: parseFloat(d.modelEnergyCostChange.toFixed(1)),
     }))
-    return fillYearGaps(sim)
+    return fillYearGaps(sim, params.simYears)
   }, [simData])
 
   const disposableHasNonPositive = useMemo(() => {
@@ -605,7 +621,7 @@ export function SimulationTab({ params, simData, actualData, childAge2026, scena
       所得格差倍率: parseFloat(d.incomeRatio.toFixed(2)),
       ジニ係数: parseFloat(d.giniIndex.toFixed(3)),
     }))
-    return fillYearGaps([...actual, ...sim])
+    return fillYearGaps([...actual, ...sim], params.simYears)
   }, [actualData, simData])
 
   const modelSummaryData = useMemo(() => {
@@ -616,7 +632,7 @@ export function SimulationTab({ params, simData, actualData, childAge2026, scena
       食費: parseFloat(d.modelFoodCost.toFixed(0)),
       光熱費: parseFloat(d.modelEnergyCost.toFixed(0)),
     }))
-    return fillYearGaps(sim)
+    return fillYearGaps(sim, params.simYears)
   }, [simData])
 
   const tradeData = useMemo(() => {
@@ -632,7 +648,7 @@ export function SimulationTab({ params, simData, actualData, childAge2026, scena
       輸入: parseFloat(d.importAmount.toFixed(1)),
       貿易収支: parseFloat(d.tradeBalance.toFixed(1)),
     }))
-    return fillYearGaps([...actual, ...sim])
+    return fillYearGaps([...actual, ...sim], params.simYears)
   }, [actualData, simData])
 
   const fxData = useMemo(() => {
@@ -644,7 +660,7 @@ export function SimulationTab({ params, simData, actualData, childAge2026, scena
       year: d.year,
       為替レート: parseFloat(d.exchangeRate.toFixed(0)),
     }))
-    return fillYearGaps([...actual, ...sim])
+    return fillYearGaps([...actual, ...sim], params.simYears)
   }, [actualData, simData])
 
   const nfaData = useMemo(() => {
@@ -660,7 +676,7 @@ export function SimulationTab({ params, simData, actualData, childAge2026, scena
       経常収支: parseFloat(d.currentAccount.toFixed(1)),
       通貨リスク加算: parseFloat(d.dynamicRiskPremium.toFixed(1)),
     }))
-    return fillYearGaps([...actual, ...sim])
+    return fillYearGaps([...actual, ...sim], params.simYears)
   }, [actualData, simData])
 
   const gdpData = useMemo(() => {
@@ -676,8 +692,51 @@ export function SimulationTab({ params, simData, actualData, childAge2026, scena
       債務GDP比: parseFloat(d.debtToGDP.toFixed(1)),
       内部留保GDP比: parseFloat(d.retainedToGDP.toFixed(1)),
     }))
-    return fillYearGaps([...actual, ...sim])
+    return fillYearGaps([...actual, ...sim], params.simYears)
   }, [actualData, simData])
+
+  const humanCapitalData = useMemo(() => {
+    return simData.map(d => ({
+      year: d.year,
+      人的資本指数: parseFloat(d.humanCapitalIndex.toFixed(1)),
+      労働力指数: parseFloat(d.laborForceIndex.toFixed(1)),
+    }))
+  }, [simData])
+
+  const tfrData = useMemo(() => {
+    return simData.map((d, i) => {
+      const recentWageGrowths: number[] = []
+      for (let w = Math.max(0, i - 3); w < i; w++) {
+        recentWageGrowths.push(simData[w].realWageGrowth)
+      }
+      const avgRecentWage = recentWageGrowths.length > 0
+        ? recentWageGrowths.reduce((a, b) => a + b, 0) / recentWageGrowths.length / 100
+        : 0
+      const currentGini = i === 0 ? params.initGini : simData[i - 1].giniIndex
+      const childcareGDPPct = i === 0
+        ? (params.initChildcare / params.initNominalGDP) * 100
+        : (simData[i - 1].childcare / simData[i - 1].nominalGDP) * 100
+
+      const wageEffect = 0.08 * avgRecentWage * 3 * params.tfrSensitivity
+      const inequalityEffect = 1.5 * (params.initGini - currentGini) * params.tfrSensitivity
+      const childcareEffect = 0.15 * (childcareGDPPct - 0.81) * params.tfrSensitivity
+
+      return {
+        year: d.year,
+        TFR: parseFloat(d.tfr.toFixed(3)),
+        賃金効果: parseFloat(wageEffect.toFixed(4)),
+        格差効果: parseFloat(inequalityEffect.toFixed(4)),
+        子育て支援効果: parseFloat(childcareEffect.toFixed(4)),
+      }
+    })
+  }, [simData, params])
+
+  const socialVitalityData = useMemo(() => {
+    return simData.map(d => ({
+      year: d.year,
+      社会活力指数: parseFloat(d.socialVitalityIndex.toFixed(1)),
+    }))
+  }, [simData])
 
   const summaryWarnings = useMemo(() => computeWarnings(simData, params), [simData, params])
 
@@ -743,12 +802,14 @@ export function SimulationTab({ params, simData, actualData, childAge2026, scena
     const finalInterestBurden = last.interestBurden
     const displacementScore = finalInterestBurden - initInterestBurden
 
-    const childAgeAtEnd = childAge2026 + 29
+    const simYears = params.simYears || 30
+    const lastSimYear = 2026 + simYears - 1
+    const childAgeAtEnd = childAge2026 + simYears - 1
     const childAt20Year = 2026 + (20 - childAge2026)
     const childAt30Year = 2026 + (30 - childAge2026)
 
-    const dataAt20 = childAt20Year >= 2026 && childAt20Year <= 2055 ? simData.find(d => d.year === childAt20Year) : undefined
-    const dataAt30 = childAt30Year >= 2026 && childAt30Year <= 2055 ? simData.find(d => d.year === childAt30Year) : undefined
+    const dataAt20 = childAt20Year >= 2026 && childAt20Year <= lastSimYear ? simData.find(d => d.year === childAt20Year) : undefined
+    const dataAt30 = childAt30Year >= 2026 && childAt30Year <= lastSimYear ? simData.find(d => d.year === childAt30Year) : undefined
 
     return { displacementScore, childAgeAtEnd, dataAt20, dataAt30, childAt20Year, childAt30Year, finalInterestBurden, initInterestBurden }
   }, [simData, childAge2026])
@@ -761,7 +822,7 @@ export function SimulationTab({ params, simData, actualData, childAge2026, scena
       return buildCombinedTable(params)
     }
     const years = tableView === '5year'
-      ? simData.filter((_, i) => i % 5 === 0 || i === 29)
+      ? simData.filter((_, i) => i % 5 === 0 || i === simData.length - 1)
       : simData
     return buildSimTable(years, params)
   }, [tableView, simData, actualData, params])
@@ -969,7 +1030,7 @@ export function SimulationTab({ params, simData, actualData, childAge2026, scena
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    const viewLabel = tableView === 'combined' ? '実績予測' : tableView === '5year' ? '予測5年' : tableView === 'full' ? '予測全30年' : '実績'
+    const viewLabel = tableView === 'combined' ? '実績予測' : tableView === '5year' ? '予測5年' : tableView === 'full' ? `予測全${params.simYears || 30}年` : '実績'
     a.download = `財政シミュレーション_${viewLabel}.csv`
     a.click()
     URL.revokeObjectURL(url)
@@ -978,28 +1039,53 @@ export function SimulationTab({ params, simData, actualData, childAge2026, scena
   return (
     <div>
       <div className="summary-panel">
-        <div className="summary-title">30年シミュレーション・サマリー</div>
+        <div className="summary-title">{params.simYears || 30}年シミュレーション・サマリー</div>
         <div className="responsive-grid-4col">
           <div className="metric-card">
-            <div className="metric-label">2055年 債務残高</div>
+            <div className="metric-label">{2025 + (params.simYears || 30)}年 債務残高</div>
             <div className="metric-value">{summaryStats.last ? `${Math.round(summaryStats.last.debt).toLocaleString()}兆円` : '―'}</div>
           </div>
           <div className="metric-card">
-            <div className="metric-label">2055年 利払負担率</div>
+            <div className="metric-label">{2025 + (params.simYears || 30)}年 利払負担率</div>
             <div className="metric-value" style={{ color: (summaryStats.last?.interestBurden ?? 0) > 30 ? '#ef4444' : '#22c55e' }}>
               {summaryStats.last ? `${summaryStats.last.interestBurden.toFixed(1)}%` : '―'}
             </div>
           </div>
           <div className="metric-card">
-            <div className="metric-label">2055年 対外純資産</div>
+            <div className="metric-label">{2025 + (params.simYears || 30)}年 対外純資産</div>
             <div className="metric-value" style={{ color: (summaryStats.last?.nfa ?? 0) < params.nfaThreshold ? '#ef4444' : '#22c55e' }}>
               {summaryStats.last ? `${Math.round(summaryStats.last.nfa).toLocaleString()}兆円` : '―'}
             </div>
           </div>
           <div className="metric-card">
-            <div className="metric-label">2055年 貧困率</div>
+            <div className="metric-label">{2025 + (params.simYears || 30)}年 貧困率</div>
             <div className="metric-value" style={{ color: (summaryStats.last?.povertyRate ?? 0) > 20 ? '#ef4444' : '#f97316' }}>
               {summaryStats.last ? `${summaryStats.last.povertyRate.toFixed(1)}%` : '―'}
+            </div>
+          </div>
+        </div>
+        <div className="responsive-grid-4col" style={{ marginTop: 8 }}>
+          <div className="metric-card">
+            <div className="metric-label">最終年 人的資本指数</div>
+            <div className="metric-value" style={{ color: (summaryStats.last?.humanCapitalIndex ?? 100) >= 100 ? '#22c55e' : '#ef4444' }}>
+              {summaryStats.last ? summaryStats.last.humanCapitalIndex.toFixed(1) : '―'}
+            </div>
+          </div>
+          <div className="metric-card">
+            <div className="metric-label">最終年 TFR</div>
+            <div className="metric-value" style={{ color: (summaryStats.last?.tfr ?? 1.2) >= 1.5 ? '#22c55e' : (summaryStats.last?.tfr ?? 1.2) >= 1.2 ? '#f59e0b' : '#ef4444' }}>
+              {summaryStats.last ? summaryStats.last.tfr.toFixed(2) : '―'}
+            </div>
+          </div>
+          <div className="metric-card">
+            <div className="metric-label">最終年 社会活力指数</div>
+            <div className="metric-value" style={{ color: (summaryStats.last?.socialVitalityIndex ?? 100) >= 120 ? '#22c55e' : (summaryStats.last?.socialVitalityIndex ?? 100) >= 80 ? '#f59e0b' : '#ef4444' }}>
+              {summaryStats.last ? `${summaryStats.last.socialVitalityIndex.toFixed(1)}` : '―'}
+              {summaryStats.last && (
+                <span style={{ fontSize: 12, marginLeft: 4 }}>
+                  {summaryStats.last.socialVitalityIndex >= 120 ? '（好循環）' : summaryStats.last.socialVitalityIndex >= 80 ? '（中立）' : '（悪循環）'}
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -1302,6 +1388,75 @@ export function SimulationTab({ params, simData, actualData, childAge2026, scena
             </BarChart>
           </ResponsiveContainer>
         </Collapsible>
+      </Collapsible>
+
+      <Collapsible title="人的資本・人口動態" defaultOpen={true}>
+        <ChartSubtitle title="人的資本指数・労働力指数" />
+        <ResponsiveContainer width="100%" height={280}>
+          <LineChart data={humanCapitalData}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+            <XAxis dataKey="year" tick={{ fontSize: 10 }} />
+            <YAxis tick={{ fontSize: 10 }} />
+            <Tooltip content={<NoDataTooltip childAge2026={childAge2026} decimals={1} />} />
+            <Legend />
+            <ReferenceLine y={100} stroke="#94a3b8" strokeDasharray="5 5" label={{ value: '基準 100', fill: '#94a3b8', fontSize: 10 }} />
+            <Line type="monotone" dataKey="人的資本指数" stroke="#22c55e" dot={false} strokeWidth={2} />
+            <Line type="monotone" dataKey="労働力指数" stroke="#3b82f6" dot={false} strokeWidth={2} />
+          </LineChart>
+        </ResponsiveContainer>
+
+        <ChartSubtitle title="合計特殊出生率（TFR）の推移" />
+        <ResponsiveContainer width="100%" height={280}>
+          <LineChart data={tfrData}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+            <XAxis dataKey="year" tick={{ fontSize: 10 }} />
+            <YAxis tick={{ fontSize: 10 }} domain={[0.5, 2.5]} />
+            <Tooltip content={<NoDataTooltip childAge2026={childAge2026} decimals={3} />} />
+            <Legend />
+            <ReferenceLine y={2.07} stroke="#22c55e" strokeDasharray="5 5" label={{ value: '人口置換水準 2.07', fill: '#22c55e', fontSize: 10 }} />
+            <ReferenceLine y={1.20} stroke="#f59e0b" strokeDasharray="5 5" label={{ value: '現状 1.20', fill: '#f59e0b', fontSize: 10 }} />
+            <Line type="monotone" dataKey="TFR" stroke="#8b5cf6" dot={false} strokeWidth={2.5} />
+          </LineChart>
+        </ResponsiveContainer>
+        <ResponsiveContainer width="100%" height={200}>
+          <BarChart data={tfrData}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+            <XAxis dataKey="year" tick={{ fontSize: 10 }} />
+            <YAxis tick={{ fontSize: 10 }} />
+            <Tooltip content={<NoDataTooltip childAge2026={childAge2026} decimals={4} />} />
+            <Legend />
+            <ReferenceLine y={0} stroke="#94a3b8" />
+            <Bar dataKey="賃金効果" fill="#3b82f6" opacity={0.7} stackId="tfr" />
+            <Bar dataKey="格差効果" fill="#f59e0b" opacity={0.7} stackId="tfr" />
+            <Bar dataKey="子育て支援効果" fill="#a855f7" opacity={0.7} stackId="tfr" />
+          </BarChart>
+        </ResponsiveContainer>
+        <div className="chart-note">
+          TFR寄与分解: 賃金効果（実質賃金変化率由来）、格差効果（ジニ係数変化由来）、子育て支援効果（子育て支援GDP比由来）
+        </div>
+
+        <ChartSubtitle title="社会活力指数" />
+        <ResponsiveContainer width="100%" height={280}>
+          <LineChart data={socialVitalityData}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+            <XAxis dataKey="year" tick={{ fontSize: 10 }} />
+            <YAxis tick={{ fontSize: 10 }} domain={['auto', 'auto']} />
+            <Tooltip content={<NoDataTooltip childAge2026={childAge2026} decimals={1} />} />
+            {socialVitalityData.length > 0 && (
+              <ReferenceArea y1={120} y2={Math.max(160, ...socialVitalityData.map(d => d.社会活力指数))} fill="#22c55e" fillOpacity={0.1} />
+            )}
+            {socialVitalityData.length > 0 && (
+              <ReferenceArea y1={Math.min(40, ...socialVitalityData.map(d => d.社会活力指数))} y2={80} fill="#ef4444" fillOpacity={0.1} />
+            )}
+            <ReferenceLine y={120} stroke="#22c55e" strokeDasharray="5 5" label={{ value: '好循環 120', fill: '#22c55e', fontSize: 10 }} />
+            <ReferenceLine y={100} stroke="#94a3b8" strokeDasharray="5 5" label={{ value: '基準 100', fill: '#94a3b8', fontSize: 10 }} />
+            <ReferenceLine y={80} stroke="#ef4444" strokeDasharray="5 5" label={{ value: '悪循環 80', fill: '#ef4444', fontSize: 10 }} />
+            <Line type="monotone" dataKey="社会活力指数" stroke="#8b5cf6" dot={false} strokeWidth={2.5} />
+          </LineChart>
+        </ResponsiveContainer>
+        <div className="chart-note">
+          社会活力指数 = 100 × (TFR/ベースTFR) × (1+人的資本成長率) × (1+実質賃金変化率)。緑帯(≥120)=好循環、赤帯(≤80)=悪循環
+        </div>
       </Collapsible>
 
       <Collapsible title="貿易収支・為替レート" defaultOpen={true}>

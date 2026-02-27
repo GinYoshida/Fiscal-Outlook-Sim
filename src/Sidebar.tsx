@@ -216,9 +216,21 @@ export function Sidebar({ params, scenarioIndex, onScenarioChange, onParamChange
           onChange={v => onChildAgeChange(v)}
           searchHidden={sh("2026年時点の年齢", "子供")} />
         <p style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>
-          → 2055年に{childAge2026 + 29}歳
+          → {2025 + (p.simYears || 30)}年に{childAge2026 + (p.simYears || 30) - 1}歳
         </p>
       </div>
+
+      <SidebarSection title="マクロ前提">
+        <label>シミュレーション年数</label>
+        <select
+          value={p.simYears}
+          onChange={e => onParamChange('simYears', parseInt(e.target.value))}
+        >
+          {[30, 40, 50].map(y => (
+            <option key={y} value={y}>{y}年（〜{2026 + y - 1}年）</option>
+          ))}
+        </select>
+      </SidebarSection>
 
       <SidebarSection title="マクロ経済">
         <Slider label="インフレ率 (%)" value={p.inflationRate} min={0} max={10} step={0.1}
@@ -295,7 +307,7 @@ export function Sidebar({ params, scenarioIndex, onScenarioChange, onParamChange
           value={p.taxRateChangeYear}
           onChange={e => onParamChange('taxRateChangeYear', e.target.value)}
         >
-          {["なし", "2030", "2035", "2040"].map(y => (
+          {["なし", "2030", "2035", "2040", "2045", "2050"].map(y => (
             <option key={y} value={y}>{y}</option>
           ))}
         </select>
@@ -322,6 +334,52 @@ export function Sidebar({ params, scenarioIndex, onScenarioChange, onParamChange
         <Slider label="防衛費 増加率 (%/年)" value={p.defenseGrowth} min={0} max={5} step={0.5}
           tooltip="防衛費の年間増加率。安全保障環境の変化に応じた防衛力強化の度合いです。"
           onChange={v => onParamChange('defenseGrowth', v)} searchHidden={sh("防衛費 増加率 (%/年)", "防衛費の年間増加率")} />
+      </SidebarSection>
+
+      <SidebarSection title="人的資本・人口動態">
+        <Slider label="人口成長率 (%/年)" value={p.populationGrowth} min={-2.0} max={1.0} step={0.1}
+          tooltip="総人口の年間変化率。日本は現在約-0.5%/年。移民政策や出生率により変動します。"
+          onChange={v => onParamChange('populationGrowth', v)} searchHidden={sh("人口成長率 (%/年)", "総人口の年間変化率")} />
+        <Slider label="労働参加率変化 (%/年)" value={p.laborParticipationChange} min={-0.5} max={1.0} step={0.1}
+          tooltip="労働参加率の年間変化。女性・高齢者の労働参加拡大でプラス、高齢化進行でマイナスに。"
+          onChange={v => onParamChange('laborParticipationChange', v)} searchHidden={sh("労働参加率変化 (%/年)", "労働参加率の年間変化")} />
+        <Slider label="教育投資対GDP比 (%)" value={p.educationGDPRatio} min={2.0} max={7.0} step={0.1}
+          tooltip="公教育支出のGDP比。日本は約3.5%でOECD平均（約4.9%）を下回ります。15年ラグで人的資本に影響。"
+          onChange={v => onParamChange('educationGDPRatio', v)} searchHidden={sh("教育投資対GDP比 (%)", "公教育支出のGDP比")} />
+        <Slider label="テクノロジー効果 (%/年)" value={p.techEffect} min={0.0} max={2.0} step={0.1}
+          tooltip="AI・デジタル化等の技術進歩が人的資本成長率に与える効果。高いほど生産性向上に寄与。"
+          onChange={v => onParamChange('techEffect', v)} searchHidden={sh("テクノロジー効果 (%/年)", "技術進歩が人的資本成長率に与える効果")} />
+        <Slider label="ベースTFR" value={p.baseTFR} min={0.8} max={2.1} step={0.05}
+          tooltip="合計特殊出生率のベースライン。日本の2024年実績は約1.20。経済環境により内生的に変動します。"
+          onChange={v => onParamChange('baseTFR', v)} searchHidden={sh("ベースTFR", "合計特殊出生率のベースライン")} />
+        <Slider label="出生率感応度" value={p.tfrSensitivity} min={0.0} max={1.0} step={0.1}
+          tooltip="出生率が経済環境（賃金・格差・子育て支援）にどれだけ反応するかの感応度。0=固定、1=最大反応。"
+          onChange={v => onParamChange('tfrSensitivity', v)} searchHidden={sh("出生率感応度", "出生率が経済環境にどれだけ反応するか")} />
+
+        <div style={{ margin: '8px 0 4px 0' }}>
+          <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 4 }}>▼ 教育投資GDP比の実績と設定値</div>
+          <ResponsiveContainer width="100%" height={130}>
+            <LineChart data={ACTUAL_MACRO} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
+              <XAxis dataKey="year" tick={{ fontSize: 9, fill: '#94a3b8' }} />
+              <YAxis tick={{ fontSize: 9, fill: '#94a3b8' }} domain={[2.0, 6.0]} />
+              <Tooltip contentStyle={{ fontSize: 11, background: '#1e293b', border: '1px solid #334155' }} labelStyle={{ color: '#e2e8f0' }} />
+              <Line type="monotone" dataKey="educationGDPRatio" name="教育投資GDP比" stroke="#34d399" strokeWidth={1.5} dot={{ r: 2 }} />
+              <ReferenceLine y={p.educationGDPRatio} stroke="#34d399" strokeDasharray="6 3" strokeWidth={2} label={{ value: `設定${p.educationGDPRatio}%`, position: 'right', fontSize: 9, fill: '#34d399' }} />
+              <ReferenceLine y={4.9} stroke="#fbbf24" strokeDasharray="4 2" strokeWidth={1.5} label={{ value: 'OECD平均4.9%', position: 'right', fontSize: 9, fill: '#fbbf24' }} />
+              <Legend wrapperStyle={{ fontSize: 9 }} />
+            </LineChart>
+          </ResponsiveContainer>
+          <p style={{ fontSize: 10, color: '#64748b', margin: '2px 0 0 0' }}>
+            日本の公教育支出GDP比: 3.1〜3.5% / OECD平均: 約4.9%
+          </p>
+        </div>
+
+        <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 8, padding: '6px 8px', background: '#0f172a', borderRadius: 4, lineHeight: 1.6 }}>
+          <div style={{ fontWeight: 'bold', marginBottom: 2 }}>人的資本モデル概要:</div>
+          <div>人的資本成長 = 教育効果(15年ラグ) + テクノロジー効果 − 老化減耗</div>
+          <div>内生TFR = ベースTFR + 賃金効果 + 格差効果 + 子育て支援効果</div>
+          <div>社会活力 = f(TFR, 人的資本, 実質賃金)</div>
+        </div>
       </SidebarSection></>}
 
       <div className="sidebar-divider-label" onClick={() => setSectionInitOpen(v => !v)}>

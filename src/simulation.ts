@@ -1,4 +1,5 @@
 import type { SimParams } from './data';
+import { HISTORICAL_EDUCATION_GDP, HISTORICAL_TFR } from './data';
 
 export interface SimResult {
   year: number;
@@ -71,6 +72,12 @@ export interface SimResult {
   retainedToGDP: number;
   endogenousWage: number;
   nfaDeteriorationStreak: number;
+  humanCapitalIndex: number;
+  laborForceIndex: number;
+  tfr: number;
+  socialVitalityIndex: number;
+  educationEffect: number;
+  humanCapitalGrowth: number;
 }
 
 function giniToIncomeRatio(gini: number): number {
@@ -103,6 +110,13 @@ export function runSimulation(p: SimParams): SimResult[] {
 
   const baseEnergyAmount = p.inflationRate * 10;
 
+  const popGrowth = p.populationGrowth / 100;
+  const laborPartChange = p.laborParticipationChange / 100;
+  const techEff = p.techEffect / 100;
+  const eduGDP = p.educationGDPRatio;
+  const EDU_ELASTICITY = 0.5;
+  const EDU_BASE = 3.0;
+
   const results: SimResult[] = [];
   let bojCumulativeLoss = 0;
   let retainedEarnings = p.initRetainedEarnings;
@@ -110,8 +124,12 @@ export function runSimulation(p: SimParams): SimResult[] {
   let bojCAActual = p.bojCA;
   let bojYieldActual = p.bojYield / 100;
   let nfaDeteriorationStreak = 0;
+  let humanCapitalIndex = 100;
+  let laborForceIndex = 100;
 
-  for (let i = 0; i < 30; i++) {
+  const simYears = Math.max(30, Math.min(p.simYears || 30, 50));
+
+  for (let i = 0; i < simYears; i++) {
     const year = 2026 + i;
 
     const prevNFA = i === 0 ? p.initNFA : results[i - 1].nfa;
@@ -140,7 +158,62 @@ export function runSimulation(p: SimParams): SimResult[] {
       fiscalRiskPremium = (prevInterestBurden - p.interestBurdenThreshold) * p.fiscalRiskSensitivity / 100;
     }
 
-    const baseMarketRate = D + p.riskPremium / 100;
+    laborForceIndex = i === 0 ? 100 : laborForceIndex * (1 + popGrowth + laborPartChange);
+
+    let laggedEduGDP: number;
+    if (i < 15) {
+      const histIndex = HISTORICAL_EDUCATION_GDP.length - 15 + i;
+      laggedEduGDP = histIndex >= 0 ? HISTORICAL_EDUCATION_GDP[histIndex] : EDU_BASE;
+    } else {
+      laggedEduGDP = eduGDP;
+    }
+    const educationEffect = EDU_ELASTICITY * (laggedEduGDP - EDU_BASE) / EDU_BASE;
+
+    const agingPenalty = Math.abs(popGrowth) * 0.3;
+    const humanCapitalGrowth = educationEffect + techEff - agingPenalty;
+    humanCapitalIndex = i === 0 ? 100 * (1 + humanCapitalGrowth) : humanCapitalIndex * (1 + humanCapitalGrowth);
+
+    let tfrFeedback = 0;
+    if (i >= 20) {
+      const pastTFR = results[i - 20].tfr;
+      tfrFeedback = (pastTFR - p.baseTFR) * 0.005;
+    }
+    const effectivePopGrowth = popGrowth + tfrFeedback;
+
+    const recentWageGrowths: number[] = [];
+    for (let w = Math.max(0, i - 3); w < i; w++) {
+      recentWageGrowths.push(results[w].realWageGrowth);
+    }
+    const avgRecentWage = recentWageGrowths.length > 0
+      ? recentWageGrowths.reduce((a, b) => a + b, 0) / recentWageGrowths.length / 100
+      : 0;
+    const currentGini = i === 0 ? p.initGini : results[i - 1].giniIndex;
+    const childcareGDPPct = i === 0
+      ? (p.initChildcare / p.initNominalGDP) * 100
+      : (results[i - 1].childcare / results[i - 1].nominalGDP) * 100;
+
+    const wageEffect = 0.08 * avgRecentWage * 3 * p.tfrSensitivity;
+    const inequalityEffect = 1.5 * (p.initGini - currentGini) * p.tfrSensitivity;
+    const childcareEffect = 0.15 * (childcareGDPPct - 0.81) * p.tfrSensitivity;
+    const tfr = Math.max(0.8, Math.min(2.07, p.baseTFR + wageEffect + inequalityEffect + childcareEffect));
+
+    const tfrValues: number[] = [];
+    for (let w = Math.max(0, i - 5); w < i; w++) {
+      tfrValues.push(results[w].tfr);
+    }
+    const tfrTrend = tfrValues.length >= 2
+      ? (tfrValues[tfrValues.length - 1] - tfrValues[0]) / tfrValues.length
+      : 0;
+    const vitalityBoost = Math.max(-0.003, Math.min(0.003, tfrTrend * 0.1));
+
+    const growthAdjust = humanCapitalGrowth * 0.4;
+    const hcD = D + growthAdjust + vitalityBoost;
+
+    const socialVitalityIndex = 100 * (tfr / p.baseTFR) * (1 + humanCapitalGrowth) * (1 + avgRecentWage);
+
+    const socialSecurityDemographicPressure = popGrowth < 0 ? Math.abs(popGrowth) * 0.5 : 0;
+
+    const baseMarketRate = hcD + p.riskPremium / 100;
     const E = baseMarketRate + dynamicRiskPremium + fiscalRiskPremium;
 
     if (i > 0) {
@@ -180,17 +253,16 @@ export function runSimulation(p: SimParams): SimResult[] {
 
       const fxValuationGain = p.fxReserves * yenFactor;
 
-      const nominalGDP = p.initNominalGDP * (1 + D);
-      const endogenousWage = C * prodShare + B * wagePassThrough;
+      const nominalGDP = p.initNominalGDP * (1 + hcD);
+      const endogenousWage = C * prodShare + B * wagePassThrough + humanCapitalGrowth * 0.3;
       const nomWageG = Math.max(endogenousWage, baseNomWageG);
 
-      // Fix 3: 初年度も成長率を適用
       let taxConsumption = p.initTaxConsumption * (1 + B * 1.0);
       if (changeYear !== null && year >= changeYear) {
         taxConsumption = taxConsumption * (p.taxRateNew / 10.0);
       }
-      // Fix 5: 所得税に内生賃金を反映（初年度はnomWageGベース）
-      const taxIncome = p.initTaxIncome * (1 + (D * 0.5 + nomWageG * 0.5) * 1.4);
+      const hcTaxMultiplier = humanCapitalIndex / 100;
+      const taxIncome = p.initTaxIncome * (1 + (hcD * 0.5 + nomWageG * 0.5) * 1.4) * hcTaxMultiplier;
 
       const exportProfit = Math.max(yenFactor, 0) * 0.3;
       const importCost = Math.max(yenFactor, 0) * 0.2;
@@ -236,7 +308,7 @@ export function runSimulation(p: SimParams): SimResult[] {
       const avgCoupon = p.initAvgCoupon / 100;
       const interest = p.initDebt * avgCoupon;
 
-      const socialSecurity = p.initSocialSecurity;
+      const socialSecurity = p.initSocialSecurity + socialSecurityDemographicPressure * p.initSocialSecurity;
       const childcare = p.initChildcare;
       const localGovTransfer = p.initLocalGovTransfer;
       const defense = p.initDefense;
@@ -307,6 +379,12 @@ export function runSimulation(p: SimParams): SimResult[] {
         nominalGDP, debtToGDP, corporateProfit, retainedEarnings, retainedToGDP,
         endogenousWage: endogenousWage * 100,
         nfaDeteriorationStreak,
+        humanCapitalIndex,
+        laborForceIndex,
+        tfr,
+        socialVitalityIndex,
+        educationEffect: educationEffect * 100,
+        humanCapitalGrowth: humanCapitalGrowth * 100,
       });
     } else {
       const prev = results[i - 1];
@@ -328,19 +406,19 @@ export function runSimulation(p: SimParams): SimResult[] {
 
       const fxValuationGain = p.fxReserves * yenDep;
 
-      const nominalGDP = prev.nominalGDP * (1 + D);
-      const endogenousWage = C * prodShare + B * wagePassThrough;
+      const nominalGDP = prev.nominalGDP * (1 + hcD);
+      const endogenousWage = C * prodShare + B * wagePassThrough + humanCapitalGrowth * 0.3;
       const nomWageG = Math.max(endogenousWage, baseNomWageG);
 
-      // Fix 5: 所得税に前年の内生賃金を反映（賃金成長50% + 名目成長50%のブレンド）
       const prevWageDriver = prev.wageIncrease / 100;
-      const taxIncomeGrowth = (D * 0.5 + prevWageDriver * 0.5) * 1.4;
+      const hcTaxMultiplier = humanCapitalIndex / 100;
+      const taxIncomeGrowth = (hcD * 0.5 + prevWageDriver * 0.5) * 1.4;
 
       let taxConsumption = prev.taxConsumption * (1 + B * 1.0);
       if (changeYear !== null && year === changeYear) {
         taxConsumption = prev.taxConsumption * (1 + B * 1.0) * (p.taxRateNew / 10.0);
       }
-      const taxIncome = prev.taxIncome * (1 + taxIncomeGrowth);
+      const taxIncome = prev.taxIncome * (1 + taxIncomeGrowth) * (hcTaxMultiplier / (prev.humanCapitalIndex / 100));
 
       const exportProfit = Math.max(yenDep, 0) * 0.3;
       const importCost = Math.max(yenDep, 0) * 0.2;
@@ -396,7 +474,7 @@ export function runSimulation(p: SimParams): SimResult[] {
       const energyCostIndex = (1 + cpiIncrease) * (1 + Math.max(yenDep, 0) * 0.5);
       const energySubsidy = baseEnergyAmount * p.energySubsidyRate * energyCostIndex;
 
-      const socialSecurity = prev.socialSecurity * (1 + B) + p.naturalIncrease * 0.7;
+      const socialSecurity = prev.socialSecurity * (1 + B) + p.naturalIncrease * 0.7 + socialSecurityDemographicPressure * prev.socialSecurity;
       const childcare = prev.childcare * (1 + p.childcareGrowth / 100);
       const localGovTransfer = prev.localGovTransfer * (1 + D * 0.5);
       const defense = prev.defense * (1 + p.defenseGrowth / 100);
@@ -477,6 +555,12 @@ export function runSimulation(p: SimParams): SimResult[] {
         nominalGDP, debtToGDP, corporateProfit, retainedEarnings, retainedToGDP,
         endogenousWage: endogenousWage * 100,
         nfaDeteriorationStreak,
+        humanCapitalIndex,
+        laborForceIndex,
+        tfr,
+        socialVitalityIndex,
+        educationEffect: educationEffect * 100,
+        humanCapitalGrowth: humanCapitalGrowth * 100,
       });
     }
   }
