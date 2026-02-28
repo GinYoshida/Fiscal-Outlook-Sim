@@ -20,6 +20,7 @@
     "@types/react-plotly.js": "^2.6.4",
     "@vitejs/plugin-react": "^5.1.4",
     "next": "^16.1.6",
+    "playwright": "^1.58.2",
     "plotly.js": "^3.4.0",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",

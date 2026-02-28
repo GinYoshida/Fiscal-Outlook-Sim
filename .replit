@@ -6,7 +6,7 @@ publicDir = "dist/public"
 
 [nix]
 channel = "stable-25_05"
-packages = ["glibcLocales"]
+packages = ["glibcLocales", "glib", "nss", "nspr", "atk", "cups", "dbus", "expat", "libdrm", "mesa", "alsa-lib", "pango", "cairo", "xorg.libX11", "xorg.libXcomposite", "xorg.libXdamage", "xorg.libXext", "xorg.libXfixes", "xorg.libXrandr", "xorg.libxcb", "at-spi2-atk", "gtk3", "libgbm", "libxkbcommon"]
 
 [workflows]
 runButton = "Project"
