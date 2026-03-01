@@ -1,0 +1,177 @@
+GitHubのリポジトリを確認します。主要なソースファイルもいくつか確認します。ネットワーク制限でGitHubの個別ファイルは取得できませんでしたが、READMEから構造・スタック・ロジックを十分把握できました。詳しく分析します。
+
+---
+
+## 改善提案
+
+READMEと構成から読み取れる範囲で、優先度順に整理します。
+
+### 1. リポジトリの整理（最優先）
+
+**問題点：** 不要ファイルが混在しています。
+
+- `sed7268A6` — これはsedコマンドの残留ファイルで、完全に不要です
+- `dist/` フォルダ — ビルド成果物はGitで管理すべきでありません
+- `app/`、`lib/`、`static/`、`fiscal-simulator/` — Replitの試行錯誤で残ったと思われるフォルダが多く、プロジェクト構造が不明瞭です
+- `app.py` と `main.py` の両方が存在しているのは混乱を招きます
+
+**対応方法：**
+```
+# .gitignoreに追加
+dist/
+*.tsbuildinfo
+__pycache__/
+.replit  # 公開リポジトリなら
+```
+
+`sed7268A6` は `git rm sed7268A6 && git commit` で削除してください。
+
+---
+
+### 2. `simulation.ts` のロジック分離
+
+**問題点：** `runSimulation` 関数一本にすべての計算ロジックが入っている可能性が高く、テストが書けない・変更が怖い状態になりがちです。
+
+**対応方法：** 計算モジュールを機能別に分けます。
+
+```
+src/
+├── simulation/
+│   ├── index.ts       # runSimulation (オーケストレーター)
+│   ├── revenue.ts     # 税収計算 (A)
+│   ├── expenditure.ts # 支出計算 (B)
+│   ├── trade.ts       # 貿易収支 (D)
+│   ├── household.ts   # 家計インパクト (E)
+│   └── nfa.ts         # 対外純資産 (F)
+```
+
+これにより各関数が `(prevYear, params) => YearResult` の純粋関数になり、ユニットテストが書けるようになります。
+
+---
+
+### 3. マジックナンバーの定数化
+
+**問題点：** READMEにも `1.4`、`2.0`、`0.5`、`0.8`、`3%`、`9年` などの係数が直接記載されており、これらがコード内にハードコードされている場合、根拠が追えません。
+
+**対応方法：** `src/constants.ts` を作成します。
+
+```typescript
+// src/constants.ts
+export const MODEL_CONSTANTS = {
+  /** 所得税の名目成長率に対する弾性値 (財務省推計ベース) */
+  INCOME_TAX_ELASTICITY: 1.4,
+  /** 法人税の実質成長率に対する弾性値 */
+  CORP_TAX_REAL_ELASTICITY: 2.0,
+  /** 国債の平均借換年数 */
+  BOND_ROLLOVER_YEARS: 9,
+  /** 対外純資産の所得収支利回り */
+  NFA_INCOME_YIELD: 0.03,
+} as const;
+```
+
+係数の変更・感度分析がしやすくなり、「なぜこの数字なのか」をコードレベルで文書化できます。
+
+---
+
+### 4. TypeScriptの型安全性強化
+
+**問題点：** `data.ts` に型定義が集中しており、シミュレーション結果の型が `any` や緩い型になっている可能性があります。
+
+**対応方法：**
+```typescript
+// 各年のシミュレーション結果を厳密に型定義
+export type YearResult = {
+  year: number;
+  revenue: RevenueBreakdown;
+  expenditure: ExpenditureBreakdown;
+  fiscal: FiscalBalance;
+  trade: TradeBalance;
+  household: HouseholdImpact;
+  nfa: NetForeignAssets;
+};
+
+// パラメータも型定義
+export type SimulationParams = {
+  nominalGrowthRate: number;  // 名目成長率
+  inflationRate: number;       // インフレ率
+  // ...
+};
+```
+
+---
+
+### 5. CI/CD の追加
+
+**問題点：** 現状はReplitで手動ビルドしており、コード品質チェックがありません。
+
+**対応方法：** `.github/workflows/ci.yml` を追加します。
+
+```yaml
+name: CI
+on: [push, pull_request]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - run: npm ci
+      - run: npx tsc --noEmit    # 型チェック
+      - run: npx eslint src/     # Lint
+      - run: npm run build        # ビルド確認
+```
+
+これで `dist/` をGitに含める必要もなくなります。
+
+---
+
+### 6. GitHub Pages への自動デプロイ
+
+**問題点：** 現状はReplitでのみアクセス可能ですが、READMEに「dist/index.htmlは単体で動作する」と書かれているので、静的配信が可能です。
+
+**対応方法：** CIに以下を追加するだけで、プッシュのたびに自動公開されます。
+
+```yaml
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+```
+
+`https://ginyoshida.github.io/Fiscal-Outlook-Sim/` でアクセスできるようになります。
+
+---
+
+### 7. パラメータのURL共有機能
+
+**問題点：** スライダーを調整したシナリオを他者と共有できません。
+
+**対応方法：** パラメータをURLのクエリパラメータにエンコードします。
+
+```typescript
+// URLにシナリオ状態をシリアライズ
+const shareUrl = () => {
+  const params = new URLSearchParams(
+    Object.entries(simulationParams).map(([k, v]) => [k, String(v)])
+  );
+  navigator.clipboard.writeText(`${location.origin}?${params}`);
+};
+```
+
+---
+
+### 優先度まとめ
+
+| 優先度 | 改善内容 | 工数 |
+|--------|----------|------|
+| 高 | 不要ファイル削除・`.gitignore` 整備 | 30分 |
+| 高 | `dist/` をGit管理から除外 | 15分 |
+| 中 | 定数ファイル (`constants.ts`) の作成 | 2時間 |
+| 中 | CI/CD (GitHub Actions) の追加 | 1時間 |
+| 中 | GitHub Pages 自動デプロイ | 30分 |
+| 低 | simulation.ts のモジュール分割 | 半日 |
+| 低 | URLパラメータによる共有機能 | 3時間 |
+
+まず**ファイル整理とCI追加**に着手するのが最もコスパが高いと思います。個別のファイルのコードレビューも必要であれば、具体的なファイルのrawURLを共有いただければ確認できます。
