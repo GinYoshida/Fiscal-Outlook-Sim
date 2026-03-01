@@ -4,11 +4,16 @@
  * シミュレーションパラメータの調整、シナリオ選択、制約条件設定、
  * 最適化実行、UST10Y/JGB10Yミニチャートの表示を担当する。
  */
-import { useState, useRef, useCallback, useMemo } from 'react'
+import { useState, useCallback } from 'react'
 import type { SimParams, Constraints, Constraint } from './types'
-import { SCENARIOS, ACTUAL_MACRO } from './data'
-import { OPTIMIZABLE_PARAMS, runOptimizer, countWarnings, type OptimizerProgress } from './optimizer'
-import { LineChart, Line, XAxis, YAxis, Tooltip, ReferenceLine, ResponsiveContainer, Legend } from 'recharts'
+import { SCENARIOS } from './data'
+import { OPTIMIZABLE_PARAMS } from './optimizer'
+import { Slider } from './components/ui/Slider'
+import { NumberInput } from './components/ui/NumberInput'
+import { SidebarSection } from './components/ui/SidebarSection'
+import { InterestRateMiniChart, EducationMiniChart } from './components/sidebar/SidebarMiniChart'
+import { ConstraintRow } from './components/sidebar/ConstraintRow'
+import { useOptimizer } from './hooks/useOptimizer'
 
 interface SidebarProps {
   params: SimParams;
@@ -21,91 +26,11 @@ interface SidebarProps {
   onConstraintsChange: (c: Constraints) => void;
   childAge2026: number;
   onChildAgeChange: (age: number) => void;
+  onCopyUrl?: () => void;
+  urlCopied?: boolean;
 }
 
-function Slider({ label, value, min, max, step, tooltip, onChange, searchHidden }: {
-  label: string; value: number; min: number; max: number; step: number;
-  tooltip?: string; onChange: (v: number) => void; searchHidden?: boolean;
-}) {
-  const decimals = step < 0.01 ? 3 : step < 0.1 ? 2 : step < 1 ? 1 : 0
-
-  if (searchHidden) return null
-
-  return (
-    <div className="slider-group">
-      <div className="slider-label-row">
-        <label>
-          {label}
-          {tooltip && (
-            <span className="tooltip-icon">
-              ?<span className="tooltip-text">{tooltip}</span>
-            </span>
-          )}
-        </label>
-      </div>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={e => onChange(parseFloat(e.target.value))}
-      />
-      <input
-        type="number"
-        className="slider-number-input"
-        value={parseFloat(value.toFixed(decimals))}
-        step={step}
-        min={min}
-        max={max}
-        onChange={e => {
-          const v = parseFloat(e.target.value)
-          if (!isNaN(v)) onChange(Math.min(max, Math.max(min, v)))
-        }}
-      />
-    </div>
-  )
-}
-
-function NumberInput({ label, value, step, tooltip, onChange, searchHidden }: {
-  label: string; value: number; step: number;
-  tooltip?: string; onChange: (v: number) => void; searchHidden?: boolean;
-}) {
-  if (searchHidden) return null
-  return (
-    <div className="number-input-group">
-      <label>
-        {label}
-        {tooltip && (
-          <span className="tooltip-icon">
-            ?<span className="tooltip-text">{tooltip}</span>
-          </span>
-        )}
-      </label>
-      <input
-        type="number"
-        value={value}
-        step={step}
-        onChange={e => onChange(parseFloat(e.target.value) || 0)}
-      />
-    </div>
-  )
-}
-
-function SidebarSection({ title, children, defaultOpen = true }: { title: string; children: React.ReactNode; defaultOpen?: boolean }) {
-  const [open, setOpen] = useState(defaultOpen)
-  return (
-    <div className="sidebar-section">
-      <div className="sidebar-section-header" onClick={() => setOpen(!open)}>
-        <span>{title}</span>
-        <span className={`collapsible-arrow ${open ? 'open' : ''}`}>▼</span>
-      </div>
-      {open && <div className="sidebar-section-content">{children}</div>}
-    </div>
-  )
-}
-
-export function Sidebar({ params, scenarioIndex, onScenarioChange, onParamChange, onParamsReplace, isOpen, onClose, constraints, onConstraintsChange, childAge2026, onChildAgeChange }: SidebarProps & { onClose?: () => void }) {
+export function Sidebar({ params, scenarioIndex, onScenarioChange, onParamChange, onParamsReplace, isOpen, onClose, constraints, onConstraintsChange, childAge2026, onChildAgeChange, onCopyUrl, urlCopied }: SidebarProps & { onClose?: () => void }) {
   const p = params;
   const taxTotal = p.initTaxConsumption + p.initTaxIncome + p.initTaxCorporate + p.initTaxOther;
   const [searchQuery, setSearchQuery] = useState('')
@@ -125,22 +50,16 @@ export function Sidebar({ params, scenarioIndex, onScenarioChange, onParamChange
   const [sectionInitOpen, setSectionInitOpen] = useState(true)
   const [sectionOptOpen, setSectionOptOpen] = useState(true)
 
-  const [selectedOptKeys, setSelectedOptKeys] = useState<Set<string>>(
-    () => new Set(OPTIMIZABLE_PARAMS.slice(0, 5).map(p => p.key))
-  )
-  const [optimizerProgress, setOptimizerProgress] = useState<OptimizerProgress | null>(null)
-  const [isOptimizing, setIsOptimizing] = useState(false)
-  const [baselineWarnings, setBaselineWarnings] = useState<number | null>(null)
-  const cancelRef = useRef<(() => void) | null>(null)
-
-  const toggleOptKey = useCallback((key: string) => {
-    setSelectedOptKeys(prev => {
-      const next = new Set(prev)
-      if (next.has(key)) next.delete(key)
-      else next.add(key)
-      return next
-    })
-  }, [])
+  const {
+    selectedOptKeys,
+    optimizerProgress,
+    isOptimizing,
+    baselineWarnings,
+    currentWarnings,
+    toggleOptKey,
+    startOptimizer,
+    applyOptResult,
+  } = useOptimizer(params, onParamsReplace, constraints)
 
   const updateConstraint = useCallback((key: keyof Constraints, field: keyof Constraint, value: boolean | number) => {
     onConstraintsChange({
@@ -149,38 +68,6 @@ export function Sidebar({ params, scenarioIndex, onScenarioChange, onParamChange
     })
   }, [constraints, onConstraintsChange])
 
-  const hasActiveConstraints = useMemo(() =>
-    Object.values(constraints).some(c => c.enabled), [constraints])
-
-  const startOptimizer = useCallback(() => {
-    if (isOptimizing) {
-      cancelRef.current?.()
-      setIsOptimizing(false)
-      return
-    }
-    const keys = Array.from(selectedOptKeys) as (keyof SimParams)[]
-    if (keys.length === 0) return
-    setIsOptimizing(true)
-    setOptimizerProgress(null)
-    const activeConstraints = hasActiveConstraints ? constraints : undefined
-    setBaselineWarnings(countWarnings(params, activeConstraints))
-    const { cancel } = runOptimizer(params, keys, (progress) => {
-      setOptimizerProgress(progress)
-      if (progress.done) {
-        setIsOptimizing(false)
-      }
-    }, activeConstraints)
-    cancelRef.current = cancel
-  }, [params, selectedOptKeys, isOptimizing, constraints, hasActiveConstraints])
-
-  const applyOptResult = useCallback(() => {
-    if (optimizerProgress?.bestParams) {
-      onParamsReplace(optimizerProgress.bestParams)
-    }
-  }, [optimizerProgress, onParamsReplace])
-
-  const activeConstraints = useMemo(() => hasActiveConstraints ? constraints : undefined, [constraints, hasActiveConstraints])
-  const currentWarnings = useMemo(() => countWarnings(params, activeConstraints), [params, activeConstraints])
 
   return (
     <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
@@ -193,11 +80,23 @@ export function Sidebar({ params, scenarioIndex, onScenarioChange, onParamChange
         value={scenarioIndex}
         onChange={e => onScenarioChange(parseInt(e.target.value))}
       >
+        {scenarioIndex < 0 && <option value={-1}>カスタム（URL共有）</option>}
         {SCENARIOS.map((s, i) => (
           <option key={i} value={i}>{s.name}</option>
         ))}
       </select>
-      <p className="scenario-caption">{SCENARIOS[scenarioIndex].label}</p>
+      <p className="scenario-caption">
+        {scenarioIndex >= 0 ? SCENARIOS[scenarioIndex].label : 'URLから復元されたカスタムパラメータ'}
+      </p>
+
+      {onCopyUrl && (
+        <button
+          className="url-share-btn"
+          onClick={onCopyUrl}
+        >
+          {urlCopied ? '✓ コピーしました' : '🔗 共有URLをコピー'}
+        </button>
+      )}
 
       <div className="param-search-box">
         <input
@@ -261,27 +160,11 @@ export function Sidebar({ params, scenarioIndex, onScenarioChange, onParamChange
         <Slider label="海外インフレ率 (%)" value={p.foreignInflation} min={0.0} max={8.0} step={0.1}
           tooltip="海外（主に米国）のインフレ率。日本のインフレ率との差が購買力平価を通じて為替レートに影響します。"
           onChange={v => onParamChange('foreignInflation', v)} searchHidden={sh("海外インフレ率 (%)", "海外のインフレ率")} />
-        <div style={{ margin: '8px 0 4px 0' }}>
-          <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 4 }}>▼ 金利実績と設定値の比較</div>
-          <ResponsiveContainer width="100%" height={130}>
-            <LineChart data={ACTUAL_MACRO} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
-              <XAxis dataKey="year" tick={{ fontSize: 9, fill: '#94a3b8' }} />
-              <YAxis tick={{ fontSize: 9, fill: '#94a3b8' }} domain={[-0.5, 5]} />
-              <Tooltip contentStyle={{ fontSize: 11, background: '#1e293b', border: '1px solid #334155' }} labelStyle={{ color: '#e2e8f0' }} />
-              <Line type="monotone" dataKey="ust10y" name="UST10Y" stroke="#60a5fa" strokeWidth={1.5} dot={{ r: 2 }} strokeDasharray="4 2" />
-              <Line type="monotone" dataKey="jgb10y" name="JGB10Y" stroke="#f87171" strokeWidth={1.5} dot={{ r: 2 }} strokeDasharray="4 2" />
-              <ReferenceLine y={p.foreignInterestRate} stroke="#60a5fa" strokeDasharray="6 3" strokeWidth={2} label={{ value: `海外${p.foreignInterestRate}%`, position: 'right', fontSize: 9, fill: '#60a5fa' }} />
-              <ReferenceLine y={p.inflationRate + p.riskPremium} stroke="#f87171" strokeDasharray="6 3" strokeWidth={2} label={{ value: `国内${(p.inflationRate + p.riskPremium).toFixed(1)}%`, position: 'right', fontSize: 9, fill: '#f87171' }} />
-              <Legend wrapperStyle={{ fontSize: 9 }} />
-            </LineChart>
-          </ResponsiveContainer>
-          <p style={{ fontSize: 10, color: '#64748b', margin: '2px 0 0 0' }}>
-            過去10年レンジ: UST10Y 0.9%〜4.3% / JGB10Y -0.1%〜1.1%
-          </p>
-          <p style={{ fontSize: 10, color: '#64748b', margin: '2px 0 8px 0' }}>
-            為替 = バイアス + 0.5×(海外金利−国内金利) + 0.3×(国内CPI−海外CPI) + 0.5×リスクP
-          </p>
-        </div>
+        <InterestRateMiniChart
+          foreignInterestRate={p.foreignInterestRate}
+          inflationRate={p.inflationRate}
+          riskPremium={p.riskPremium}
+        />
         <Slider label="名目賃金上昇率 下限 (%/年)" value={p.nominalWageGrowth} min={0} max={5} step={0.1}
           tooltip="賃金モデルの下限値。内生的に計算される名目賃金上昇率がこの値を下回る場合、この値が適用されます。"
           onChange={v => onParamChange('nominalWageGrowth', v)} searchHidden={sh("名目賃金上昇率 下限 (%/年)", "賃金モデルの下限値")} />
@@ -363,23 +246,7 @@ export function Sidebar({ params, scenarioIndex, onScenarioChange, onParamChange
           tooltip="出生率が経済環境（賃金・格差・子育て支援）にどれだけ反応するかの感応度。0=固定、1=最大反応。"
           onChange={v => onParamChange('tfrSensitivity', v)} searchHidden={sh("出生率感応度", "出生率が経済環境にどれだけ反応するか")} />
 
-        <div style={{ margin: '8px 0 4px 0' }}>
-          <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 4 }}>▼ 教育投資GDP比の実績と設定値</div>
-          <ResponsiveContainer width="100%" height={130}>
-            <LineChart data={ACTUAL_MACRO} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
-              <XAxis dataKey="year" tick={{ fontSize: 9, fill: '#94a3b8' }} />
-              <YAxis tick={{ fontSize: 9, fill: '#94a3b8' }} domain={[2.0, 6.0]} />
-              <Tooltip contentStyle={{ fontSize: 11, background: '#1e293b', border: '1px solid #334155' }} labelStyle={{ color: '#e2e8f0' }} />
-              <Line type="monotone" dataKey="educationGDPRatio" name="教育投資GDP比" stroke="#34d399" strokeWidth={1.5} dot={{ r: 2 }} />
-              <ReferenceLine y={p.educationGDPRatio} stroke="#34d399" strokeDasharray="6 3" strokeWidth={2} label={{ value: `設定${p.educationGDPRatio}%`, position: 'right', fontSize: 9, fill: '#34d399' }} />
-              <ReferenceLine y={4.9} stroke="#fbbf24" strokeDasharray="4 2" strokeWidth={1.5} label={{ value: 'OECD平均4.9%', position: 'right', fontSize: 9, fill: '#fbbf24' }} />
-              <Legend wrapperStyle={{ fontSize: 9 }} />
-            </LineChart>
-          </ResponsiveContainer>
-          <p style={{ fontSize: 10, color: '#64748b', margin: '2px 0 0 0' }}>
-            日本の公教育支出GDP比: 3.1〜3.5% / OECD平均: 約4.9%
-          </p>
-        </div>
+        <EducationMiniChart educationGDPRatio={p.educationGDPRatio} />
 
         <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 8, padding: '6px 8px', background: '#0f172a', borderRadius: 4, lineHeight: 1.6 }}>
           <div style={{ fontWeight: 'bold', marginBottom: 2 }}>人的資本モデル概要:</div>
@@ -508,55 +375,51 @@ export function Sidebar({ params, scenarioIndex, onScenarioChange, onParamChange
         <p className="optimizer-desc">
           最適化探索時に「起きてはいけない状態」を制約条件として設定します。
         </p>
-        <label className="constraint-row">
-          <input type="checkbox" checked={constraints.povertyRate.enabled}
-            onChange={e => updateConstraint('povertyRate', 'enabled', e.target.checked)} />
-          <span>貧困率 ≤</span>
-          <input type="number" className="constraint-threshold" value={constraints.povertyRate.threshold}
-            step={1} min={10} max={40}
-            onChange={e => updateConstraint('povertyRate', 'threshold', parseFloat(e.target.value) || 20)} />
-          <span>%</span>
-        </label>
-        <label className="constraint-row">
-          <input type="checkbox" checked={constraints.giniIndex.enabled}
-            onChange={e => updateConstraint('giniIndex', 'enabled', e.target.checked)} />
-          <span>ジニ係数 ≤</span>
-          <input type="number" className="constraint-threshold" value={constraints.giniIndex.threshold}
-            step={0.01} min={0.3} max={0.6}
-            onChange={e => updateConstraint('giniIndex', 'threshold', parseFloat(e.target.value) || 0.45)} />
-        </label>
-        <label className="constraint-row">
-          <input type="checkbox" checked={constraints.interestBurden.enabled}
-            onChange={e => updateConstraint('interestBurden', 'enabled', e.target.checked)} />
-          <span>利払負担率 ≤</span>
-          <input type="number" className="constraint-threshold" value={constraints.interestBurden.threshold}
-            step={1} min={10} max={60}
-            onChange={e => updateConstraint('interestBurden', 'threshold', parseFloat(e.target.value) || 30)} />
-          <span>%</span>
-        </label>
-        <label className="constraint-row">
-          <input type="checkbox" checked={constraints.realPolicyExpIndex.enabled}
-            onChange={e => updateConstraint('realPolicyExpIndex', 'enabled', e.target.checked)} />
-          <span>実質政策経費指数 ≥</span>
-          <input type="number" className="constraint-threshold" value={constraints.realPolicyExpIndex.threshold}
-            step={5} min={30} max={100}
-            onChange={e => updateConstraint('realPolicyExpIndex', 'threshold', parseFloat(e.target.value) || 70)} />
-        </label>
-        <p className="constraint-note">
-          実質政策経費指数：初年度=100。インフレ調整後の政策的経費（利払除く）が初年度から何%の水準か
-        </p>
-        <label className="constraint-row">
-          <input type="checkbox" checked={constraints.currentAccountDeficit.enabled}
-            onChange={e => updateConstraint('currentAccountDeficit', 'enabled', e.target.checked)} />
-          <span>経常赤字連続年数 ≤</span>
-          <input type="number" className="constraint-threshold" value={constraints.currentAccountDeficit.threshold}
-            step={1} min={1} max={30}
-            onChange={e => updateConstraint('currentAccountDeficit', 'threshold', parseFloat(e.target.value) || 5)} />
-          <span>年</span>
-        </label>
-        <p className="constraint-note">
-          経常収支が連続して赤字となる年数の上限。超過すると通貨リスクプレミアムが加速的に上昇します
-        </p>
+        <ConstraintRow
+          enabled={constraints.povertyRate.enabled}
+          onEnabledChange={v => updateConstraint('povertyRate', 'enabled', v)}
+          label="貧困率 ≤"
+          threshold={constraints.povertyRate.threshold}
+          onThresholdChange={v => updateConstraint('povertyRate', 'threshold', v)}
+          step={1} min={10} max={40} defaultValue={20}
+          unit="%"
+        />
+        <ConstraintRow
+          enabled={constraints.giniIndex.enabled}
+          onEnabledChange={v => updateConstraint('giniIndex', 'enabled', v)}
+          label="ジニ係数 ≤"
+          threshold={constraints.giniIndex.threshold}
+          onThresholdChange={v => updateConstraint('giniIndex', 'threshold', v)}
+          step={0.01} min={0.3} max={0.6} defaultValue={0.45}
+        />
+        <ConstraintRow
+          enabled={constraints.interestBurden.enabled}
+          onEnabledChange={v => updateConstraint('interestBurden', 'enabled', v)}
+          label="利払負担率 ≤"
+          threshold={constraints.interestBurden.threshold}
+          onThresholdChange={v => updateConstraint('interestBurden', 'threshold', v)}
+          step={1} min={10} max={60} defaultValue={30}
+          unit="%"
+        />
+        <ConstraintRow
+          enabled={constraints.realPolicyExpIndex.enabled}
+          onEnabledChange={v => updateConstraint('realPolicyExpIndex', 'enabled', v)}
+          label="実質政策経費指数 ≥"
+          threshold={constraints.realPolicyExpIndex.threshold}
+          onThresholdChange={v => updateConstraint('realPolicyExpIndex', 'threshold', v)}
+          step={5} min={30} max={100} defaultValue={70}
+          note="実質政策経費指数：初年度=100。インフレ調整後の政策的経費（利払除く）が初年度から何%の水準か"
+        />
+        <ConstraintRow
+          enabled={constraints.currentAccountDeficit.enabled}
+          onEnabledChange={v => updateConstraint('currentAccountDeficit', 'enabled', v)}
+          label="経常赤字連続年数 ≤"
+          threshold={constraints.currentAccountDeficit.threshold}
+          onThresholdChange={v => updateConstraint('currentAccountDeficit', 'threshold', v)}
+          step={1} min={1} max={30} defaultValue={5}
+          unit="年"
+          note="経常収支が連続して赤字となる年数の上限。超過すると通貨リスクプレミアムが加速的に上昇します"
+        />
       </div>
 
       <div className="optimizer-section">

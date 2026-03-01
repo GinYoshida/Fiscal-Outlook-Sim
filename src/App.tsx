@@ -16,6 +16,7 @@ import { Sidebar } from './Sidebar'
 import { SimulationTab } from './SimulationTab'
 import { ExplanationTab } from './ExplanationTab'
 import { ScenariosTab } from './ScenariosTab'
+import { useUrlParams } from './hooks/useUrlParams'
 
 function App() {
   const [params, setParams] = useState<SimParams>({ ...SCENARIOS[0].params })
@@ -24,6 +25,13 @@ function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [constraints, setConstraints] = useState<Constraints>({ ...DEFAULT_CONSTRAINTS })
   const [childAge2026, setChildAge2026] = useState(7)
+
+  const restoreParams = useCallback((restored: SimParams) => {
+    setParams(restored)
+    setScenarioIndex(-1)
+  }, [])
+
+  const { copyUrl, copied } = useUrlParams(params, restoreParams)
 
   const simData = useMemo(() => runSimulation(params), [params])
 
@@ -60,6 +68,8 @@ function App() {
         onConstraintsChange={setConstraints}
         childAge2026={childAge2026}
         onChildAgeChange={setChildAge2026}
+        onCopyUrl={copyUrl}
+        urlCopied={copied}
       />
       <main className={`main-content ${sidebarOpen ? 'sidebar-is-open' : ''}`}>
         <h1 className="app-title">🏛️ 統合政府 {params.simYears || 30}年財政シミュレーター</h1>

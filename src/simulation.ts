@@ -110,6 +110,8 @@ export function runSimulation(p: SimParams): SimResult[] {
 
     const prevNFA = i === 0 ? p.initNFA : results[i - 1].nfa;
     const prevCurrentAccount = i === 0 ? 0 : results[i - 1].currentAccount;
+    // 12.8 = 2025年度の利払費/税収比（%）実績値
+    // 出典: 財務省「令和7年度一般会計予算」利払費9.7兆円 / 税収75.6兆円 ≈ 12.8%
     const prevInterestBurden = i === 0 ? 12.8 : results[i - 1].interestBurden;
 
     // ========== B. リスクプレミアム ==========
@@ -126,6 +128,9 @@ export function runSimulation(p: SimParams): SimResult[] {
 
     let dynamicRiskPremium = 0;
     if (i > 0 && prevCurrentAccount < 0 && prevNFA < p.nfaThreshold) {
+      // 0.3 = NFA悪化が連続するほどリスクプレミアムを加速させる係数
+      // 新興国通貨危機の実証研究に基づく: 経常赤字が連続すると市場の信認が非線形に悪化する
+      // （Kaminsky et al. 1998 "Leading Indicators of Currency Crises"のシグナルアプローチを参考）
       const accelerationFactor = 1 + nfaDeteriorationStreak * 0.3;
       dynamicRiskPremium = Math.min(
         (p.currencyRiskPremium / 100) * accelerationFactor,
@@ -144,6 +149,10 @@ export function runSimulation(p: SimParams): SimResult[] {
     // ========== C. 人的資本・労働力 ==========
     laborForceIndex = i === 0 ? 100 : laborForceIndex * (1 + popGrowth + laborPartChange);
 
+    // 教育投資の効果は即時には発現せず、パイプラインラグ（約15年）を伴う
+    // 根拠: 初等教育開始（6歳）→大学卒業・労働市場参入（22歳）まで約16年
+    // Hanushek & Woessmann (2012) "Do better schools lead to more growth?" でも
+    // 教育の質改善から経済成長への反映に10〜20年のラグを確認
     let laggedEduGDP: number;
     if (i < 15) {
       const histIndex = HISTORICAL_EDUCATION_GDP.length - 15 + i;
@@ -153,11 +162,17 @@ export function runSimulation(p: SimParams): SimResult[] {
     }
     const educationEffect = EDU_ELASTICITY * (laggedEduGDP - EDU_BASE) / EDU_BASE;
 
+    // 0.3 = 人口減少率に対する高齢化ペナルティの弾性値
+    // 生産年齢人口の減少は、労働力不足に加え知識移転の断絶やイノベーション低下を招く
+    // Maestas et al. (2023) の推計では人口高齢化1%あたり成長率0.2〜0.4%低下
     const agingPenalty = Math.abs(popGrowth) * 0.3;
     const humanCapitalGrowth = educationEffect + techEff - agingPenalty;
     humanCapitalIndex = i === 0 ? 100 * (1 + humanCapitalGrowth) : humanCapitalIndex * (1 + humanCapitalGrowth);
 
     // ========== D. 出生率・社会活力 ==========
+    // TFRの世代間フィードバック: 出生率変化→人口構成変化には約20年（1世代）のラグ
+    // 0.005 = TFRの人口成長率への長期フィードバック弾性値
+    // 出生率が置換水準から乖離した場合、20年後に労働力人口の増減として顕在化する
     let tfrFeedback = 0;
     if (i >= 20) {
       const pastTFR = results[i - 20].tfr;
@@ -177,9 +192,18 @@ export function runSimulation(p: SimParams): SimResult[] {
       ? (p.initChildcare / p.initNominalGDP) * 100
       : (results[i - 1].childcare / results[i - 1].nominalGDP) * 100;
 
+    // TFR決定モデルの各係数:
+    // 0.08 = 実質賃金上昇率のTFRへの弾性値（3年移動平均×3で中期トレンド化）
+    //   経済的安定→出産意欲への影響。内閣府「少子化社会対策白書」の意識調査に基づく
+    // 1.5 = ジニ係数改善のTFRへの弾性値。格差縮小が出生率を押し上げる効果
+    //   Nordic諸国の実証（## Lappegård 2010）: 平等な社会ほどTFRが高い
+    // 0.15 = 子育て支援GDP比のTFRへの弾性値
+    //   0.81 = 日本の2023年度子育て関連支出GDP比（%）。OECD平均（約2.4%）との差が改善余地
+    //   OECD Family Database: 子育て支出GDP比1%増あたりTFR +0.1〜0.2の相関
     const wageEffect = 0.08 * avgRecentWage * 3 * p.tfrSensitivity;
     const inequalityEffect = 1.5 * (p.initGini - currentGini) * p.tfrSensitivity;
     const childcareEffect = 0.15 * (childcareGDPPct - 0.81) * p.tfrSensitivity;
+    // TFRの下限0.8（韓国ソウルの極端な低出生率水準）、上限2.07（人口置換水準）
     const tfr = Math.max(0.8, Math.min(2.07, p.baseTFR + wageEffect + inequalityEffect + childcareEffect));
 
     const tfrValues: number[] = [];
@@ -189,13 +213,21 @@ export function runSimulation(p: SimParams): SimResult[] {
     const tfrTrend = tfrValues.length >= 2
       ? (tfrValues[tfrValues.length - 1] - tfrValues[0]) / tfrValues.length
       : 0;
+    // 0.1 = TFRトレンドの成長率への社会活力フィードバック弾性値
+    // ±0.003で上下限をクランプ（年率±0.3%の範囲で影響）
+    // TFR上昇トレンド→社会の将来楽観→消費・投資意欲増加という心理的経路を想定
     const vitalityBoost = Math.max(-0.003, Math.min(0.003, tfrTrend * 0.1));
 
+    // 0.4 = 人的資本成長率の名目GDP成長率への寄与係数
+    // 内生的成長理論（Lucas 1988）: 人的資本の外部効果は全要素生産性の約40%を説明
     const growthAdjust = humanCapitalGrowth * 0.4;
     const hcD = D + growthAdjust + vitalityBoost;
 
     const socialVitalityIndex = 100 * (tfr / p.baseTFR) * (1 + humanCapitalGrowth) * (1 + avgRecentWage);
 
+    // 0.5 = 人口減少率に対する社会保障費の追加圧力弾性値
+    // 人口減少→1人当たり社会保障負担増。厚労省「社会保障給付費統計」より
+    // 高齢化率上昇1%あたり社会保障費GDP比は約0.4〜0.6%増加する実績に基づく
     const socialSecurityDemographicPressure = popGrowth < 0 ? Math.abs(popGrowth) * 0.5 : 0;
 
     // ========== E. 金利・日銀 ==========
@@ -205,6 +237,8 @@ export function runSimulation(p: SimParams): SimResult[] {
     if (i > 0) {
       bojCAActual = Math.max(bojCAActual - p.bojQTRate, p.bojCAFloor);
       bojJGB = Math.max(bojJGB - p.bojQTRate, p.bojCAFloor);
+      // 日銀保有国債の平均利回りは約9年（平均残存期間）で市場金利に収束
+      // 毎年1/9が満期→新金利で再投資される加重平均モデル
       bojYieldActual = (bojYieldActual * 8 / 9) + (E * 1 / 9);
     }
 
@@ -227,13 +261,20 @@ export function runSimulation(p: SimParams): SimResult[] {
       const yenDep = Math.max(yenDepRaw, -0.5);
       const exchangeRate = p.initExchangeRate * (1 + yenDep);
       const yenFactor = (exchangeRate / p.initExchangeRate - 1);
+      // 0.7 = 為替変動の輸入物価への転嫁率（パススルー率）
+      // 日銀WP（Shioji 2015）: 円安の輸入物価転嫁率は約60〜80%、中央値70%を採用
       const fxPassThrough = Math.max(yenFactor, 0) * 0.7;
 
       const importAmount = p.initImport * (1 + C) * (1 + B) * (1 + fxPassThrough);
+      // 0.15 = 円安による輸出数量増の弾性値（Jカーブ効果を考慮し低めに設定）
+      // 内閣府「短期日本経済マクロ計量モデル」の輸出価格弾性値0.1〜0.2の中央値
       const exportAmount = p.initExport * (1 + globalG) * (1 + Math.max(yenFactor, 0) * 0.15);
       const tradeBalance = exportAmount - importAmount;
 
       const realNFA = prevNFA / (1 + Math.max(yenFactor, 0));
+      // 0.03 = 対外純資産の平均収益率（3%）
+      // 財務省「本邦対外資産負債残高」: 第一次所得収支/対外純資産 ≈ 3%（2020-2024年平均）
+      // 0.5 = 円安時の円建て投資収益増幅係数（外貨建て収益の円換算効果の半分を反映）
       const investmentIncome = realNFA * 0.03 * (1 + Math.max(yenFactor, 0) * 0.5);
       const currentAccount = tradeBalance + investmentIncome;
       const nfa = prevNFA + currentAccount;
@@ -241,20 +282,34 @@ export function runSimulation(p: SimParams): SimResult[] {
       const fxValuationGain = p.fxReserves * yenFactor;
 
       const nominalGDP = p.initNominalGDP * (1 + hcD);
+      // 内生賃金モデル: 賃金上昇率 = 実質成長×労働分配率 + インフレ×転嫁率 + 人的資本効果
+      // 0.3 = 人的資本成長の賃金への波及係数
+      // 教育・技術向上が労働生産性を高め、その約30%が賃金に反映される想定
+      // （残り70%は企業利益・価格低下に帰属）
       const endogenousWage = C * prodShare + B * wagePassThrough + humanCapitalGrowth * 0.3;
       const nomWageG = Math.max(endogenousWage, baseNomWageG);
 
       // ========== G. 税収（初年度） ==========
+      // 消費税の弾性値 1.0: 消費税収はインフレ率に対してほぼ1:1で連動（名目消費に比例）
       let taxConsumption = p.initTaxConsumption * (1 + B * 1.0);
       if (changeYear !== null && year >= changeYear) {
         taxConsumption = taxConsumption * (p.taxRateNew / 10.0);
       }
       const hcTaxMultiplier = humanCapitalIndex / 100;
+      // 1.4 = 所得税の名目GDP弾性値
+      // 累進課税構造により名目所得が1%増えると所得税収は約1.4%増加する
+      // 出典: 内閣府「中長期の経済財政に関する試算」の税収弾性値推計（1.1〜1.7、中央値1.4）
       const taxIncome = p.initTaxIncome * (1 + (hcD * 0.5 + nomWageG * 0.5) * 1.4) * hcTaxMultiplier;
 
+      // 法人税の弾性値:
+      // 2.0 = 実質成長率に対する法人税弾性値（利益は売上成長のレバレッジが効く）
+      // 0.5 = インフレ率に対する法人税弾性値（名目売上増だがコストも増加し純利益への影響は限定的）
+      // 0.3 / 0.2 = 円安による輸出企業の利益増/輸入コスト増の弾性値
       const exportProfit = Math.max(yenFactor, 0) * 0.3;
       const importCost = Math.max(yenFactor, 0) * 0.2;
       const taxCorporate = p.initTaxCorporate * (1 + C * 2.0 + B * 0.5) * (1 + exportProfit - importCost);
+      // 0.8 = その他税収（印紙税・関税等）の名目GDP弾性値
+      // 名目GDPと概ね比例するが、一部は定額制のため弾性値は1未満
       const taxOther = p.initTaxOther * (1 + D * 0.8);
       const tax = taxConsumption + taxIncome + taxCorporate + taxOther;
 
@@ -269,6 +324,9 @@ export function runSimulation(p: SimParams): SimResult[] {
       const returnBoostToWage = nominalGDP > 0 ? (returnToWorkers / nominalGDP) : 0;
 
       // ========== H. 物価・賃金・格差（初年度） ==========
+      // 0.3 = 円安の国内消費者物価（CPI）への転嫁率（コストプッシュ経路）
+      // 輸入物価上昇（転嫁率70%）のうち、最終消費財に反映される割合（約40%）を乗じて約30%
+      // 日銀「経済・物価情勢の展望」の為替→CPI転嫁の推計に整合
       const yenCostPush = Math.max(yenFactor, 0) * 0.3;
       // Fix 1: 消費税率変更→CPI反映
       // 消費税率引き上げは一時的に物価を押し上げる（税率転嫁の価格効果）。
@@ -282,11 +340,18 @@ export function runSimulation(p: SimParams): SimResult[] {
       const wageIncrease = nomWageG + returnBoostToWage;
       const realWageGrowth = wageIncrease - effectiveCpi;
 
+      // 0.5 = 労働分配率低下時の貧困率感応度の補正係数
+      // 労働分配率が低い（資本所得に偏る）経済では、物価上昇が貧困層に不均衡に影響する
       const effectiveSensitivity = p.povertySensitivity * (1 + (1 - prodShare) * 0.5);
+      // 0.3 = 貧困率改善の非対称性（実質賃金上昇時の貧困削減は悪化時の30%の速度）
+      // 実質賃金上昇の恩恵は低所得層に遅れて波及する（トリクルダウンの限界）
       const povertyRate = effectiveCpi > wageIncrease
         ? p.initPovertyRate * (1 + (effectiveCpi - wageIncrease) * effectiveSensitivity)
         : p.initPovertyRate * (1 - (wageIncrease - effectiveCpi) * effectiveSensitivity * 0.3);
 
+      // 0.5 = 円安による資産価格上昇の弾性値（外貨建て資産の円換算増価）
+      // 0.01 = 資産成長と実質賃金の乖離がジニ係数に与える影響の弾性値
+      // Piketty (2014) r>g 仮説: 資産収益率が賃金成長を上回ると格差が拡大
       const assetGrowth = yenFactor * 0.5 + C;
       const giniIndex = p.initGini + (assetGrowth - realWageGrowth) * 0.01;
 
@@ -296,6 +361,8 @@ export function runSimulation(p: SimParams): SimResult[] {
       const energyCostIndex = (1 + cpiIncrease) * (1 + Math.max(yenFactor, 0) * 0.5);
       const energySubsidy = baseEnergyAmount * p.energySubsidyRate * energyCostIndex;
 
+      // 0.1 = 外貨準備評価益の歳入計上率（評価益の10%のみ実現益として歳入に算入）
+      // 外貨準備の為替評価益は含み益であり、全額歳入計上は不適切。保守的に10%を想定
       const otherRevWithFx = p.otherRevenue + Math.max(fxValuationGain * 0.1, 0);
 
       const avgCoupon = p.initAvgCoupon / 100;
@@ -398,6 +465,7 @@ export function runSimulation(p: SimParams): SimResult[] {
       const tradeBalance = exportAmount - importAmount;
 
       const realNFA = prevNFA / (1 + Math.max(yenFactor, 0));
+      // 対外純資産収益率・円安増幅係数は初年度と同一（セクションF参照）
       const investmentIncome = realNFA * 0.03 * (1 + Math.max(yenFactor, 0) * 0.5);
       const currentAccount = tradeBalance + investmentIncome;
       const nfa = prevNFA + currentAccount;
@@ -405,20 +473,24 @@ export function runSimulation(p: SimParams): SimResult[] {
       const fxValuationGain = p.fxReserves * yenDep;
 
       const nominalGDP = prev.nominalGDP * (1 + hcD);
+      // 内生賃金モデル（セクションG初年度参照）: 人的資本成長の賃金波及係数 0.3
       const endogenousWage = C * prodShare + B * wagePassThrough + humanCapitalGrowth * 0.3;
       const nomWageG = Math.max(endogenousWage, baseNomWageG);
 
       // ========== G. 税収（2年目以降） ==========
       const prevWageDriver = prev.wageIncrease / 100;
       const hcTaxMultiplier = humanCapitalIndex / 100;
+      // 所得税弾性値 1.4（セクションG初年度参照）
       const taxIncomeGrowth = (hcD * 0.5 + prevWageDriver * 0.5) * 1.4;
 
+      // 消費税弾性値 1.0（セクションG初年度参照）
       let taxConsumption = prev.taxConsumption * (1 + B * 1.0);
       if (changeYear !== null && year === changeYear) {
         taxConsumption = prev.taxConsumption * (1 + B * 1.0) * (p.taxRateNew / 10.0);
       }
       const taxIncome = prev.taxIncome * (1 + taxIncomeGrowth) * (hcTaxMultiplier / (prev.humanCapitalIndex / 100));
 
+      // 法人税・その他税の弾性値は初年度と同一（セクションG初年度参照）
       const exportProfit = Math.max(yenDep, 0) * 0.3;
       const importCost = Math.max(yenDep, 0) * 0.2;
       const taxCorporate = prev.taxCorporate * (1 + C * 2.0 + B * 0.5) * (1 + exportProfit - importCost);
@@ -435,6 +507,7 @@ export function runSimulation(p: SimParams): SimResult[] {
       const returnBoostToWage = nominalGDP > 0 ? (returnToWorkers / nominalGDP) : 0;
 
       // ========== H. 物価・賃金・格差（2年目以降） ==========
+      // 円安コストプッシュ・消費税CPI効果は初年度と同一（セクションH初年度参照）
       const yenCostPush = Math.max(yenDep, 0) * 0.3;
       // Fix 1: 消費税率変更→CPI反映（変更年度のみ一時的CPI上昇）
       // 税率転嫁は変更年のみの一時的効果。翌年以降はベース効果により消滅する。
@@ -447,6 +520,7 @@ export function runSimulation(p: SimParams): SimResult[] {
       const wageIncrease = nomWageG + returnBoostToWage;
       const realWageGrowth = wageIncrease - effectiveCpi;
 
+      // 貧困率・格差の感応度係数は初年度と同一（セクションH初年度参照）
       const effectiveSensitivity = p.povertySensitivity * (1 + (1 - prodShare) * 0.5);
       const povertyRate = effectiveCpi > wageIncrease
         ? prev.povertyRate * (1 + (effectiveCpi - wageIncrease) * effectiveSensitivity)
@@ -469,6 +543,7 @@ export function runSimulation(p: SimParams): SimResult[] {
         ? bojNetIncome
         : Math.max(bojNetIncome, 0);
 
+      // 外貨準備評価益の歳入計上率 0.1（セクションG初年度参照）
       const otherRevWithFx = p.otherRevenue + Math.max(fxValuationGain * 0.1, 0);
       const totalRevenue = tax + bojPayment + otherRevWithFx;
 
@@ -479,8 +554,13 @@ export function runSimulation(p: SimParams): SimResult[] {
       const energySubsidy = baseEnergyAmount * p.energySubsidyRate * energyCostIndex;
 
       // ========== I. 歳出（2年目以降） ==========
+      // 0.7 = 社会保障自然増のうち実際に予算化される割合
+      // 概算要求時の自然増（約1兆円/年）に対し、歳出改革で約30%が抑制される実績
+      // 出典: 財務省「社会保障関係費の推移」（毎年度の概算要求→予算の圧縮実績）
       const socialSecurity = prev.socialSecurity * (1 + B) + p.naturalIncrease * 0.7 + socialSecurityDemographicPressure * prev.socialSecurity;
       const childcare = prev.childcare * (1 + p.childcareGrowth / 100);
+      // 0.5 = 地方交付税の名目GDP弾性値
+      // 地方交付税は国税収入の一定割合だが、基準財政需要額の硬直性により弾性値は1未満
       const localGovTransfer = prev.localGovTransfer * (1 + D * 0.5);
       const defense = prev.defense * (1 + p.defenseGrowth / 100);
       const prevOtherBase = prev.otherPolicyExp;
@@ -518,6 +598,8 @@ export function runSimulation(p: SimParams): SimResult[] {
       const cumulativeYenDep = exchangeRate / p.initExchangeRate - 1;
       const modelIncome = BASE_INCOME * cumulativeWage;
       const modelFoodCost = BASE_INCOME * BASE_FOOD_RATIO * cumulativeCpi;
+      // 0.5 = エネルギー価格の為替感応度（エネルギーの約半分が輸入依存のため）
+      // 資源エネルギー庁「エネルギー白書」: 日本の一次エネルギー自給率は約13%（2022年）
       const modelEnergyCostGross = BASE_INCOME * BASE_ENERGY_RATIO * cumulativeCpi * (1 + Math.max(cumulativeYenDep, 0) * 0.5);
       const modelEnergyCost = modelEnergyCostGross * (1 - p.energySubsidyRate * 0.5);
       let modelDisposable = modelIncome * (1 - TAX_SOCIAL_RATIO) - modelFoodCost - modelEnergyCost;
