@@ -105,7 +105,7 @@ src/
 └── svg/
     └── FlowDiagram.tsx       # 統合政府フロー図（SVG）
 
-app.py                        # Streamlit配信ラッパー
+vercel.json                   # Vercelデプロイ設定
 vite.config.ts                # Vite設定
 ```
 
@@ -147,17 +147,25 @@ vite.config.ts                # Vite設定
 ## ビルド・開発
 
 ```bash
-# 開発サーバー起動
-npx vite --host 0.0.0.0 --port 5001
+# 依存インストール
+npm install
 
-# プロダクションビルド
-npx vite build
+# 開発サーバー起動（http://localhost:5000）
+npm run dev
 
-# Streamlit経由で配信（ポート5000）
-streamlit run app.py --server.port 5000
+# プロダクションビルド（dist/ を生成）
+npm run build
+
+# ビルド結果をローカル配信（http://localhost:4173）
+npm run preview
 ```
 
 ビルド後の `dist/index.html` は単体で動作するため、GitHub Pages やブログ記事への埋め込みにも対応しています。
+
+## デプロイ
+
+Vercel への静的デプロイに対応しています（`vercel.json` 設定済み）。手順は
+[`docs/superpowers/vercel-deploy.md`](docs/superpowers/vercel-deploy.md) を参照してください。
 
 ## データ出典
 
